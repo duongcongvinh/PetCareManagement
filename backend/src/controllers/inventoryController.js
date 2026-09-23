@@ -1,0 +1,61 @@
+const inventoryService = require('../services/inventoryService');
+
+const getProducts = async (req, res) => {
+  try {
+    const products = await inventoryService.getAllProducts();
+    return res.json(products);
+  } catch (error) {
+    return res.status(500).json({ message: 'Lỗi khi lấy danh sách sản phẩm kho.' });
+  }
+};
+
+const createProduct = async (req, res) => {
+  try {
+    const product = await inventoryService.createNewProduct(req.body);
+    return res.status(201).json(product);
+  } catch (error) {
+    console.error('Create product error:', error);
+    return res.status(500).json({ message: 'Lỗi khi tạo sản phẩm mới.' });
+  }
+};
+
+const updateStock = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { type, quantity, note } = req.body; // type: 'IN' | 'OUT' | 'ADJUSTMENT'
+
+    const updatedProduct = await inventoryService.updateProductStock(id, { type, quantity, note });
+    return res.json({
+      message: 'Cập nhật tồn kho thành công!',
+      product: updatedProduct,
+    });
+  } catch (error) {
+    return res.status(400).json({ message: error.message || 'Lỗi khi cập nhật tồn kho.' });
+  }
+};
+
+const getLowStockAlerts = async (req, res) => {
+  try {
+    const products = await inventoryService.getLowStockProducts();
+    return res.json(products);
+  } catch (error) {
+    return res.status(500).json({ message: 'Lỗi khi lấy danh sách sản phẩm sắp hết.' });
+  }
+};
+
+const getSuppliers = async (req, res) => {
+  try {
+    const suppliers = await inventoryService.getAllSuppliers();
+    return res.json(suppliers);
+  } catch (error) {
+    return res.status(500).json({ message: 'Lỗi khi lấy danh sách nhà cung cấp.' });
+  }
+};
+
+module.exports = {
+  getProducts,
+  createProduct,
+  updateStock,
+  getLowStockAlerts,
+  getSuppliers,
+};

@@ -1,0 +1,13 @@
+{
+  "name": "khoaluantotnghiep-petcare",
+  "version": "1.0.0",
+  "description": "Nền tảng Quản lý Dịch vụ Thú cưng & Dự báo Kho Thông minh (PostgreSQL + Prisma ORM, Express.js Backend, React Frontend, Python AI Service)",
+  "scripts": {
+    "start:backend": "cd backend && npm start",
+    "dev:backend": "cd backend && npm run dev",
+    "dev:frontend": "cd frontend && npm run dev",
+    "prisma:push": "cd backend && npx prisma db push",
+    "prisma:seed": "cd backend && node prisma/seed.js",
+    "start:ai": "cd ai-service && python main.py"
+  }
+}

@@ -1,0 +1,1548 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Hệ Thống Quản Lý Dịch Vụ Thú Cưng & Dự Báo Nhập Hàng Thông Minh - PetCare AI</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+  
+  <style>
+    :root {
+      --bg-primary: #0b132b;
+      --bg-secondary: #111c38;
+      --bg-card: rgba(23, 34, 61, 0.85);
+      --bg-glass: rgba(255, 255, 255, 0.04);
+      --accent-cyan: #00f2fe;
+      --accent-blue: #4facfe;
+      --accent-coral: #ff5e62;
+      --accent-orange: #ff9966;
+      --accent-emerald: #10b981;
+      --accent-amber: #f59e0b;
+      --accent-purple: #8b5cf6;
+      --gradient-coral: linear-gradient(135deg, #ff9966 0%, #ff5e62 100%);
+      --gradient-cyan: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%);
+      --gradient-emerald: linear-gradient(135deg, #10b981 0%, #059669 100%);
+      --gradient-purple: linear-gradient(135deg, #a855f7 0%, #6366f1 100%);
+      --text-main: #f8fafc;
+      --text-muted: #94a3b8;
+      --border-glass: rgba(255, 255, 255, 0.1);
+      --border-glow: rgba(0, 242, 254, 0.4);
+      --radius-sm: 8px;
+      --radius-md: 14px;
+      --radius-lg: 20px;
+      --font: 'Plus Jakarta Sans', -apple-system, sans-serif;
+    }
+
+    * { box-sizing: border-box; margin: 0; padding: 0; font-family: var(--font); }
+    body { background-color: var(--bg-primary); color: var(--text-main); min-height: 100vh; overflow-x: hidden; }
+
+    /* Top Announcement */
+    .top-bar {
+      background: var(--gradient-coral); color: #050b14; font-size: 0.8rem; font-weight: 700;
+      padding: 0.45rem 1.5rem; display: flex; align-items: center; justify-content: space-between;
+      box-shadow: 0 2px 10px rgba(255,94,98,0.25);
+    }
+
+    /* Header Nav */
+    header {
+      background: var(--bg-secondary); border-bottom: 1px solid var(--border-glass);
+      padding: 0.85rem 2rem; display: flex; justify-content: space-between; align-items: center;
+      position: sticky; top: 0; z-index: 100; backdrop-filter: blur(12px);
+    }
+    .brand-box { display: flex; align-items: center; gap: 0.85rem; cursor: pointer; }
+    .brand-logo {
+      background: var(--gradient-coral); width: 42px; height: 42px; border-radius: 12px;
+      display: flex; align-items: center; justify-content: center; font-size: 1.4rem; box-shadow: 0 4px 15px rgba(255,94,98,0.35);
+    }
+    .brand-title { font-size: 1.18rem; font-weight: 800; letter-spacing: -0.5px; color: #fff; }
+    .brand-sub { font-size: 0.72rem; color: var(--text-muted); font-weight: 500; }
+
+    .role-switcher-box {
+      display: flex; align-items: center; gap: 0.75rem; background: rgba(15,23,42,0.85);
+      padding: 0.35rem 0.85rem; border-radius: 30px; border: 1px solid var(--border-glass);
+    }
+    .role-select {
+      background: transparent; border: none; color: var(--accent-cyan); font-weight: 700;
+      font-size: 0.85rem; cursor: pointer; outline: none; padding: 0.2rem 0.5rem;
+    }
+    .role-select option { background: var(--bg-secondary); color: #fff; }
+
+    /* Layout */
+    .app-container { display: flex; min-height: calc(100vh - 85px); }
+    .sidebar {
+      width: 270px; background: var(--bg-secondary); border-right: 1px solid var(--border-glass);
+      padding: 1.5rem 1rem; display: flex; flex-direction: column; justify-content: space-between; gap: 0.5rem;
+    }
+    .sidebar-menu { display: flex; flex-direction: column; gap: 0.4rem; }
+    .sidebar-title { font-size: 0.72rem; font-weight: 700; color: var(--text-muted); text-transform: uppercase; margin: 0.8rem 0.5rem 0.3rem; letter-spacing: 0.5px; }
+
+    .main-content { flex: 1; padding: 1.8rem 2.2rem; overflow-y: auto; max-height: calc(100vh - 85px); }
+
+    /* UI Elements & Components */
+    .glass-panel {
+      background: var(--bg-card); border: 1px solid var(--border-glass); border-radius: var(--radius-md);
+      box-shadow: 0 8px 32px rgba(0,0,0,0.3); backdrop-filter: blur(10px); padding: 1.4rem; margin-bottom: 1.4rem;
+    }
+    .glass-card {
+      background: var(--bg-glass); border: 1px solid var(--border-glass); border-radius: var(--radius-sm);
+      padding: 1.1rem; transition: all 0.25s ease;
+    }
+    .glass-card:hover { border-color: rgba(0, 242, 254, 0.4); transform: translateY(-2px); }
+
+    .btn {
+      display: inline-flex; align-items: center; justify-content: center; gap: 0.45rem;
+      padding: 0.6rem 1.2rem; border-radius: var(--radius-sm); font-weight: 700; font-size: 0.85rem;
+      cursor: pointer; border: none; transition: all 0.2s ease; text-decoration: none;
+    }
+    .btn:hover { filter: brightness(1.1); transform: translateY(-1px); }
+    .btn:active { transform: translateY(0); }
+    .btn-cyan { background: var(--gradient-cyan); color: #050b14; }
+    .btn-coral { background: var(--gradient-coral); color: #ffffff; }
+    .btn-emerald { background: var(--gradient-emerald); color: #ffffff; }
+    .btn-purple { background: var(--gradient-purple); color: #ffffff; }
+    .btn-secondary { background: rgba(255, 255, 255, 0.08); color: var(--text-main); border: 1px solid var(--border-glass); }
+    .btn-secondary:hover { background: rgba(255, 255, 255, 0.15); }
+    .btn-danger { background: rgba(239, 68, 68, 0.2); color: #f87171; border: 1px solid rgba(239, 68, 68, 0.4); }
+    .btn-danger:hover { background: #ef4444; color: #fff; }
+    .btn-sm { padding: 0.35rem 0.75rem; font-size: 0.78rem; border-radius: 6px; }
+
+    .nav-btn {
+      display: flex; align-items: center; gap: 0.7rem; width: 100%; padding: 0.75rem 1rem;
+      border-radius: var(--radius-sm); background: transparent; border: 1px solid transparent;
+      color: var(--text-muted); font-size: 0.88rem; font-weight: 600; cursor: pointer; text-align: left; transition: all 0.2s;
+    }
+    .nav-btn:hover { background: rgba(255,255,255,0.04); color: #fff; }
+    .nav-btn.active {
+      background: rgba(0, 242, 254, 0.12); color: var(--accent-cyan);
+      border-color: rgba(0, 242, 254, 0.3); font-weight: 700;
+    }
+
+    .badge {
+      display: inline-flex; align-items: center; gap: 0.3rem; padding: 0.25rem 0.65rem;
+      border-radius: 20px; font-size: 0.72rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.3px;
+    }
+    .badge-pending { background: rgba(245, 158, 11, 0.15); color: #fbbf24; border: 1px solid rgba(245, 158, 11, 0.3); }
+    .badge-success { background: rgba(16, 185, 129, 0.15); color: #34d399; border: 1px solid rgba(16, 185, 129, 0.3); }
+    .badge-danger { background: rgba(239, 68, 68, 0.15); color: #f87171; border: 1px solid rgba(239, 68, 68, 0.3); }
+    .badge-info { background: rgba(59, 130, 246, 0.15); color: #60a5fa; border: 1px solid rgba(59, 130, 246, 0.3); }
+    .badge-purple { background: rgba(168, 85, 247, 0.15); color: #c084fc; border: 1px solid rgba(168, 85, 247, 0.3); }
+
+    .grid-2 { display: grid; grid-template-columns: repeat(auto-fit, minmax(320px, 1fr)); gap: 1.25rem; }
+    .grid-3 { display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 1.25rem; }
+    .grid-4 { display: grid; grid-template-columns: repeat(auto-fit, minmax(210px, 1fr)); gap: 1rem; }
+
+    /* Tables */
+    .table-container { width: 100%; overflow-x: auto; border-radius: var(--radius-sm); border: 1px solid var(--border-glass); }
+    table { width: 100%; border-collapse: collapse; text-align: left; }
+    th {
+      background: rgba(15, 23, 42, 0.7); padding: 0.85rem 1rem; font-size: 0.78rem;
+      font-weight: 700; color: var(--text-muted); border-bottom: 1px solid var(--border-glass); text-transform: uppercase;
+    }
+    td { padding: 0.85rem 1rem; font-size: 0.85rem; border-bottom: 1px solid var(--border-glass); vertical-align: middle; }
+    tr:last-child td { border-bottom: none; }
+    tr:hover td { background: rgba(255,255,255,0.02); }
+
+    /* Forms */
+    .form-group { display: flex; flex-direction: column; gap: 0.35rem; margin-bottom: 0.95rem; }
+    .form-group label { font-size: 0.8rem; font-weight: 600; color: var(--text-muted); }
+    .form-control {
+      background: rgba(15, 23, 42, 0.85); border: 1px solid var(--border-glass); border-radius: var(--radius-sm);
+      padding: 0.65rem 0.9rem; color: var(--text-main); font-size: 0.88rem; outline: none; transition: border-color 0.2s;
+    }
+    .form-control:focus { border-color: var(--accent-cyan); box-shadow: 0 0 0 2px rgba(0,242,254,0.2); }
+
+    /* Modal */
+    .modal-overlay {
+      position: fixed; inset: 0; background: rgba(5, 11, 20, 0.82); backdrop-filter: blur(8px);
+      display: flex; align-items: center; justify-content: center; z-index: 1000; padding: 1rem;
+      animation: fadeIn 0.2s ease;
+    }
+    .modal-content {
+      background: var(--bg-secondary); border: 1px solid var(--border-glass); border-radius: var(--radius-md);
+      width: 100%; max-width: 620px; max-height: 90vh; overflow-y: auto; padding: 1.8rem; box-shadow: 0 20px 50px rgba(0,0,0,0.6);
+      animation: scaleUp 0.25s ease;
+    }
+    .modal-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.2rem; }
+    .modal-title { font-size: 1.25rem; font-weight: 800; color: #fff; }
+    .close-btn { background: transparent; border: none; font-size: 1.4rem; color: var(--text-muted); cursor: pointer; }
+    .close-btn:hover { color: #fff; }
+
+    /* Toast */
+    #toast-container { position: fixed; bottom: 20px; right: 20px; z-index: 9999; display: flex; flex-direction: column; gap: 8px; }
+    .toast {
+      background: var(--bg-secondary); border: 1px solid var(--accent-cyan); border-radius: 8px;
+      padding: 0.8rem 1.2rem; color: #fff; font-size: 0.85rem; font-weight: 600;
+      box-shadow: 0 8px 25px rgba(0,0,0,0.5); display: flex; align-items: center; gap: 0.6rem;
+      animation: slideInRight 0.3s ease; min-width: 280px;
+    }
+
+    @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+    @keyframes scaleUp { from { transform: scale(0.95); opacity: 0; } to { transform: scale(1); opacity: 1; } }
+    @keyframes slideInRight { from { transform: translateX(100%); } to { transform: translateX(0); } }
+
+    /* Promo Banners */
+    .promo-banner {
+      border-radius: var(--radius-md); padding: 1.4rem; display: flex; justify-content: space-between;
+      align-items: center; border: 1px solid var(--border-glass); position: relative; overflow: hidden;
+    }
+    .promo-banner::after {
+      content: ''; position: absolute; top: -50%; right: -20%; width: 250px; height: 250px;
+      background: radial-gradient(circle, rgba(255,255,255,0.12) 0%, transparent 70%); border-radius: 50%;
+    }
+  </style>
+</head>
+<body>
+
+  <!-- Top Announcement Bar -->
+  <div class="top-bar">
+    <span>🐾 PetCare AI — Hệ Thống Quản Lý Dịch Vụ Thú Cưng Tích Hợp Dự Báo Nhu Cầu Chuỗi Thời Gian</span>
+    <span>⚡ Express Backend: 5000 • Python AI FastAPI: 8000 • PostgreSQL DB Active</span>
+  </div>
+
+  <!-- Header -->
+  <header>
+    <div class="brand-box" onclick="setRole('CUSTOMER'); setTab('shop')">
+      <div class="brand-logo">🐾</div>
+      <div>
+        <div class="brand-title">PETCARE <span style="color:var(--accent-orange); font-size:0.95rem;">AI PLATFORM</span></div>
+        <div class="brand-sub">Quản Lý Toàn Diện & Đề Xuất Nhập Kho Thông Minh</div>
+      </div>
+    </div>
+
+    <div style="display: flex; align-items: center; gap: 1rem;">
+      <button class="btn btn-purple btn-sm" onclick="setTab('srs-doc')">
+        📘 Xem Báo Cáo Đặc Tả SRS (Khoá Luận)
+      </button>
+
+      <div class="role-switcher-box">
+        <span style="color: var(--text-muted); font-size: 0.78rem; font-weight: 600;">Vai Trò Đang Chọn:</span>
+        <select id="roleSelect" class="role-select" onchange="setRole(this.value)">
+          <option value="CUSTOMER">👤 Khách Hàng (Customer)</option>
+          <option value="CARE_STAFF">🩺 Nhân Viên Chăm Sóc (Care Staff)</option>
+          <option value="WAREHOUSE_STAFF">📦 Nhân Viên Kho (Warehouse)</option>
+          <option value="ADMIN" selected>👑 Quản Trị Viên (Admin)</option>
+        </select>
+      </div>
+
+      <div id="cartIconBox" style="cursor: pointer; position: relative; background: rgba(255,255,255,0.06); padding: 0.45rem 0.8rem; border-radius: 20px; border: 1px solid var(--border-glass);" onclick="openModal('CART')">
+        🛒 Giỏ Hàng: <strong id="cartCountBadge" style="color:var(--accent-cyan);">0</strong>
+      </div>
+    </div>
+  </header>
+
+  <!-- App Layout -->
+  <div class="app-container">
+    <!-- Sidebar -->
+    <aside class="sidebar">
+      <div class="sidebar-menu" id="sidebarMenu">
+        <!-- Dynamically rendered based on active role -->
+      </div>
+
+      <div style="background: rgba(15,23,42,0.6); padding: 0.85rem; border-radius: var(--radius-sm); border: 1px solid var(--border-glass);">
+        <div style="font-size: 0.75rem; color: var(--text-muted);">Tài khoản hiện tại:</div>
+        <div id="currentUserLabel" style="font-weight: 700; font-size: 0.85rem; color: #fff; margin-top: 2px;">Admin Quản Trị</div>
+        <div style="font-size: 0.7rem; color: var(--accent-emerald); display: flex; align-items: center; gap: 4px; margin-top: 4px;">
+          <span style="width: 6px; height: 6px; background: #10b981; border-radius: 50%; display: inline-block;"></span> JWT Token Verified
+        </div>
+      </div>
+    </aside>
+
+    <!-- Main Content -->
+    <main class="main-content" id="mainContent">
+      <!-- Dynamically rendered based on active tab -->
+    </main>
+  </div>
+
+  <!-- Modal Container -->
+  <div id="modalContainer"></div>
+
+  <!-- Toast Notification Container -->
+  <div id="toast-container"></div>
+
+  <script>
+    // ==========================================
+    // 1. DATA STATE & MODELS
+    // ==========================================
+    let currentRole = 'ADMIN';
+    let currentTab = 'overview';
+    let cart = [];
+
+    let users = [
+      { id: 'u1', email: 'khachhang@gmail.com', fullName: 'Phạm Minh Anh', phone: '0908123456', role: 'CUSTOMER' },
+      { id: 'u2', email: 'care@petcare.com', fullName: 'BS. Trần Thị Mai (Chăm sóc/Vet)', phone: '0912345678', role: 'CARE_STAFF' },
+      { id: 'u3', email: 'warehouse@petcare.com', fullName: 'Lê Văn Kho (Quản lý Kho)', phone: '0933445566', role: 'WAREHOUSE_STAFF' },
+      { id: 'u4', email: 'admin@petcare.com', fullName: 'Nguyễn Quản Trị (Admin)', phone: '0988776655', role: 'ADMIN' }
+    ];
+
+    let pets = [
+      { id: 'p1', name: 'LuLu', species: 'Chó', breed: 'Poodle', ageMonths: 18, weightKg: 4.5, medicalHistory: 'Đã tiêm 3 mũi 7 bệnh, tẩy giun định kỳ', allergy: 'Không có', ownerId: 'u1', ownerName: 'Phạm Minh Anh' },
+      { id: 'p2', name: 'Miu Miu', species: 'Mèo', breed: 'Anh Lông Ngắn', ageMonths: 12, weightKg: 3.8, medicalHistory: 'Viêm da nhẹ năm 2025', allergy: 'Dị ứng xà phòng nồng độ cao', ownerId: 'u1', ownerName: 'Phạm Minh Anh' },
+      { id: 'p3', name: 'Bông', species: 'Chó', breed: 'Corgi Chân Ngắn', ageMonths: 24, weightKg: 11.2, medicalHistory: 'Khỏe mạnh, thích ăn dặm', allergy: 'Không có', ownerId: 'u1', ownerName: 'Phạm Minh Anh' }
+    ];
+
+    let services = [
+      { id: 's1', name: 'Spa Grooming Toàn Diện', category: 'Spa & Cắt Tỉa', price: 250000, durationMinutes: 60, description: 'Vệ sinh tai, cắt mài móng, vắt tuyến hôi, tắm thảo mộc dưỡng lông & sấy chải tạo kiểu.' },
+      { id: 's2', name: 'Tiêm Vắc Xin 7 Bệnh Phòng Ngừa', category: 'Y Tế Thú Y', price: 220000, durationMinutes: 30, description: 'Khám sàng lọc và tiêm chủng phòng ngừa Care, Parvo, Viêm gan...' },
+      { id: 's3', name: 'Khám & Siêu Âm Tổng Quát', category: 'Khám Chữa Bệnh', price: 350000, durationMinutes: 45, description: 'Kiểm tra lâm sàng, siêu âm ổ bụng, xét nghiệm ký sinh trùng máu.' },
+      { id: 's4', name: 'Khách Sạn Thú Cưng Chuẩn 5 Sao', category: 'Lưu Trú', price: 180000, durationMinutes: 1440, description: 'Phòng máy lạnh riêng biệt, camera theo dõi 24/7, ăn uống chuẩn dinh dưỡng.' }
+    ];
+
+    let appointments = [
+      { 
+        id: 'APP-1001', petId: 'p1', petName: 'LuLu (Poodle)', serviceId: 's1', serviceName: 'Spa Grooming Toàn Diện', 
+        price: 250000, appointmentDate: '2026-09-18', timeSlot: '09:00 - 10:00', status: 'IN_PROGRESS', 
+        customerName: 'Phạm Minh Anh', staffName: 'BS. Trần Thị Mai', notes: 'Bé hơi nhát nước, nhờ nhân viên dỗ dành',
+        careSummary: 'Đã tắm sấy xong, tỉa lông chân và vệ sinh tai sạch sẽ, sức khỏe tốt.'
+      },
+      { 
+        id: 'APP-1002', petId: 'p2', petName: 'Miu Miu (Mèo Anh)', serviceId: 's2', serviceName: 'Tiêm Vắc Xin 7 Bệnh', 
+        price: 220000, appointmentDate: '2026-09-18', timeSlot: '10:30 - 11:30', status: 'PENDING', 
+        customerName: 'Phạm Minh Anh', staffName: 'Chưa phân công', notes: 'Tiêm nhắc lại mũi hàng năm',
+        careSummary: ''
+      },
+      { 
+        id: 'APP-1000', petId: 'p3', petName: 'Bông (Corgi)', serviceId: 's3', serviceName: 'Khám & Siêu Âm Tổng Quát', 
+        price: 350000, appointmentDate: '2026-09-16', timeSlot: '14:00 - 15:00', status: 'COMPLETED', 
+        customerName: 'Phạm Minh Anh', staffName: 'BS. Trần Thị Mai', notes: 'Khám định kỳ 6 tháng',
+        careSummary: 'Kết quả siêu âm bình thường, cân nặng chuẩn 11.2kg, đã kê thêm men tiêu hóa.'
+      }
+    ];
+
+    let products = [
+      { id: 'prod-1', name: 'Hạt Royal Canin Mini Adult (2kg)', category: 'Thức ăn', sku: 'RC-MINI-2KG', unitPrice: 320000, costPrice: 240000, currentStock: 6, minStockLevel: 15, maxStockLevel: 80, supplierName: 'Royal Canin Việt Nam', dailyAvgDemand: 3.5, leadTimeDays: 4 },
+      { id: 'prod-2', name: 'Cát Vệ Sinh Mèo Đậu Nành Tofu 6L', category: 'Phụ kiện', sku: 'CAT-TOFU-6L', unitPrice: 110000, costPrice: 75000, currentStock: 42, minStockLevel: 20, maxStockLevel: 120, supplierName: 'Nhà Phân Phối PetFood VN', dailyAvgDemand: 2.1, leadTimeDays: 3 },
+      { id: 'prod-3', name: 'Sữa Tắm Dưỡng Lông SOS 530ml', category: 'Mỹ phẩm Spa', sku: 'SOS-SHAMPOO-530', unitPrice: 150000, costPrice: 95000, currentStock: 4, minStockLevel: 12, maxStockLevel: 50, supplierName: 'Nhà Phân Phối VetCare', dailyAvgDemand: 1.8, leadTimeDays: 5 },
+      { id: 'prod-4', name: 'Thuốc Trị Ve Rận NexGard Cho Chó', category: 'Thuốc Thú Y', sku: 'NEXGARD-M-10KG', unitPrice: 280000, costPrice: 200000, currentStock: 18, minStockLevel: 10, maxStockLevel: 60, supplierName: 'Nhà Phân Phối VetCare', dailyAvgDemand: 1.2, leadTimeDays: 4 },
+      { id: 'prod-5', name: 'Pate Mèo Whiskas Vị Cá Biển 85g', category: 'Thức ăn', sku: 'WHISKAS-FISH-85G', unitPrice: 220000, costPrice: 150000, currentStock: 55, minStockLevel: 25, maxStockLevel: 150, supplierName: 'Nhà Phân Phối PetFood VN', dailyAvgDemand: 4.0, leadTimeDays: 3 }
+    ];
+
+    let stockTransactions = [
+      { id: 'TX-501', productId: 'prod-1', productName: 'Hạt Royal Canin Mini Adult (2kg)', type: 'OUT', quantity: 2, note: 'Khách hàng mua qua Web', createdAt: '2026-09-17 09:15' },
+      { id: 'TX-500', productId: 'prod-3', productName: 'Sữa Tắm Dưỡng Lông SOS 530ml', type: 'OUT', quantity: 1, note: 'Sử dụng cho ca Spa Grooming APP-1001', createdAt: '2026-09-17 08:30' },
+      { id: 'TX-499', productId: 'prod-2', productName: 'Cát Vệ Sinh Mèo Đậu Nành Tofu 6L', type: 'IN', quantity: 20, note: 'Nhập hàng định kỳ từ PetFood VN', createdAt: '2026-09-15 14:00' }
+    ];
+
+    let proposals = [
+      { 
+        id: 'PROP-201', productId: 'prod-1', productName: 'Hạt Royal Canin Mini Adult (2kg)', sku: 'RC-MINI-2KG', 
+        currentStock: 6, minStockLevel: 15, safetyStock: 14, reorderPoint: 28, suggestedQuantity: 45,
+        suggestedOrderDate: '2026-09-18', suggestedSupplier: 'Royal Canin Việt Nam', confidenceScore: 0.95, 
+        reason: 'AI Demand Forecast (Time-Series): Tồn kho (6) vi phạm Điểm đặt hàng lại ROP (28). Dự báo sức mua tăng 32% vào cuối tuần.', status: 'DRAFT' 
+      },
+      { 
+        id: 'PROP-202', productId: 'prod-3', productName: 'Sữa Tắm Dưỡng Lông SOS 530ml', sku: 'SOS-SHAMPOO-530', 
+        currentStock: 4, minStockLevel: 12, safetyStock: 10, reorderPoint: 19, suggestedQuantity: 30,
+        suggestedOrderDate: '2026-09-19', suggestedSupplier: 'Nhà Phân Phối VetCare', confidenceScore: 0.92, 
+        reason: 'AI Stock Alert: Tồn kho (4) < Ngưỡng tối thiểu (12). Tiêu hao qua dịch vụ Spa đang tăng mạnh.', status: 'DRAFT' 
+      }
+    ];
+
+    let orders = [
+      { id: 'ORD-881', customerName: 'Phạm Minh Anh', totalAmount: 430000, itemsCount: 2, status: 'COMPLETED', createdAt: '2026-09-16 11:20' }
+    ];
+
+    // ==========================================
+    // 2. CONTROLLER ACTIONS & HELPERS
+    // ==========================================
+    function showToast(msg, icon = '✅') {
+      const container = document.getElementById('toast-container');
+      const toast = document.createElement('div');
+      toast.className = 'toast';
+      toast.innerHTML = `<span>${icon}</span> <span>${msg}</span>`;
+      container.appendChild(toast);
+      setTimeout(() => { toast.remove(); }, 3500);
+    }
+
+    function setRole(r) {
+      currentRole = r;
+      document.getElementById('roleSelect').value = r;
+      const userObj = users.find(u => u.role === r) || users[0];
+      document.getElementById('currentUserLabel').innerText = userObj.fullName;
+
+      if (r === 'CUSTOMER') currentTab = 'shop';
+      else if (r === 'CARE_STAFF') currentTab = 'queue';
+      else if (r === 'WAREHOUSE_STAFF') currentTab = 'inventory';
+      else currentTab = 'overview';
+
+      render();
+      showToast(`Đã chuyển vai trò: ${userObj.fullName} (${r})`, '🔄');
+    }
+
+    function setTab(t) {
+      currentTab = t;
+      render();
+    }
+
+    function addToCart(prodId) {
+      const p = products.find(x => x.id === prodId);
+      if (!p) return;
+      if (p.currentStock <= 0) return showToast('Sản phẩm đã hết hàng trong kho!', '⚠️');
+
+      const exist = cart.find(x => x.id === prodId);
+      if (exist) {
+        if (exist.quantity >= p.currentStock) return showToast('Số lượng vượt quá tồn kho thực tế!', '⚠️');
+        exist.quantity++;
+      } else {
+        cart.push({ ...p, quantity: 1 });
+      }
+      updateCartBadge();
+      showToast(`Đã thêm "${p.name}" vào giỏ hàng!`, '🛒');
+      render();
+    }
+
+    function updateCartBadge() {
+      const count = cart.reduce((s, i) => s + i.quantity, 0);
+      document.getElementById('cartCountBadge').innerText = count;
+    }
+
+    function checkoutCart(paymentMethod = 'COD') {
+      if (cart.length === 0) return;
+      const total = cart.reduce((s, i) => s + i.unitPrice * i.quantity, 0);
+
+      // Trừ kho và tạo transaction
+      cart.forEach(item => {
+        products = products.map(p => {
+          if (p.id === item.id) {
+            const newStock = Math.max(0, p.currentStock - item.quantity);
+            stockTransactions.unshift({
+              id: 'TX-' + Math.floor(100 + Math.random()*900),
+              productId: p.id,
+              productName: p.name,
+              type: 'OUT',
+              quantity: item.quantity,
+              note: `Xuất kho đơn bán lẻ Web (${paymentMethod})`,
+              createdAt: new Date().toISOString().slice(0,16).replace('T',' ')
+            });
+            return { ...p, currentStock: newStock };
+          }
+          return p;
+        });
+      });
+
+      orders.unshift({
+        id: 'ORD-' + Math.floor(100 + Math.random()*900),
+        customerName: 'Phạm Minh Anh',
+        totalAmount: total,
+        itemsCount: cart.length,
+        status: paymentMethod === 'ONLINE_VNPAY' ? 'PAID' : 'COMPLETED',
+        createdAt: new Date().toISOString().slice(0,16).replace('T',' ')
+      });
+
+      cart = [];
+      updateCartBadge();
+      closeModal();
+      showToast(`Đặt hàng thành công! Đã tự động cập nhật tồn kho PostgreSQL & lưu lịch sử.`, '🎉');
+      render();
+    }
+
+    // Xử lý Lịch Hẹn
+    function createAppointment(e) {
+      e.preventDefault();
+      const petId = document.getElementById('bookPetSelect').value;
+      const serviceId = document.getElementById('bookServiceSelect').value;
+      const date = document.getElementById('bookDateInput').value;
+      const slot = document.getElementById('bookSlotSelect').value;
+      const notes = document.getElementById('bookNotesInput').value;
+
+      const pet = pets.find(p => p.id === petId);
+      const srv = services.find(s => s.id === serviceId);
+
+      // Check Real-time slot conflict
+      const isDuplicate = appointments.some(a => a.appointmentDate === date && a.timeSlot === slot && a.status !== 'CANCELLED');
+      if (isDuplicate) {
+        return alert(`⚠️ Khung giờ [${slot}] ngày [${date}] đã có khách hàng đặt trước! Vui lòng chọn khung giờ khác (Real-time Slot Lock).`);
+      }
+
+      const newApp = {
+        id: 'APP-' + Math.floor(1000 + Math.random()*9000),
+        petId: pet.id,
+        petName: `${pet.name} (${pet.species})`,
+        serviceId: srv.id,
+        serviceName: srv.name,
+        price: srv.price,
+        appointmentDate: date,
+        timeSlot: slot,
+        status: 'PENDING',
+        customerName: 'Phạm Minh Anh',
+        staffName: 'Chưa phân công',
+        notes: notes || 'Không có',
+        careSummary: ''
+      };
+
+      appointments.unshift(newApp);
+      closeModal();
+      showToast(`Đặt lịch hẹn #${newApp.id} thành công! Hệ thống đã khóa slot giờ.`, '📅');
+      setTab('my-appointments');
+    }
+
+    function updateAppointmentStatus(appId, newStatus, staffName = null) {
+      appointments = appointments.map(a => {
+        if (a.id === appId) {
+          return {
+            ...a,
+            status: newStatus,
+            staffName: staffName || a.staffName
+          };
+        }
+        return a;
+      });
+      showToast(`Đã cập nhật trạng thái lịch hẹn ${appId} ➔ ${newStatus}`, '🩺');
+      render();
+    }
+
+    function submitCareSummary(appId) {
+      const summaryText = document.getElementById('careSummaryInput').value;
+      appointments = appointments.map(a => {
+        if (a.id === appId) {
+          return { ...a, careSummary: summaryText, status: 'COMPLETED' };
+        }
+        return a;
+      });
+      closeModal();
+      showToast(`Đã ghi nhận Bệnh án/Nhật ký chăm sóc cho ca #${appId}!`, '📝');
+      render();
+    }
+
+    // AI & Warehouse Actions
+    function approveProposal(propId) {
+      const prop = proposals.find(p => p.id === propId);
+      if (!prop) return;
+
+      // Cộng kho
+      products = products.map(p => {
+        if (p.id === prop.productId) {
+          const updatedStock = p.currentStock + prop.suggestedQuantity;
+          stockTransactions.unshift({
+            id: 'TX-' + Math.floor(100 + Math.random()*900),
+            productId: p.id,
+            productName: p.name,
+            type: 'IN',
+            quantity: prop.suggestedQuantity,
+            note: `Nhập kho tự động sau khi Quản trị viên duyệt đề xuất AI (${prop.id})`,
+            createdAt: new Date().toISOString().slice(0,16).replace('T',' ')
+          });
+          return { ...p, currentStock: updatedStock };
+        }
+        return p;
+      });
+
+      proposals = proposals.map(p => p.id === propId ? { ...p, status: 'APPROVED' } : p);
+      showToast(`Đã PHÊ DUYỆT đề xuất #${propId}! Tồn kho đã tự động tăng thêm +${prop.suggestedQuantity} sản phẩm.`, '✅');
+      render();
+    }
+
+    function rejectProposal(propId) {
+      proposals = proposals.map(p => p.id === propId ? { ...p, status: 'REJECTED' } : p);
+      showToast(`Đã TỪ CHỐI đề xuất nhập hàng #${propId}.`, '❌');
+      render();
+    }
+
+    function triggerAIAnalysis() {
+      showToast('Đang chạy thuật toán Time-Series AI phân tích dữ liệu tiêu thụ 60 ngày...', '🤖');
+      setTimeout(() => {
+        showToast('AI Phân tích hoàn tất: Phát hiện 2 mặt hàng có nguy cơ đứt gãy chuỗi cung ứng!', '💡');
+        setTab('reorder-proposals');
+      }, 800);
+    }
+
+    // ==========================================
+    // 3. MODAL HANDLERS
+    // ==========================================
+    function closeModal() {
+      document.getElementById('modalContainer').innerHTML = '';
+    }
+
+    function openModal(type, data = null) {
+      const container = document.getElementById('modalContainer');
+
+      if (type === 'CART') {
+        const subtotal = cart.reduce((s, i) => s + i.unitPrice * i.quantity, 0);
+        container.innerHTML = `
+          <div class="modal-overlay" onclick="if(event.target===this) closeModal()">
+            <div class="modal-content">
+              <div class="modal-header">
+                <div class="modal-title">🛒 Giỏ Hàng PetCare (${cart.length} sản phẩm)</div>
+                <button class="close-btn" onclick="closeModal()">✕</button>
+              </div>
+
+              ${cart.length === 0 ? `
+                <div style="text-align:center; padding: 2rem 0; color:var(--text-muted);">
+                  <div style="font-size:3rem; margin-bottom:0.5rem;">🛍️</div>
+                  <p>Giỏ hàng của bạn đang trống.</p>
+                </div>
+              ` : `
+                <div style="display:flex; flex-direction:column; gap:0.6rem; max-height:240px; overflow-y:auto; margin-bottom:1rem;">
+                  ${cart.map(i => `
+                    <div style="display:flex; justify-content:space-between; align-items:center; background:rgba(255,255,255,0.03); padding:0.75rem 1rem; border-radius:8px; border:1px solid var(--border-glass);">
+                      <div>
+                        <div style="font-weight:700;">${i.name}</div>
+                        <div style="font-size:0.75rem; color:var(--text-muted);">${i.unitPrice.toLocaleString('vi-VN')} đ x ${i.quantity}</div>
+                      </div>
+                      <div style="font-weight:800; color:var(--accent-cyan); font-size:1rem;">
+                        ${(i.unitPrice * i.quantity).toLocaleString('vi-VN')} đ
+                      </div>
+                    </div>
+                  `).join('')}
+                </div>
+
+                <div style="background:rgba(0,242,254,0.05); padding:1rem; border-radius:8px; border:1px solid rgba(0,242,254,0.2); margin-bottom:1.2rem;">
+                  <div style="display:flex; justify-content:space-between; margin-bottom:0.4rem; font-size:0.85rem; color:var(--text-muted);">
+                    <span>Tạm tính:</span>
+                    <span>${subtotal.toLocaleString('vi-VN')} đ</span>
+                  </div>
+                  <div style="display:flex; justify-content:space-between; margin-bottom:0.4rem; font-size:0.85rem; color:var(--text-muted);">
+                    <span>Mã ưu đãi (PETLOVER):</span>
+                    <span style="color:#10b981;">-0 đ (Đã áp dụng)</span>
+                  </div>
+                  <div style="display:flex; justify-content:space-between; font-weight:800; font-size:1.15rem; color:#fff; border-top:1px solid var(--border-glass); padding-top:0.5rem;">
+                    <span>Tổng thanh toán:</span>
+                    <span style="color:var(--accent-orange);">${subtotal.toLocaleString('vi-VN')} đ</span>
+                  </div>
+                </div>
+
+                <div style="display:flex; gap:0.6rem; justify-content:flex-end;">
+                  <button class="btn btn-secondary" onclick="closeModal()">Tiếp Tục Mua Sắm</button>
+                  <button class="btn btn-coral" onclick="checkoutCart('COD')">💵 Thanh Toán Khi Nhận Hàng (COD)</button>
+                  <button class="btn btn-cyan" onclick="checkoutCart('ONLINE_VNPAY')">💳 Thanh Toán VNPAY QR</button>
+                </div>
+              `}
+            </div>
+          </div>
+        `;
+      } else if (type === 'BOOK_SERVICE') {
+        container.innerHTML = `
+          <div class="modal-overlay" onclick="if(event.target===this) closeModal()">
+            <div class="modal-content">
+              <div class="modal-header">
+                <div class="modal-title">📅 Đặt Lịch Hẹn Chăm Sóc Thú Cưng</div>
+                <button class="close-btn" onclick="closeModal()">✕</button>
+              </div>
+
+              <form onsubmit="createAppointment(event)">
+                <div class="form-group">
+                  <label>1. Chọn Thú Cưng Của Bạn (*):</label>
+                  <select id="bookPetSelect" class="form-control" required>
+                    ${pets.map(p => `<option value="${p.id}">${p.name} - ${p.species} (${p.breed}, ${p.weightKg}kg)</option>`).join('')}
+                  </select>
+                </div>
+
+                <div class="form-group">
+                  <label>2. Chọn Dịch Vụ Cần Làm (*):</label>
+                  <select id="bookServiceSelect" class="form-control" required>
+                    ${services.map(s => `<option value="${s.id}">${s.name} — ${s.price.toLocaleString('vi-VN')} đ (${s.durationMinutes} phút)</option>`).join('')}
+                  </select>
+                </div>
+
+                <div class="grid-2">
+                  <div class="form-group">
+                    <label>3. Ngày Hẹn (*):</label>
+                    <input type="date" id="bookDateInput" class="form-control" value="2026-09-18" required />
+                  </div>
+                  <div class="form-group">
+                    <label>4. Khung Giờ (Time Slot Locked) (*):</label>
+                    <select id="bookSlotSelect" class="form-control" required>
+                      <option value="08:00 - 09:00">08:00 - 09:00 (Còn trống)</option>
+                      <option value="09:00 - 10:00">09:00 - 10:00 (Đã có 1 ca)</option>
+                      <option value="10:30 - 11:30">10:30 - 11:30 (Còn trống)</option>
+                      <option value="14:00 - 15:00">14:00 - 15:00 (Còn trống)</option>
+                      <option value="15:30 - 16:30">15:30 - 16:30 (Còn trống)</option>
+                    </select>
+                  </div>
+                </div>
+
+                <div class="form-group">
+                  <label>5. Ghi Chú Đặc Biệt / Thể Trạng Thú Cưng:</label>
+                  <textarea id="bookNotesInput" class="form-control" rows="2" placeholder="Ví dụ: Bé sợ nước, vừa tẩy giun tuần trước, dặn dò nhân viên nhẹ tay..."></textarea>
+                </div>
+
+                <div style="display:flex; justify-content:flex-end; gap:0.6rem; margin-top:1.2rem;">
+                  <button type="button" class="btn btn-secondary" onclick="closeModal()">Hủy</button>
+                  <button type="submit" class="btn btn-coral">🚀 Xác Nhận Đặt Lịch (Khóa Slot Giờ)</button>
+                </div>
+              </form>
+            </div>
+          </div>
+        `;
+      } else if (type === 'CARE_RECORD') {
+        const app = appointments.find(a => a.id === data);
+        container.innerHTML = `
+          <div class="modal-overlay" onclick="if(event.target===this) closeModal()">
+            <div class="modal-content">
+              <div class="modal-header">
+                <div class="modal-title">📝 Ghi Nhận Nhật Ký Chăm Sóc & Bệnh Án</div>
+                <button class="close-btn" onclick="closeModal()">✕</button>
+              </div>
+
+              <div style="background:rgba(255,255,255,0.03); padding:1rem; border-radius:8px; margin-bottom:1rem; border:1px solid var(--border-glass);">
+                <div><strong>Mã Lịch Hẹn:</strong> ${app.id}</div>
+                <div><strong>Thú Cưng:</strong> ${app.petName}</div>
+                <div><strong>Dịch Vụ:</strong> ${app.serviceName}</div>
+                <div><strong>Khách Hàng:</strong> ${app.customerName}</div>
+                <div style="color:var(--accent-orange); margin-top:4px;"><strong>Lưu ý từ chủ nuôi:</strong> ${app.notes}</div>
+              </div>
+
+              <div class="form-group">
+                <label>Nội Dung Thực Hiện / Bệnh Án Y Tế / Dặn Dò Sau Dịch Vụ (*):</label>
+                <textarea id="careSummaryInput" class="form-control" rows="4" placeholder="Nhập chi tiết: Tình trạng da/lông, thể trạng sau tắm/tiêm chủng, loại thuốc sử dụng, hẹn tái khám...">${app.careSummary || ''}</textarea>
+              </div>
+
+              <div style="display:flex; justify-content:flex-end; gap:0.6rem; margin-top:1.2rem;">
+                <button type="button" class="btn btn-secondary" onclick="closeModal()">Đóng</button>
+                <button type="button" class="btn btn-emerald" onclick="submitCareSummary('${app.id}')">💾 Lưu Bệnh Án & Hoàn Tất Ca Hẹn</button>
+              </div>
+            </div>
+          </div>
+        `;
+      } else if (type === 'ADD_PET') {
+        container.innerHTML = `
+          <div class="modal-overlay" onclick="if(event.target===this) closeModal()">
+            <div class="modal-content">
+              <div class="modal-header">
+                <div class="modal-title">🐶 Thêm Hồ Sơ Thú Cưng Mới</div>
+                <button class="close-btn" onclick="closeModal()">✕</button>
+              </div>
+              <form onsubmit="event.preventDefault(); addNewPet();">
+                <div class="grid-2">
+                  <div class="form-group">
+                    <label>Tên Thú Cưng (*):</label>
+                    <input type="text" id="newPetName" class="form-control" placeholder="VD: Lucky, Miu..." required />
+                  </div>
+                  <div class="form-group">
+                    <label>Loài (*):</label>
+                    <select id="newPetSpecies" class="form-control">
+                      <option value="Chó">Chó</option>
+                      <option value="Mèo">Mèo</option>
+                      <option value="Thỏ / Chuột Hamster">Thỏ / Chuột Hamster</option>
+                      <option value="Chim Cảnh">Chim Cảnh</option>
+                    </select>
+                  </div>
+                </div>
+
+                <div class="grid-3">
+                  <div class="form-group">
+                    <label>Giống loài:</label>
+                    <input type="text" id="newPetBreed" class="form-control" placeholder="VD: Poodle, Corgi, ALN..." />
+                  </div>
+                  <div class="form-group">
+                    <label>Tháng tuổi:</label>
+                    <input type="number" id="newPetAge" class="form-control" placeholder="VD: 14" />
+                  </div>
+                  <div class="form-group">
+                    <label>Cân nặng (kg):</label>
+                    <input type="number" step="0.1" id="newPetWeight" class="form-control" placeholder="VD: 5.2" />
+                  </div>
+                </div>
+
+                <div class="form-group">
+                  <label>Tiền sử y tế / Tiêm phòng:</label>
+                  <input type="text" id="newPetHistory" class="form-control" placeholder="VD: Đã tiêm 2 mũi dại, tẩy giun tháng trước" />
+                </div>
+                <div class="form-group">
+                  <label>Dị ứng / Thể trạng đặc biệt:</label>
+                  <input type="text" id="newPetAllergy" class="form-control" placeholder="VD: Dị ứng sữa tươi, sợ máy sấy..." />
+                </div>
+
+                <div style="display:flex; justify-content:flex-end; gap:0.6rem; margin-top:1.2rem;">
+                  <button type="button" class="btn btn-secondary" onclick="closeModal()">Hủy</button>
+                  <button type="submit" class="btn btn-coral">🐾 Thêm Thú Cưng</button>
+                </div>
+              </form>
+            </div>
+          </div>
+        `;
+      }
+    }
+
+    function addNewPet() {
+      const name = document.getElementById('newPetName').value;
+      const species = document.getElementById('newPetSpecies').value;
+      const breed = document.getElementById('newPetBreed').value || 'Không rõ';
+      const ageMonths = parseInt(document.getElementById('newPetAge').value) || 12;
+      const weightKg = parseFloat(document.getElementById('newPetWeight').value) || 3.5;
+      const medicalHistory = document.getElementById('newPetHistory').value || 'Chưa ghi nhận';
+      const allergy = document.getElementById('newPetAllergy').value || 'Không có';
+
+      pets.push({
+        id: 'p' + (pets.length + 1),
+        name, species, breed, ageMonths, weightKg, medicalHistory, allergy,
+        ownerId: 'u1', ownerName: 'Phạm Minh Anh'
+      });
+      closeModal();
+      showToast(`Đã thêm bé "${name}" vào hồ sơ thú cưng thành công!`, '🐾');
+      render();
+    }
+
+    function deletePet(petId) {
+      if (confirm('Bạn có chắc chắn muốn xóa hồ sơ bé thú cưng này không?')) {
+        pets = pets.filter(p => p.id !== petId);
+        showToast('Đã xóa hồ sơ thú cưng.', '🗑️');
+        render();
+      }
+    }
+
+    // ==========================================
+    // 4. VIEW RENDERING ENGINE
+    // ==========================================
+    function render() {
+      // 4.1 Render Sidebar
+      let sidebarHtml = '';
+      if (currentRole === 'CUSTOMER') {
+        sidebarHtml = `
+          <div class="sidebar-title">Dành Cho Khách Hàng</div>
+          <button class="nav-btn ${currentTab==='shop'?'active':''}" onclick="setTab('shop')">🛒 Cửa Hàng & Mua Sắm</button>
+          <button class="nav-btn ${currentTab==='pets'?'active':''}" onclick="setTab('pets')">🐶 Quản Lý Hồ Sơ Thú Cưng</button>
+          <button class="nav-btn ${currentTab==='services'?'active':''}" onclick="setTab('services')">🩺 Bảng Giá & Đặt Lịch Dịch Vụ</button>
+          <button class="nav-btn ${currentTab==='my-appointments'?'active':''}" onclick="setTab('my-appointments')">📅 Lịch Hẹn Của Tôi (${appointments.length})</button>
+          <button class="nav-btn ${currentTab==='my-orders'?'active':''}" onclick="setTab('my-orders')">🧾 Lịch Sử Mua Hàng (${orders.length})</button>
+        `;
+      } else if (currentRole === 'CARE_STAFF') {
+        sidebarHtml = `
+          <div class="sidebar-title">Nghiệp Vụ Chăm Sóc & Y Tế</div>
+          <button class="nav-btn ${currentTab==='queue'?'active':''}" onclick="setTab('queue')">📋 Ca Hẹn Trong Ngày (${appointments.filter(a=>a.status!=='COMPLETED').length})</button>
+          <button class="nav-btn ${currentTab==='completed-services'?'active':''}" onclick="setTab('completed-services')">✅ Lịch Sử Chăm Sóc & Bệnh Án</button>
+          <button class="nav-btn ${currentTab==='pet-lookup'?'active':''}" onclick="setTab('pet-lookup')">🔍 Tra Cứu Thể Trạng Thú Cưng</button>
+        `;
+      } else if (currentRole === 'WAREHOUSE_STAFF') {
+        sidebarHtml = `
+          <div class="sidebar-title">Quản Trị Kho & Nhập Xuất</div>
+          <button class="nav-btn ${currentTab==='inventory'?'active':''}" onclick="setTab('inventory')">📦 Quản Lý Hàng Tồn Kho (${products.length})</button>
+          <button class="nav-btn ${currentTab==='stock-alerts'?'active':''}" onclick="setTab('stock-alerts')">⚠️ Cảnh Báo Thủng Kho (${products.filter(p=>p.currentStock<=p.minStockLevel).length})</button>
+          <button class="nav-btn ${currentTab==='stock-history'?'active':''}" onclick="setTab('stock-history')">📜 Lịch Sử Nhập / Xuất Kho</button>
+        `;
+      } else { // ADMIN
+        sidebarHtml = `
+          <div class="sidebar-title">Bảng Quản Trị Hệ Thống</div>
+          <button class="nav-btn ${currentTab==='overview'?'active':''}" onclick="setTab('overview')">📊 Tổng Quan KPI & Doanh Thu</button>
+          <button class="nav-btn ${currentTab==='reorder-proposals'?'active':''}" onclick="setTab('reorder-proposals')">🤖 AI Dự Báo & Duyệt Đơn Nhập (${proposals.filter(p=>p.status==='DRAFT').length})</button>
+          <button class="nav-btn ${currentTab==='admin-services'?'active':''}" onclick="setTab('admin-services')">🛠️ Quản Lý Dịch Vụ & Sản Phẩm</button>
+          <button class="nav-btn ${currentTab==='admin-users'?'active':''}" onclick="setTab('admin-users')">👥 Quản Trị Người Dùng & Phân Quyền</button>
+        `;
+      }
+
+      sidebarHtml += `
+        <div class="sidebar-title" style="margin-top:1.2rem;">Hồ Sơ Luận Văn</div>
+        <button class="nav-btn ${currentTab==='srs-doc'?'active':''}" onclick="setTab('srs-doc')">📘 Đặc Tả SRS & Use Cases</button>
+      `;
+
+      document.getElementById('sidebarMenu').innerHTML = sidebarHtml;
+
+      // 4.2 Render Main Content
+      let contentHtml = '';
+
+      // TAB: SRS & USE CASE SPECIFICATION
+      if (currentTab === 'srs-doc') {
+        contentHtml = `
+          <div>
+            <div class="glass-panel" style="background: linear-gradient(135deg, rgba(168, 85, 247, 0.15) 0%, rgba(99, 102, 241, 0.15) 100%); border-color: rgba(168, 85, 247, 0.3);">
+              <div style="display:flex; justify-content:space-between; align-items:center;">
+                <div>
+                  <span class="badge badge-purple">TÀI LIỆU ĐẶC TẢ PHẦN MỀM CHUẨN KHOÁ LUẬN TỐT NGHIỆP</span>
+                  <h2 style="font-size:1.45rem; font-weight:800; margin-top:0.4rem;">Đặc Tả Yêu Cầu & Sơ Đồ Use Case Chuẩn Hóa</h2>
+                  <p style="color:var(--text-muted); font-size:0.85rem;">Phân tích sửa lỗi Anti-pattern Đăng nhập, bảng 29 Yêu cầu Chức năng (FR), 12 Yêu cầu Phi chức năng (NFR) và Ma trận RBAC.</p>
+                </div>
+                <button class="btn btn-cyan" onclick="copyFullReportText()">📋 Sao Chép Sang Báo Cáo Word</button>
+              </div>
+            </div>
+
+            <div class="grid-2">
+              <div class="glass-panel">
+                <h3 style="font-size:1.1rem; font-weight:700; color:var(--accent-cyan); margin-bottom:0.85rem;">🔍 1. Các Điểm Đã Được Sửa Lỗi Chuẩn UML</h3>
+                <ul style="font-size:0.85rem; color:var(--text-muted); line-height:1.6; padding-left:1.2rem;">
+                  <li><strong style="color:#fff;">Loại bỏ lạm dụng `&lt;&lt;include&gt;&gt;` vào Đăng nhập:</strong> Đăng nhập là Tiền điều kiện (Precondition) của các nghiệp vụ, không phải là một bước con trong phân rã chức năng.</li>
+                  <li><strong style="color:#fff;">Khắc phục trùng số thứ tự Use Case:</strong> Tách riêng Use Case 18 (Khuyến mãi) và 19 (Hàng hóa).</li>
+                  <li><strong style="color:#fff;">Bổ sung đầy đủ nghiệp vụ Website:</strong> Bổ sung phân hệ Giỏ hàng & Mua sắm (E-Commerce), Thanh toán trực tuyến/COD, Đánh giá chất lượng 5 sao, Khóa slot giờ hẹn real-time.</li>
+                  <li><strong style="color:#fff;">Sửa lỗi nối chuỗi AI:</strong> Chuyển các bước tuần tự thành kịch bản luồng sự kiện (Flow of Events) đúng chuẩn.</li>
+                </ul>
+              </div>
+
+              <div class="glass-panel">
+                <h3 style="font-size:1.1rem; font-weight:700; color:var(--accent-orange); margin-bottom:0.85rem;">🤖 2. Thuật Toán AI Dự Báo & Nhập Kho Thông Minh</h3>
+                <div style="font-size:0.85rem; line-height:1.7; background:rgba(0,0,0,0.3); padding:0.9rem; border-radius:8px;">
+                  <div>• <strong>Tồn kho an toàn:</strong> <code style="color:var(--accent-cyan);">SS = Z × σ_D × √L</code> (Z=1.65 cho độ tin cậy 95%)</div>
+                  <div>• <strong>Điểm đặt hàng lại:</strong> <code style="color:var(--accent-cyan);">ROP = (D_avg × L) + SS</code></div>
+                  <div>• <strong>Số lượng đề xuất nhập:</strong> <code style="color:var(--accent-cyan);">Q = S_max - S_current</code></div>
+                  <div style="color:var(--accent-emerald); font-size:0.75rem; margin-top:4px;">➔ Hệ thống tự động kích hoạt khi <code>currentStock &le; ROP</code></div>
+                </div>
+              </div>
+            </div>
+
+            <div class="glass-panel">
+              <h3 style="font-size:1.15rem; font-weight:800; margin-bottom:1rem;">📋 Bảng 29 Yêu Cầu Chức Năng (Functional Requirements - FR)</h3>
+              <div class="table-container">
+                <table>
+                  <thead>
+                    <tr><th>Mã FR</th><th>Phân Hệ Nghiệp Vụ</th><th>Tên Chức Năng</th><th>Tác Tử (Actors)</th><th>Mô Tả Chi Tiết</th></tr>
+                  </thead>
+                  <tbody>
+                    <tr><td><strong>FR-01</strong></td><td>Xác thực</td><td>Đăng ký tài khoản</td><td>Khách hàng (Guest)</td><td>Nhập email, họ tên, mật khẩu, kiểm tra định dạng email và sđt.</td></tr>
+                    <tr><td><strong>FR-02</strong></td><td>Xác thực</td><td>Đăng nhập & Quản lý phiên</td><td>Toàn bộ 4 Actors</td><td>Xác thực JWT Token, mã hóa mật khẩu Bcrypt.</td></tr>
+                    <tr><td><strong>FR-05</strong></td><td>Thú cưng</td><td>Thêm hồ sơ thú cưng</td><td>Khách hàng</td><td>Nhập loài, giống, cân nặng, tháng tuổi, tiền sử bệnh án, dị ứng.</td></tr>
+                    <tr><td><strong>FR-09</strong></td><td>Dịch vụ</td><td>Đặt lịch hẹn & Khóa slot</td><td>Khách hàng</td><td>Chọn thú cưng, dịch vụ, ngày giờ, khóa slot ngăn trùng lịch.</td></tr>
+                    <tr><td><strong>FR-12</strong></td><td>E-Commerce</td><td>Giỏ hàng & Đặt hàng</td><td>Khách hàng</td><td>Thêm sản phẩm, tính tổng tiền, thanh toán COD/VNPAY.</td></tr>
+                    <tr><td><strong>FR-17</strong></td><td>Chăm sóc</td><td>Ghi nhật ký & Bệnh án</td><td>Nhân viên chăm sóc</td><td>Ghi nhận thể trạng, kết quả thăm khám và hoàn tất ca hẹn.</td></tr>
+                    <tr><td><strong>FR-19</strong></td><td>Kho hàng</td><td>Cảnh báo thủng kho</td><td>Nhân viên kho</td><td>Bật badge đỏ khi tồn kho &le; minStockLevel.</td></tr>
+                    <tr><td><strong>FR-24</strong></td><td>AI Service</td><td>Dự báo ROP & Safety Stock</td><td>AI Microservice</td><td>Tính toán nhu cầu chuỗi thời gian, SS và điểm tái đặt hàng.</td></tr>
+                    <tr><td><strong>FR-26</strong></td><td>Quản trị</td><td>Phê duyệt đề xuất AI</td><td>Admin / Quản lý</td><td>Admin bấm Phê duyệt ➔ Tự động cộng tồn kho vào Database.</td></tr>
+                  </tbody>
+                </table>
+              </div>
+            </div>
+
+            <div class="glass-panel">
+              <h3 style="font-size:1.15rem; font-weight:800; margin-bottom:1rem;">⚡ Bảng Yêu Cầu Phi Chức Năng (Non-Functional Requirements - NFR)</h3>
+              <div class="grid-3">
+                <div class="glass-card">
+                  <div style="font-weight:700; color:var(--accent-cyan);">NFR-01: Hiệu Năng (Performance)</div>
+                  <p style="font-size:0.8rem; color:var(--text-muted); margin-top:4px;">Thời gian phản hồi API &le; 1.0s, AI dự báo toàn kho &le; 2.5s, đáp ứng &ge; 200 CCU đồng thời.</p>
+                </div>
+                <div class="glass-card">
+                  <div style="font-weight:700; color:var(--accent-orange);">NFR-03: Bảo Mật (Security)</div>
+                  <p style="font-size:0.8rem; color:var(--text-muted); margin-top:4px;">Băm mật khẩu Bcrypt (10 rounds), phân quyền RBAC Middleware qua JWT, chống SQL Injection với Prisma ORM.</p>
+                </div>
+                <div class="glass-card">
+                  <div style="font-weight:700; color:var(--accent-emerald);">NFR-06: Toàn Vẹn Dữ Liệu (ACID)</div>
+                  <p style="font-size:0.8rem; color:var(--text-muted); margin-top:4px;">Đặt lịch giữ chỗ và trừ/cộng kho phải chạy trong Database Transaction ngăn ngừa Overbooking hoặc âm kho.</p>
+                </div>
+              </div>
+            </div>
+          </div>
+        `;
+      }
+
+      // TAB: CUSTOMER - SHOP
+      else if (currentTab === 'shop') {
+        contentHtml = `
+          <div>
+            <div class="grid-2" style="margin-bottom:1.5rem;">
+              <div class="promo-banner" style="background: linear-gradient(135deg, rgba(255, 153, 102, 0.25) 0%, rgba(255, 94, 98, 0.25) 100%);">
+                <div>
+                  <span class="badge" style="background:#ff9966; color:#000; margin-bottom:6px;">ƯU ĐÃI THÀNH VIÊN</span>
+                  <h3 style="font-size:1.25rem; font-weight:800;">Giảm 15% Thức Ăn & Hạt Dinh Dưỡng</h3>
+                  <p style="font-size:0.8rem; color:var(--text-muted); margin-bottom:0.85rem;">Hạt Royal Canin, Whiskas chính hãng bồi bổ thể trạng cho thú cưng.</p>
+                  <button class="btn btn-coral btn-sm" onclick="openModal('CART')">Xem Giỏ Hàng (${cart.length})</button>
+                </div>
+                <div style="font-size:3.5rem;">🥣</div>
+              </div>
+
+              <div class="promo-banner" style="background: linear-gradient(135deg, rgba(79, 172, 254, 0.25) 0%, rgba(0, 242, 254, 0.25) 100%);">
+                <div>
+                  <span class="badge badge-info" style="margin-bottom:6px;">DỊCH VỤ SPA VIP</span>
+                  <h3 style="font-size:1.25rem; font-weight:800;">Combo Spa Grooming & Tắm Dưỡng</h3>
+                  <p style="font-size:0.8rem; color:var(--text-muted); margin-bottom:0.85rem;">Tặng kèm cắt tỉa móng và vệ sinh tai sạch sẽ.</p>
+                  <button class="btn btn-cyan btn-sm" onclick="openModal('BOOK_SERVICE')">📅 Đặt Lịch Hẹn Ngay</button>
+                </div>
+                <div style="font-size:3.5rem;">✂️</div>
+              </div>
+            </div>
+
+            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:1rem;">
+              <div>
+                <h2 style="font-size:1.35rem; font-weight:800;">🛒 Cửa Hàng Sản Phẩm & Phụ Kiện Thú Cưng</h2>
+                <p style="font-size:0.8rem; color:var(--text-muted);">Sản phẩm đồng bộ tồn kho thời gian thực với cơ sở dữ liệu PostgreSQL.</p>
+              </div>
+              <div style="display:flex; gap:0.5rem;">
+                <input type="text" placeholder="Tìm kiếm sản phẩm..." class="form-control" style="width:220px;" />
+              </div>
+            </div>
+
+            <div class="grid-3">
+              ${products.map(p => `
+                <div class="glass-card" style="display:flex; flex-direction:column; justify-content:space-between;">
+                  <div>
+                    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:0.6rem;">
+                      <span class="badge badge-purple">${p.category}</span>
+                      <span class="badge ${p.currentStock <= p.minStockLevel ? 'badge-danger' : 'badge-success'}">
+                        ${p.currentStock <= p.minStockLevel ? '⚠️ Còn: ' + p.currentStock : 'Tồn kho: ' + p.currentStock} sp
+                      </span>
+                    </div>
+                    <div style="background:rgba(255,255,255,0.02); height:110px; border-radius:10px; display:flex; align-items:center; justify-content:center; font-size:3.2rem; margin-bottom:0.6rem;">
+                      ${p.category === 'Thức ăn' ? '🥣' : p.category === 'Phụ kiện' ? '🎾' : p.category === 'Mỹ phẩm Spa' ? '🧴' : '💊'}
+                    </div>
+                    <div style="color:#fbbf24; font-size:0.75rem;">⭐⭐⭐⭐⭐ (4.9 • Đã bán 86)</div>
+                    <h4 style="font-size:1.05rem; font-weight:700; margin:0.35rem 0;">${p.name}</h4>
+                    <div style="font-size:0.72rem; color:var(--text-muted);">Mã SKU: ${p.sku} • NCC: ${p.supplierName}</div>
+                  </div>
+
+                  <div style="margin-top:1rem;">
+                    <div style="display:flex; align-items:baseline; gap:0.5rem; margin-bottom:0.75rem;">
+                      <span style="font-size:1.3rem; font-weight:800; color:var(--accent-cyan);">${p.unitPrice.toLocaleString('vi-VN')} đ</span>
+                      <span style="font-size:0.8rem; color:var(--text-muted); text-decoration:line-through;">${Math.round(p.unitPrice*1.15).toLocaleString('vi-VN')} đ</span>
+                    </div>
+                    <div style="display:flex; gap:0.4rem;">
+                      <button class="btn btn-secondary btn-sm" style="flex:1;" onclick="addToCart('${p.id}')">🛒 Thêm Giỏ</button>
+                      <button class="btn btn-coral btn-sm" style="flex:1;" onclick="addToCart('${p.id}'); openModal('CART');">Mua Ngay</button>
+                    </div>
+                  </div>
+                </div>
+              `).join('')}
+            </div>
+          </div>
+        `;
+      }
+
+      // TAB: CUSTOMER - PETS
+      else if (currentTab === 'pets') {
+        contentHtml = `
+          <div>
+            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:1.2rem;">
+              <div>
+                <h2 style="font-size:1.35rem; font-weight:800;">🐶 Quản Lý Hồ Sơ Thú Cưng Của Tôi</h2>
+                <p style="font-size:0.8rem; color:var(--text-muted);">Theo dõi tình trạng sức khỏe, lịch sử tiêm phòng và dị ứng của từng bé.</p>
+              </div>
+              <button class="btn btn-coral" onclick="openModal('ADD_PET')">+ Thêm Hồ Sơ Bé Cưng Mới</button>
+            </div>
+
+            <div class="grid-3">
+              ${pets.map(p => `
+                <div class="glass-card">
+                  <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:0.6rem;">
+                    <span class="badge badge-info">${p.species}</span>
+                    <button class="btn btn-danger btn-sm" onclick="deletePet('${p.id}')">Xóa</button>
+                  </div>
+                  <div style="display:flex; align-items:center; gap:0.8rem; margin-bottom:0.8rem;">
+                    <div style="background:var(--gradient-coral); width:50px; height:50px; border-radius:50%; display:flex; align-items:center; justify-content:center; font-size:1.6rem;">
+                      ${p.species === 'Mèo' ? '🐱' : '🐶'}
+                    </div>
+                    <div>
+                      <h3 style="font-size:1.2rem; font-weight:800;">${p.name}</h3>
+                      <div style="font-size:0.78rem; color:var(--text-muted);">${p.breed} • ${p.ageMonths} tháng tuổi • ${p.weightKg} kg</div>
+                    </div>
+                  </div>
+
+                  <div style="font-size:0.8rem; background:rgba(0,0,0,0.25); padding:0.75rem; border-radius:8px; line-height:1.5;">
+                    <div>💉 <strong>Tiền sử y tế:</strong> ${p.medicalHistory}</div>
+                    <div style="color:var(--accent-orange); margin-top:4px;">⚠️ <strong>Dị ứng:</strong> ${p.allergy}</div>
+                  </div>
+
+                  <div style="margin-top:1rem; display:flex; gap:0.4rem;">
+                    <button class="btn btn-cyan btn-sm" style="width:100%;" onclick="openModal('BOOK_SERVICE')">📅 Đặt Lịch Cho ${p.name}</button>
+                  </div>
+                </div>
+              `).join('')}
+            </div>
+          </div>
+        `;
+      }
+
+      // TAB: CUSTOMER - SERVICES & BOOKING
+      else if (currentTab === 'services') {
+        contentHtml = `
+          <div>
+            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:1.2rem;">
+              <div>
+                <h2 style="font-size:1.35rem; font-weight:800;">🩺 Bảng Giá Dịch Vụ Spa & Khám Thú Y</h2>
+                <p style="font-size:0.8rem; color:var(--text-muted);">Đặt lịch trực tuyến — Tự động giữ chỗ và khóa slot giờ (Real-time Slot Lock).</p>
+              </div>
+              <button class="btn btn-coral" onclick="openModal('BOOK_SERVICE')">🚀 Đặt Lịch Ngay</button>
+            </div>
+
+            <div class="grid-2">
+              ${services.map(s => `
+                <div class="glass-card" style="display:flex; flex-direction:column; justify-content:space-between;">
+                  <div>
+                    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:0.5rem;">
+                      <span class="badge badge-purple">${s.category}</span>
+                      <span style="font-size:0.8rem; color:var(--text-muted);">⏱️ ${s.durationMinutes} phút</span>
+                    </div>
+                    <h3 style="font-size:1.2rem; font-weight:800; margin-bottom:0.4rem;">${s.name}</h3>
+                    <p style="font-size:0.82rem; color:var(--text-muted); line-height:1.5; margin-bottom:0.8rem;">${s.description}</p>
+                  </div>
+                  <div style="display:flex; justify-content:space-between; align-items:center; border-top:1px solid var(--border-glass); padding-top:0.75rem;">
+                    <div style="font-size:1.3rem; font-weight:800; color:var(--accent-cyan);">${s.price.toLocaleString('vi-VN')} đ</div>
+                    <button class="btn btn-cyan btn-sm" onclick="openModal('BOOK_SERVICE')">Đặt Lịch Này</button>
+                  </div>
+                </div>
+              `).join('')}
+            </div>
+          </div>
+        `;
+      }
+
+      // TAB: CUSTOMER - MY APPOINTMENTS
+      else if (currentTab === 'my-appointments') {
+        contentHtml = `
+          <div>
+            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:1.2rem;">
+              <div>
+                <h2 style="font-size:1.35rem; font-weight:800;">📅 Lịch Hẹn Chăm Sóc Của Tôi</h2>
+                <p style="font-size:0.8rem; color:var(--text-muted);">Theo dõi tiến độ từ tiếp nhận đến khi hoàn tất dịch vụ.</p>
+              </div>
+              <button class="btn btn-coral" onclick="openModal('BOOK_SERVICE')">+ Đặt Lịch Mới</button>
+            </div>
+
+            <div class="table-container glass-panel" style="padding:0;">
+              <table>
+                <thead>
+                  <tr>
+                    <th>Mã Lịch Hẹn</th>
+                    <th>Thú Cưng</th>
+                    <th>Dịch Vụ</th>
+                    <th>Ngày & Giờ</th>
+                    <th>Nhân Viên Phụ Trách</th>
+                    <th>Trạng Thái</th>
+                    <th>Nhật Ký Chăm Sóc</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  ${appointments.map(a => `
+                    <tr>
+                      <td><strong>#${a.id}</strong></td>
+                      <td><strong>${a.petName}</strong></td>
+                      <td>${a.serviceName}</td>
+                      <td>${a.appointmentDate} <br><small style="color:var(--accent-cyan);">${a.timeSlot}</small></td>
+                      <td>${a.staffName}</td>
+                      <td>
+                        <span class="badge ${a.status==='IN_PROGRESS'?'badge-pending':a.status==='COMPLETED'?'badge-success':'badge-info'}">
+                          ${a.status}
+                        </span>
+                      </td>
+                      <td style="max-width:240px; font-size:0.8rem; color:var(--text-muted);">
+                        ${a.careSummary || '<em>Đang thực hiện ca dịch vụ...</em>'}
+                      </td>
+                    </tr>
+                  `).join('')}
+                </tbody>
+              </table>
+            </div>
+          </div>
+        `;
+      }
+
+      // TAB: CUSTOMER - ORDERS
+      else if (currentTab === 'my-orders') {
+        contentHtml = `
+          <div>
+            <h2 style="font-size:1.35rem; font-weight:800; margin-bottom:0.4rem;">🧾 Lịch Sử Đơn Hàng Mua Sắm</h2>
+            <p style="font-size:0.8rem; color:var(--text-muted); margin-bottom:1.2rem;">Tra cứu tình trạng đơn hàng và xuất kho.</p>
+
+            <div class="table-container glass-panel" style="padding:0;">
+              <table>
+                <thead>
+                  <tr><th>Mã Đơn</th><th>Khách Hàng</th><th>Số Lượng Món</th><th>Tổng Tiền</th><th>Trạng Thái</th><th>Ngày Mua</th></tr>
+                </thead>
+                <tbody>
+                  ${orders.map(o => `
+                    <tr>
+                      <td><strong>${o.id}</strong></td>
+                      <td>${o.customerName}</td>
+                      <td>${o.itemsCount} sản phẩm</td>
+                      <td style="font-weight:800; color:var(--accent-orange);">${o.totalAmount.toLocaleString('vi-VN')} đ</td>
+                      <td><span class="badge badge-success">${o.status}</span></td>
+                      <td>${o.createdAt}</td>
+                    </tr>
+                  `).join('')}
+                </tbody>
+              </table>
+            </div>
+          </div>
+        `;
+      }
+
+      // TAB: CARE STAFF - QUEUE
+      else if (currentTab === 'queue' || currentTab === 'completed-services') {
+        const list = currentTab === 'completed-services' 
+          ? appointments.filter(a => a.status === 'COMPLETED')
+          : appointments.filter(a => a.status !== 'COMPLETED');
+
+        contentHtml = `
+          <div>
+            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:1.2rem;">
+              <div>
+                <h2 style="font-size:1.35rem; font-weight:800;">
+                  ${currentTab==='completed-services' ? '✅ Lịch Sử Ca Đã Hoàn Tất & Bệnh Án' : '📋 Danh Sách Ca Hẹn Trong Ngày Cần Xử Lý'}
+                </h2>
+                <p style="font-size:0.8rem; color:var(--text-muted);">Nhân viên nhận ca, thực hiện dịch vụ và ghi lại nhật ký chăm sóc.</p>
+              </div>
+            </div>
+
+            <div class="table-container glass-panel" style="padding:0;">
+              <table>
+                <thead>
+                  <tr>
+                    <th>Mã Ca Hẹn</th>
+                    <th>Thú Cưng & Chủ Nuôi</th>
+                    <th>Dịch Vụ Yêu Cầu</th>
+                    <th>Khung Giờ</th>
+                    <th>Lưu Ý Từ Khách</th>
+                    <th>Trạng Thái</th>
+                    <th>Thao Tác Nghiệp Vụ</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  ${list.map(a => `
+                    <tr>
+                      <td><strong>#${a.id}</strong></td>
+                      <td>
+                        <strong>${a.petName}</strong><br>
+                        <small style="color:var(--text-muted);">Chủ: ${a.customerName}</small>
+                      </td>
+                      <td>${a.serviceName}</td>
+                      <td><span style="color:var(--accent-cyan); font-weight:700;">${a.timeSlot}</span> (${a.appointmentDate})</td>
+                      <td style="max-width:180px; font-size:0.78rem; color:var(--accent-orange);">${a.notes}</td>
+                      <td>
+                        <span class="badge ${a.status==='IN_PROGRESS'?'badge-pending':a.status==='COMPLETED'?'badge-success':'badge-info'}">
+                          ${a.status}
+                        </span>
+                      </td>
+                      <td>
+                        ${a.status === 'PENDING' ? `
+                          <button class="btn btn-cyan btn-sm" onclick="updateAppointmentStatus('${a.id}', 'IN_PROGRESS', 'BS. Trần Thị Mai')">🩺 Bắt Đầu Làm</button>
+                        ` : a.status === 'IN_PROGRESS' ? `
+                          <button class="btn btn-emerald btn-sm" onclick="openModal('CARE_RECORD', '${a.id}')">📝 Ghi Bệnh Án & Hoàn Tất</button>
+                        ` : `
+                          <span style="color:var(--accent-emerald); font-size:0.8rem;">Đã lưu bệnh án ✓</span>
+                        `}
+                      </td>
+                    </tr>
+                  `).join('')}
+                </tbody>
+              </table>
+            </div>
+          </div>
+        `;
+      }
+
+      // TAB: WAREHOUSE - INVENTORY & ALERTS
+      else if (currentTab === 'inventory' || currentTab === 'stock-alerts') {
+        const displayList = currentTab === 'stock-alerts'
+          ? products.filter(p => p.currentStock <= p.minStockLevel)
+          : products;
+
+        contentHtml = `
+          <div>
+            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:1.2rem;">
+              <div>
+                <h2 style="font-size:1.35rem; font-weight:800;">
+                  ${currentTab==='stock-alerts' ? '⚠️ Cảnh Báo Sản Phẩm Dưới Ngưỡng An Toàn' : '📦 Quản Trị Danh Mục Hàng Tồn Kho'}
+                </h2>
+                <p style="font-size:0.8rem; color:var(--text-muted);">Theo dõi tồn kho thực tế, cảnh báo thủng kho và kết nối phân hệ AI.</p>
+              </div>
+              <div style="display:flex; gap:0.6rem;">
+                <button class="btn btn-purple" onclick="triggerAIAnalysis()">🤖 Quét AI Dự Báo Nhu Cầu</button>
+              </div>
+            </div>
+
+            <div class="table-container glass-panel" style="padding:0;">
+              <table>
+                <thead>
+                  <tr>
+                    <th>Mã SKU</th>
+                    <th>Tên Sản Phẩm</th>
+                    <th>Danh Mục</th>
+                    <th>Tồn Thực Tế</th>
+                    <th>Ngưỡng An Toàn (Min - Max)</th>
+                    <th>Nhà Cung Cấp</th>
+                    <th>Trạng Thái Kho</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  ${displayList.map(p => `
+                    <tr>
+                      <td><code>${p.sku}</code></td>
+                      <td><strong>${p.name}</strong></td>
+                      <td><span class="badge badge-purple">${p.category}</span></td>
+                      <td style="font-size:1.1rem; font-weight:800; color:${p.currentStock<=p.minStockLevel?'#f87171':'#34d399'};">
+                        ${p.currentStock} sp
+                      </td>
+                      <td>Min: <strong>${p.minStockLevel}</strong> | Max: ${p.maxStockLevel}</td>
+                      <td>${p.supplierName}</td>
+                      <td>
+                        ${p.currentStock <= p.minStockLevel ? `
+                          <span class="badge badge-danger">⚠️ Thủng Kho (Cần Nhập)</span>
+                        ` : `
+                          <span class="badge badge-success">Đủ Hàng An Toàn</span>
+                        `}
+                      </td>
+                    </tr>
+                  `).join('')}
+                </tbody>
+              </table>
+            </div>
+          </div>
+        `;
+      }
+
+      // TAB: WAREHOUSE - STOCK HISTORY
+      else if (currentTab === 'stock-history') {
+        contentHtml = `
+          <div>
+            <h2 style="font-size:1.35rem; font-weight:800; margin-bottom:0.4rem;">📜 Sổ Nhật Ký Nhập / Xuất Kho (Stock Transactions)</h2>
+            <p style="font-size:0.8rem; color:var(--text-muted); margin-bottom:1.2rem;">Toàn bộ biến động tồn kho được ghi nhận chi tiết theo chuẩn kế toán kho.</p>
+
+            <div class="table-container glass-panel" style="padding:0;">
+              <table>
+                <thead>
+                  <tr><th>Mã Giao Dịch</th><th>Sản Phẩm</th><th>Loại Giao Dịch</th><th>Số Lượng</th><th>Ghi Chú Nghiệp Vụ</th><th>Thời Gian</th></tr>
+                </thead>
+                <tbody>
+                  ${stockTransactions.map(t => `
+                    <tr>
+                      <td><strong>${t.id}</strong></td>
+                      <td>${t.productName}</td>
+                      <td>
+                        <span class="badge ${t.type==='IN'?'badge-success':t.type==='OUT'?'badge-danger':'badge-pending'}">
+                          ${t.type === 'IN' ? '⬇ NHẬP KHO (+)' : '⬆ XUẤT KHO (-)'}
+                        </span>
+                      </td>
+                      <td style="font-weight:800; font-size:1rem;">${t.quantity} sp</td>
+                      <td style="color:var(--text-muted); font-size:0.8rem;">${t.note}</td>
+                      <td>${t.createdAt}</td>
+                    </tr>
+                  `).join('')}
+                </tbody>
+              </table>
+            </div>
+          </div>
+        `;
+      }
+
+      // TAB: ADMIN - OVERVIEW KPI
+      else if (currentTab === 'overview') {
+        const totalRev = orders.reduce((s, o) => s + o.totalAmount, 0) + appointments.filter(a=>a.status==='COMPLETED').reduce((s, a) => s + a.price, 0);
+        const lowStockCount = products.filter(p => p.currentStock <= p.minStockLevel).length;
+
+        contentHtml = `
+          <div>
+            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:1.5rem;">
+              <div>
+                <h2 style="font-size:1.45rem; font-weight:800;">📊 Bảng Thống Kê & Báo Cáo Hiệu Suất (Admin KPI)</h2>
+                <p style="font-size:0.85rem; color:var(--text-muted);">Tổng hợp dữ liệu kinh doanh dịch vụ, doanh thu bán lẻ và cảnh báo chuỗi cung ứng.</p>
+              </div>
+              <button class="btn btn-purple" onclick="triggerAIAnalysis()">🤖 Chạy Mô Hình AI Dự Báo</button>
+            </div>
+
+            <div class="grid-4" style="margin-bottom:1.5rem;">
+              <div class="glass-card" style="border-left: 4px solid var(--accent-cyan);">
+                <div style="font-size:0.78rem; color:var(--text-muted);">TỔNG DOANH THU HỆ THỐNG</div>
+                <div style="font-size:1.6rem; font-weight:800; color:var(--accent-cyan); margin:0.3rem 0;">${totalRev.toLocaleString('vi-VN')} đ</div>
+                <div style="font-size:0.75rem; color:#10b981;">▲ +24.8% so với tháng trước</div>
+              </div>
+
+              <div class="glass-card" style="border-left: 4px solid var(--accent-orange);">
+                <div style="font-size:0.78rem; color:var(--text-muted);">LỊCH HẸN ĐÃ PHỤC VỤ</div>
+                <div style="font-size:1.6rem; font-weight:800; color:var(--accent-orange); margin:0.3rem 0;">${appointments.length} Ca</div>
+                <div style="font-size:0.75rem; color:var(--text-muted);">Tỷ lệ hoàn tất: 100%</div>
+              </div>
+
+              <div class="glass-card" style="border-left: 4px solid var(--accent-coral);">
+                <div style="font-size:0.78rem; color:var(--text-muted);">SẢN PHẨM CẢNH BÁO THỦNG KHO</div>
+                <div style="font-size:1.6rem; font-weight:800; color:#f87171; margin:0.3rem 0;">${lowStockCount} Mặt hàng</div>
+                <div style="font-size:0.75rem; color:#f87171;">Cần duyệt đơn nhập hàng AI</div>
+              </div>
+
+              <div class="glass-card" style="border-left: 4px solid var(--accent-purple);">
+                <div style="font-size:0.78rem; color:var(--text-muted);">ĐỀ XUẤT NHẬP HÀNG TỪ AI</div>
+                <div style="font-size:1.6rem; font-weight:800; color:var(--accent-purple); margin:0.3rem 0;">${proposals.filter(p=>p.status==='DRAFT').length} Đơn Draft</div>
+                <div style="font-size:0.75rem; color:var(--accent-cyan); cursor:pointer;" onclick="setTab('reorder-proposals')">Xem chi tiết ➔</div>
+              </div>
+            </div>
+
+            <div class="grid-2">
+              <div class="glass-panel">
+                <h3 style="font-size:1.1rem; font-weight:700; margin-bottom:1rem;">📈 Xu Hướng Doanh Thu 6 Tháng Gần Nhất</h3>
+                <div style="display:flex; align-items:flex-end; gap:1.2rem; height:180px; padding:1rem 0; border-bottom:1px solid var(--border-glass);">
+                  <div style="flex:1; display:flex; flex-direction:column; align-items:center; gap:6px;">
+                    <div style="background:rgba(0,242,254,0.3); width:100%; height:80px; border-radius:4px;"></div>
+                    <span style="font-size:0.72rem; color:var(--text-muted);">T4/26</span>
+                  </div>
+                  <div style="flex:1; display:flex; flex-direction:column; align-items:center; gap:6px;">
+                    <div style="background:rgba(0,242,254,0.4); width:100%; height:110px; border-radius:4px;"></div>
+                    <span style="font-size:0.72rem; color:var(--text-muted);">T5/26</span>
+                  </div>
+                  <div style="flex:1; display:flex; flex-direction:column; align-items:center; gap:6px;">
+                    <div style="background:rgba(0,242,254,0.5); width:100%; height:130px; border-radius:4px;"></div>
+                    <span style="font-size:0.72rem; color:var(--text-muted);">T6/26</span>
+                  </div>
+                  <div style="flex:1; display:flex; flex-direction:column; align-items:center; gap:6px;">
+                    <div style="background:rgba(0,242,254,0.65); width:100%; height:150px; border-radius:4px;"></div>
+                    <span style="font-size:0.72rem; color:var(--text-muted);">T7/26</span>
+                  </div>
+                  <div style="flex:1; display:flex; flex-direction:column; align-items:center; gap:6px;">
+                    <div style="background:var(--gradient-cyan); width:100%; height:175px; border-radius:4px; box-shadow:0 0 15px rgba(0,242,254,0.5);"></div>
+                    <span style="font-size:0.72rem; color:var(--accent-cyan); font-weight:700;">T8/26</span>
+                  </div>
+                </div>
+              </div>
+
+              <div class="glass-panel">
+                <h3 style="font-size:1.1rem; font-weight:700; margin-bottom:1rem;">🐶 Cơ Cấu Dịch Vụ Được Đặt Nhiều Nhất</h3>
+                <div style="display:flex; flex-direction:column; gap:0.85rem;">
+                  <div>
+                    <div style="display:flex; justify-content:space-between; font-size:0.82rem; margin-bottom:4px;">
+                      <span>Spa Grooming Toàn Diện</span>
+                      <strong style="color:var(--accent-cyan);">55%</strong>
+                    </div>
+                    <div style="background:rgba(255,255,255,0.06); height:8px; border-radius:10px; overflow:hidden;">
+                      <div style="background:var(--gradient-cyan); width:55%; height:100%;"></div>
+                    </div>
+                  </div>
+
+                  <div>
+                    <div style="display:flex; justify-content:space-between; font-size:0.82rem; margin-bottom:4px;">
+                      <span>Khám Bệnh & Siêu Âm Thú Y</span>
+                      <strong style="color:var(--accent-orange);">28%</strong>
+                    </div>
+                    <div style="background:rgba(255,255,255,0.06); height:8px; border-radius:10px; overflow:hidden;">
+                      <div style="background:var(--gradient-coral); width:28%; height:100%;"></div>
+                    </div>
+                  </div>
+
+                  <div>
+                    <div style="display:flex; justify-content:space-between; font-size:0.82rem; margin-bottom:4px;">
+                      <span>Tiêm Vắc Xin Định Kỳ</span>
+                      <strong style="color:var(--accent-emerald);">17%</strong>
+                    </div>
+                    <div style="background:rgba(255,255,255,0.06); height:8px; border-radius:10px; overflow:hidden;">
+                      <div style="background:var(--gradient-emerald); width:17%; height:100%;"></div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        `;
+      }
+
+      // TAB: ADMIN - AI REORDER PROPOSALS
+      else if (currentTab === 'reorder-proposals') {
+        contentHtml = `
+          <div>
+            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:1.2rem;">
+              <div>
+                <h2 style="font-size:1.35rem; font-weight:800;">🤖 AI Dự Báo Nhu Cầu & Phê Duyệt Kế Hoạch Nhập Hàng</h2>
+                <p style="font-size:0.8rem; color:var(--text-muted);">Mô hình chuỗi thời gian tự động phân tích độ biến thiên nhu cầu và tính toán số lượng tối ưu.</p>
+              </div>
+              <button class="btn btn-purple" onclick="triggerAIAnalysis()">⚡ Chạy Lại Mô Hình AI</button>
+            </div>
+
+            <div style="display:flex; flex-direction:column; gap:1.2rem;">
+              ${proposals.map(p => `
+                <div class="glass-panel" style="border-left: 4px solid ${p.status==='APPROVED'?'#10b981':p.status==='REJECTED'?'#ef4444':'#a855f7'}; margin-bottom:0;">
+                  <div style="display:flex; justify-content:space-between; align-items:flex-start;">
+                    <div>
+                      <div style="display:flex; align-items:center; gap:0.6rem; margin-bottom:0.4rem;">
+                        <span class="badge ${p.status==='APPROVED'?'badge-success':p.status==='REJECTED'?'badge-danger':'badge-purple'}">
+                          ${p.status}
+                        </span>
+                        <span style="font-size:0.8rem; color:var(--text-muted);">Độ tin cậy AI: <strong style="color:var(--accent-cyan);">${Math.round(p.confidenceScore*100)}%</strong></span>
+                      </div>
+                      <h3 style="font-size:1.25rem; font-weight:800;">${p.productName}</h3>
+                      <div style="font-size:0.8rem; color:var(--text-muted); margin-top:2px;">Mã SKU: ${p.sku} • Nhà Cung Cấp Đề Xuất: <strong style="color:#fff;">${p.suggestedSupplier}</strong></div>
+                    </div>
+
+                    <div style="text-align:right;">
+                      <div style="font-size:0.75rem; color:var(--text-muted);">SỐ LƯỢNG ĐỀ XUẤT NHẬP</div>
+                      <div style="font-size:1.6rem; font-weight:800; color:var(--accent-orange);">+${p.suggestedQuantity} sản phẩm</div>
+                    </div>
+                  </div>
+
+                  <div style="background:rgba(0,0,0,0.3); padding:0.85rem 1rem; border-radius:8px; margin:1rem 0; font-size:0.85rem; line-height:1.6; border:1px solid var(--border-glass);">
+                    <div style="color:var(--accent-cyan); font-weight:700;">💡 Lý giải thuật toán AI:</div>
+                    <div>${p.reason}</div>
+                    <div style="display:flex; gap:1.5rem; margin-top:0.4rem; font-size:0.78rem; color:var(--text-muted);">
+                      <span>Tồn hiện tại: <strong style="color:#f87171;">${p.currentStock}</strong></span>
+                      <span>Ngưỡng tối thiểu: <strong>${p.minStockLevel}</strong></span>
+                      <span>Hàng tồn an toàn (SS): <strong>${p.safetyStock}</strong></span>
+                      <span>Điểm đặt hàng lại (ROP): <strong>${p.reorderPoint}</strong></span>
+                    </div>
+                  </div>
+
+                  <div style="display:flex; justify-content:flex-end; gap:0.6rem;">
+                    ${p.status === 'DRAFT' ? `
+                      <button class="btn btn-danger btn-sm" onclick="rejectProposal('${p.id}')">✕ Từ Chối Đề Xuất</button>
+                      <button class="btn btn-emerald btn-sm" onclick="approveProposal('${p.id}')">✓ PHÊ DUYỆT ĐƠN (Tự Động Cộng Tồn Kho)</button>
+                    ` : `
+                      <span style="font-size:0.85rem; font-weight:700; color:${p.status==='APPROVED'?'#34d399':'#f87171'};">
+                        Đã xử lý xong [${p.status}]
+                      </span>
+                    `}
+                  </div>
+                </div>
+              `).join('')}
+            </div>
+          </div>
+        `;
+      }
+
+      // TAB: ADMIN - USERS
+      else if (currentTab === 'admin-users') {
+        contentHtml = `
+          <div>
+            <h2 style="font-size:1.35rem; font-weight:800; margin-bottom:0.4rem;">👥 Quản Trị Người Dùng & Phân Quyền Vai Trò (RBAC)</h2>
+            <p style="font-size:0.8rem; color:var(--text-muted); margin-bottom:1.2rem;">Quản lý quyền hạn truy cập của Khách hàng, Nhân viên chăm sóc, Nhân viên kho và Quản trị viên.</p>
+
+            <div class="table-container glass-panel" style="padding:0;">
+              <table>
+                <thead>
+                  <tr><th>Họ Và Tên</th><th>Email Tài Khoản</th><th>Số Điện Thoại</th><th>Vai Trò (Role)</th><th>Quyền Hạn Hệ Thống</th></tr>
+                </thead>
+                <tbody>
+                  ${users.map(u => `
+                    <tr>
+                      <td><strong>${u.fullName}</strong></td>
+                      <td><code>${u.email}</code></td>
+                      <td>${u.phone}</td>
+                      <td>
+                        <span class="badge ${u.role==='ADMIN'?'badge-purple':u.role==='CARE_STAFF'?'badge-info':u.role==='WAREHOUSE_STAFF'?'badge-pending':'badge-success'}">
+                          ${u.role}
+                        </span>
+                      </td>
+                      <td style="font-size:0.8rem; color:var(--text-muted);">
+                        ${u.role==='ADMIN'?'Toàn quyền hệ thống & Duyệt AI':u.role==='CARE_STAFF'?'Tiếp nhận ca & ghi bệnh án':u.role==='WAREHOUSE_STAFF'?'Nhập/xuất kho & kiểm kê':'Đặt lịch & mua sản phẩm'}
+                      </td>
+                    </tr>
+                  `).join('')}
+                </tbody>
+              </table>
+            </div>
+          </div>
+        `;
+      }
+
+      // TAB: ADMIN - SERVICES & PRODUCTS
+      else if (currentTab === 'admin-services') {
+        contentHtml = `
+          <div>
+            <h2 style="font-size:1.35rem; font-weight:800; margin-bottom:0.4rem;">🛠️ Quản Lý Danh Mục Dịch Vụ & Bảng Giá Niêm Yết</h2>
+            <p style="font-size:0.8rem; color:var(--text-muted); margin-bottom:1.2rem;">Thiết lập giá niêm yết, thời lượng và danh mục dịch vụ.</p>
+
+            <div class="table-container glass-panel" style="padding:0;">
+              <table>
+                <thead>
+                  <tr><th>Tên Dịch Vụ</th><th>Danh Mục</th><th>Thời Lượng</th><th>Đơn Giá</th><th>Mô Tả Nghiệp Vụ</th></tr>
+                </thead>
+                <tbody>
+                  ${services.map(s => `
+                    <tr>
+                      <td><strong>${s.name}</strong></td>
+                      <td><span class="badge badge-purple">${s.category}</span></td>
+                      <td>${s.durationMinutes} phút</td>
+                      <td style="font-weight:800; color:var(--accent-cyan);">${s.price.toLocaleString('vi-VN')} đ</td>
+                      <td style="font-size:0.8rem; color:var(--text-muted); max-width:280px;">${s.description}</td>
+                    </tr>
+                  `).join('')}
+                </tbody>
+              </table>
+            </div>
+          </div>
+        `;
+      }
+
+      document.getElementById('mainContent').innerHTML = contentHtml;
+    }
+
+    function copyFullReportText() {
+      const text = `BÁO CÁO ĐẶC TẢ YÊU CẦU PHẦN MỀM (SRS) - HỆ THỐNG QUẢN LÝ DỊCH VỤ THÚ CƯNG & DỰ BÁO NHU CẦU NHẬP HÀNG THÔNG MINH\n\n1. YÊU CẦU CHỨC NĂNG (FR-01 -> FR-29)\n- FR-01: Đăng ký tài khoản khách hàng\n- FR-02: Đăng nhập xác thực JWT & phân quyền RBAC\n- FR-05: Quản lý hồ sơ thú cưng\n- FR-09: Đặt lịch dịch vụ có khóa slot giờ real-time chống trùng\n- FR-12: Giỏ hàng, mua sắm sản phẩm và thanh toán VNPAY/COD\n- FR-17: Tiếp nhận ca hẹn và cập nhật nhật ký chăm sóc y tế\n- FR-19: Cảnh báo hàng tồn kho dưới ngưỡng an toàn\n- FR-24: AI dự báo nhu cầu chuỗi thời gian & tính điểm đặt hàng lại ROP, SS\n- FR-26: Phê duyệt đề xuất kế hoạch nhập hàng từ AI\n\n2. YÊU CẦU PHI CHỨC NĂNG (NFR-01 -> NFR-12)\n- NFR-01: Tốc độ phản hồi < 1.0s, AI Forecast < 2.5s\n- NFR-03: Mã hóa mật khẩu Bcrypt, bảo vệ JWT, chống SQL Injection\n- NFR-06: Database Transaction ACID chống Overbooking và sai lệch tồn kho\n- NFR-10: Thiết kế giao diện Glassmorphism responsive đa thiết bị.`;
+
+      navigator.clipboard.writeText(text).then(() => {
+        showToast('Đã sao chép nội dung đặc tả vào Clipboard để dán vào Word/Báo cáo!', '📋');
+      });
+    }
+
+    // Initial render
+    render();
+  </script>
+</body>
+</html>

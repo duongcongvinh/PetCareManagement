@@ -1,0 +1,266 @@
+/* Petopia Ultra-Clean Warm Light Theme Design System */
+@import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=Be+Vietnam+Pro:wght@400;500;600;700;800&display=swap');
+
+:root {
+  /* Color Palette inspired by Petopia.vn Light Mode */
+  --primary-orange: #ff6b35;
+  --primary-hover: #e85620;
+  --accent-coral: #ff8e53;
+  --accent-yellow: #f59e0b;
+  --accent-cyan: #0284c7;
+  --accent-emerald: #059669;
+  --accent-purple: #7c3aed;
+
+  /* Fresh Pearl Light Backgrounds */
+  --bg-main: #f8fafc;
+  --bg-nav: #ffffff;
+  --bg-card: #ffffff;
+  --bg-card-hover: #ffffff;
+  --bg-glass: #ffffff;
+  
+  /* Text & Borders for Light Mode */
+  --text-primary: #0f172a;
+  --text-secondary: #334155;
+  --text-muted: #64748b;
+  --border-light: #e2e8f0;
+  --border-glow: rgba(255, 107, 53, 0.4);
+
+  /* Shadows & Radius */
+  --radius-sm: 12px;
+  --radius-md: 18px;
+  --radius-lg: 24px;
+  --shadow-soft: 0 10px 30px rgba(0, 0, 0, 0.05);
+  --shadow-hover: 0 15px 35px rgba(255, 107, 53, 0.15);
+  --font-family: 'Plus Jakarta Sans', 'Be Vietnam Pro', sans-serif;
+}
+
+* {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+  font-family: var(--font-family);
+}
+
+body {
+  background-color: var(--bg-main);
+  background-image: 
+    radial-gradient(at 0% 0%, rgba(255, 107, 53, 0.07) 0px, transparent 50%),
+    radial-gradient(at 100% 0%, rgba(2, 132, 199, 0.06) 0px, transparent 50%),
+    radial-gradient(at 50% 100%, rgba(245, 158, 11, 0.05) 0px, transparent 50%);
+  background-attachment: fixed;
+  color: var(--text-primary);
+  min-height: 100vh;
+  overflow-x: hidden;
+  line-height: 1.5;
+}
+
+/* Top Announcement Bar */
+.top-announcement-bar {
+  background: linear-gradient(90deg, #ff6b35 0%, #ff8e53 50%, #f59e0b 100%);
+  color: #ffffff;
+  font-size: 0.82rem;
+  font-weight: 700;
+  padding: 0.55rem 2.5rem;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  box-shadow: 0 2px 10px rgba(255, 107, 53, 0.25);
+  letter-spacing: 0.2px;
+}
+
+/* Glassmorphism Panel in Light Mode */
+.glass-panel {
+  background: var(--bg-card);
+  border: 1px solid var(--border-light);
+  border-radius: var(--radius-md);
+  box-shadow: var(--shadow-soft);
+  transition: all 0.3s ease;
+}
+
+.glass-card {
+  background: #ffffff;
+  border: 1px solid var(--border-light);
+  border-radius: var(--radius-sm);
+  padding: 1.35rem;
+  box-shadow: 0 4px 15px rgba(0, 0, 0, 0.03);
+  transition: transform 0.25s cubic-bezier(0.16, 1, 0.3, 1), border-color 0.25s ease, box-shadow 0.25s ease;
+}
+
+.glass-card:hover {
+  transform: translateY(-4px);
+  border-color: #ff8e53;
+  box-shadow: var(--shadow-hover);
+}
+
+/* Light Theme Hero Cards */
+.hero-card {
+  position: relative;
+  overflow: hidden;
+  border-radius: var(--radius-lg);
+  padding: 2rem;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  border: 1px solid var(--border-light);
+  box-shadow: var(--shadow-soft);
+}
+
+.hero-card-orange {
+  background: linear-gradient(135deg, #fff0e6 0%, #ffe3d1 100%);
+  border-color: #ffd1b3;
+}
+
+.hero-card-cyan {
+  background: linear-gradient(135deg, #e0f2fe 0%, #bae6fd 100%);
+  border-color: #93c5fd;
+}
+
+/* Modern Glowing Buttons for Light Theme */
+.btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  padding: 0.7rem 1.4rem;
+  border-radius: 12px;
+  font-weight: 700;
+  font-size: 0.88rem;
+  cursor: pointer;
+  border: none;
+  transition: all 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+  text-decoration: none;
+}
+
+.btn-coral {
+  background: linear-gradient(135deg, #ff6b35 0%, #ff8e53 100%);
+  color: #ffffff;
+  box-shadow: 0 4px 15px rgba(255, 107, 53, 0.35);
+}
+.btn-coral:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 6px 22px rgba(255, 107, 53, 0.5);
+  background: linear-gradient(135deg, #e85620 0%, #ff7e3d 100%);
+}
+
+.btn-cyan {
+  background: linear-gradient(135deg, #0284c7 0%, #0369a1 100%);
+  color: #ffffff;
+  box-shadow: 0 4px 15px rgba(2, 132, 199, 0.3);
+}
+.btn-cyan:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 6px 22px rgba(2, 132, 199, 0.45);
+}
+
+.btn-emerald {
+  background: linear-gradient(135deg, #059669 0%, #047857 100%);
+  color: #ffffff;
+  box-shadow: 0 4px 15px rgba(5, 150, 105, 0.3);
+}
+.btn-emerald:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 6px 22px rgba(5, 150, 105, 0.45);
+}
+
+.btn-secondary {
+  background: #f1f5f9;
+  color: #1e293b;
+  border: 1px solid #cbd5e1;
+}
+.btn-secondary:hover {
+  background: #e2e8f0;
+  color: #0f172a;
+}
+
+.btn-danger {
+  background: #fef2f2;
+  color: #dc2626;
+  border: 1px solid #fca5a5;
+}
+.btn-danger:hover {
+  background: #fee2e2;
+}
+
+/* Badges for Light Theme */
+.badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  padding: 0.32rem 0.75rem;
+  border-radius: 20px;
+  font-size: 0.75rem;
+  font-weight: 700;
+  letter-spacing: 0.3px;
+}
+
+.badge-coral { background: #fff7ed; color: #ea580c; border: 1px solid #ffedd5; }
+.badge-pending { background: #fef3c7; color: #d97706; border: 1px solid #fde68a; }
+.badge-success { background: #ecfdf5; color: #059669; border: 1px solid #a7f3d0; }
+.badge-danger { background: #fef2f2; color: #dc2626; border: 1px solid #fecaca; }
+.badge-info { background: #f0f9ff; color: #0284c7; border: 1px solid #bae6fd; }
+
+/* Tables in Light Theme */
+.table-container { width: 100%; overflow-x: auto; }
+table { width: 100%; border-collapse: collapse; text-align: left; }
+th { background: #f8fafc; padding: 1.1rem; font-size: 0.82rem; font-weight: 700; color: #475569; border-bottom: 1px solid var(--border-light); }
+td { padding: 1.1rem; font-size: 0.9rem; border-bottom: 1px solid var(--border-light); color: var(--text-primary); }
+tr:hover td { background: #f8fafc; }
+
+/* Forms in Light Theme */
+.form-group { display: flex; flex-direction: column; gap: 0.45rem; margin-bottom: 1.1rem; }
+.form-group label { font-size: 0.85rem; font-weight: 600; color: var(--text-secondary); }
+.form-control { background: #ffffff; border: 1px solid #cbd5e1; border-radius: 12px; padding: 0.7rem 1rem; color: var(--text-primary); font-size: 0.9rem; outline: none; transition: border-color 0.2s ease, box-shadow 0.2s ease; }
+.form-control:focus { border-color: var(--primary-orange); box-shadow: 0 0 12px rgba(255, 107, 53, 0.2); }
+
+/* Grid System */
+.grid-2 { display: grid; grid-template-columns: repeat(auto-fit, minmax(320px, 1fr)); gap: 1.75rem; }
+.grid-3 { display: grid; grid-template-columns: repeat(auto-fit, minmax(290px, 1fr)); gap: 1.75rem; }
+.grid-4 { display: grid; grid-template-columns: repeat(auto-fit, minmax(230px, 1fr)); gap: 1.5rem; }
+
+/* Modals */
+.modal-overlay { 
+  position: fixed !important; 
+  top: 0 !important;
+  left: 0 !important;
+  right: 0 !important;
+  bottom: 0 !important;
+  width: 100vw !important;
+  height: 100vh !important;
+  background: rgba(15, 23, 42, 0.65); 
+  backdrop-filter: blur(8px); 
+  display: flex; 
+  align-items: center; 
+  justify-content: center; 
+  z-index: 99999 !important; 
+  padding: 1rem; 
+  overflow-y: auto;
+}
+.modal-content { 
+  background: #ffffff; 
+  border: 1px solid var(--border-light); 
+  border-radius: var(--radius-lg); 
+  width: 100%; 
+  max-width: 560px; 
+  padding: 2rem; 
+  box-shadow: 0 25px 60px -15px rgba(0, 0, 0, 0.35); 
+  position: relative;
+  margin: auto;
+}
+
+/* Petopia Footer in Light Mode */
+.petopia-footer {
+  background: #ffffff;
+  border-top: 1px solid #e2e8f0;
+  padding: 3.5rem 2.5rem 1.5rem 2.5rem;
+  margin-top: 4rem;
+  display: flex;
+  flex-direction: column;
+  gap: 2.5rem;
+  box-shadow: 0 -4px 20px rgba(0, 0, 0, 0.02);
+}
+
+@keyframes fadeIn { 
+  from { opacity: 0; transform: translateY(10px); } 
+  to { opacity: 1; transform: none; } 
+}
+.animate-fade-in { animation: fadeIn 0.35s cubic-bezier(0.16, 1, 0.3, 1) forwards; }
