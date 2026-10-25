@@ -9,10 +9,12 @@ const inventoryController = require('../controllers/inventoryController');
 const orderController = require('../controllers/orderController');
 const forecastingController = require('../controllers/forecastingController');
 
-// --- 1. Auth Routes ---
+// --- 1. Auth & User Management Routes ---
 router.post('/auth/register', authController.register);
 router.post('/auth/login', authController.login);
 router.get('/auth/me', authenticateToken, authController.getProfile);
+router.get('/users', authController.getUsers);
+router.post('/users', authController.createUser);
 
 // --- 2. Pet Routes ---
 router.get('/pets', authenticateToken, petController.getPets);
@@ -54,13 +56,14 @@ router.get('/sync/live-state', (req, res) => {
 });
 
 router.post('/sync/live-state', (req, res) => {
-  const { appointments, orders, products, pets, services } = req.body;
+  const { appointments, orders, products, pets, services, users } = req.body;
   if (!liveSyncStore) liveSyncStore = {};
   if (appointments !== undefined) liveSyncStore.appointments = appointments;
   if (orders !== undefined) liveSyncStore.orders = orders;
   if (products !== undefined) liveSyncStore.products = products;
   if (pets !== undefined) liveSyncStore.pets = pets;
   if (services !== undefined) liveSyncStore.services = services;
+  if (users !== undefined) liveSyncStore.users = users;
   liveSyncStore.lastUpdated = Date.now();
   res.json({ status: 'ok', data: liveSyncStore });
 });

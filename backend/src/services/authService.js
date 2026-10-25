@@ -76,8 +76,28 @@ const getUserProfile = async (userId) => {
   });
 };
 
+const getAllUsers = async () => {
+  const users = await prisma.user.findMany({
+    select: {
+      id: true,
+      email: true,
+      fullName: true,
+      phone: true,
+      role: true,
+      createdAt: true,
+    },
+    orderBy: { createdAt: 'desc' },
+  });
+  return users.map(u => ({
+    ...u,
+    status: 'ACTIVE',
+    createdAt: u.createdAt ? u.createdAt.toISOString().split('T')[0] : '2026-01-01'
+  }));
+};
+
 module.exports = {
   registerUser,
   loginUser,
   getUserProfile,
+  getAllUsers,
 };

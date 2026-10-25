@@ -52,8 +52,37 @@ const getProfile = async (req, res) => {
   }
 };
 
+const getUsers = async (req, res) => {
+  try {
+    const users = await authService.getAllUsers();
+    return res.json(users);
+  } catch (error) {
+    console.error('getUsers error:', error);
+    return res.status(500).json({ message: 'Lỗi server khi tải danh sách người dùng.' });
+  }
+};
+
+const createUser = async (req, res) => {
+  try {
+    const { email, password, fullName, phone, role } = req.body;
+    if (!email || !password || !fullName) {
+      return res.status(400).json({ message: 'Vui lòng điền đầy đủ Email, Mật khẩu và Họ tên!' });
+    }
+    const result = await authService.registerUser({ email, password, fullName, phone, role });
+    return res.status(201).json({
+      message: 'Tạo tài khoản người dùng thành công!',
+      user: result.user,
+    });
+  } catch (error) {
+    console.error('createUser error:', error);
+    return res.status(400).json({ message: error.message || 'Lỗi server khi tạo người dùng.' });
+  }
+};
+
 module.exports = {
   register,
   login,
   getProfile,
+  getUsers,
+  createUser,
 };

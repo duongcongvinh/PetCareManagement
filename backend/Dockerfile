@@ -20,5 +20,5 @@ COPY . .
 
 EXPOSE 5000
 
-# Push DB schema and start server
-CMD ["sh", "-c", "npx prisma db push --accept-data-loss && node prisma/seed.js && npm start"]
+# Push DB schema with retry until MongoDB Replica Set is ready, seed data, and start server
+CMD ["sh", "-c", "until npx prisma db push --accept-data-loss; do echo 'Waiting for MongoDB Replica Set to be ready...'; sleep 2; done && node prisma/seed.js && npm start"]

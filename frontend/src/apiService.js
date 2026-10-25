@@ -1,6 +1,6 @@
 // API Integration Service connecting React Frontend to Node.js Express + Prisma PostgreSQL Backend
 
-const API_BASE_URL = 'http://localhost:5000/api';
+const API_BASE_URL = '/api';
 
 const getHeaders = (token) => ({
   'Content-Type': 'application/json',
@@ -30,6 +30,20 @@ export const apiService = {
   getProfile: async (token) => {
     const res = await fetch(`${API_BASE_URL}/auth/me`, {
       headers: getHeaders(token)
+    });
+    return res.json();
+  },
+
+  getUsers: async () => {
+    const res = await fetch(`${API_BASE_URL}/users`);
+    return res.json();
+  },
+
+  createUser: async (userData) => {
+    const res = await fetch(`${API_BASE_URL}/users`, {
+      method: 'POST',
+      headers: getHeaders(),
+      body: JSON.stringify(userData)
     });
     return res.json();
   },

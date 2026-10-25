@@ -129,6 +129,21 @@ export default function Navbar({
               );
             })}
           </nav>
+        ) : !isStaffUser ? (
+          <div style={{ 
+            display: 'flex', 
+            alignItems: 'center', 
+            gap: '0.5rem', 
+            background: 'rgba(2, 132, 199, 0.08)', 
+            padding: '0.45rem 1.1rem', 
+            borderRadius: '24px', 
+            border: '1px solid rgba(2, 132, 199, 0.25)' 
+          }}>
+            <Shield size={16} color="#0284c7" />
+            <span style={{ fontSize: '0.85rem', fontWeight: 800, color: '#0369a1' }}>
+              🔒 CỔNG XÁC THỰC NỘI BỘ (CHƯA ĐĂNG NHẬP)
+            </span>
+          </div>
         ) : (
           /* Role Header Badge in Staff Mode */
           <div style={{ 
@@ -179,14 +194,31 @@ export default function Navbar({
                   {getRoleDisplayName(currentUser.role)}
                 </div>
               </div>
-              <button onClick={onLogout} style={{ background: 'none', border: 'none', color: '#dc2626', cursor: 'pointer', marginLeft: '0.2rem', display: 'flex' }} title="Đăng xuất">
-                <LogOut size={15} />
+              <button 
+                onClick={onLogout} 
+                style={{ 
+                  background: '#fee2e2', 
+                  border: '1px solid #fca5a5', 
+                  color: '#dc2626', 
+                  cursor: 'pointer', 
+                  marginLeft: '0.4rem', 
+                  padding: '0.25rem 0.65rem',
+                  borderRadius: '16px',
+                  fontSize: '0.75rem',
+                  fontWeight: 700,
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '4px'
+                }} 
+                title="Đăng xuất"
+              >
+                <span>Đăng xuất</span>
+                <LogOut size={13} />
               </button>
             </div>
           ) : portalMode === 'STAFF' ? (
-            <button className="btn btn-cyan" onClick={onOpenStaffLogin} style={{ borderRadius: '20px', fontSize: '0.82rem', padding: '0.45rem 0.95rem' }}>
-              <Shield size={15} />
-              Đăng Nhập Quản Trị / Staff
+            <button className="btn btn-secondary" onClick={() => onSwitchPortalMode('CUSTOMER')} style={{ borderRadius: '20px', fontSize: '0.82rem', padding: '0.45rem 0.95rem', border: '1px solid #cbd5e1' }}>
+              ← Quay lại Trang Khách
             </button>
           ) : currentUser ? (
             <div style={{ display: 'flex', alignItems: 'center', gap: '0.65rem', background: '#f8fafc', padding: '0.3rem 0.75rem', borderRadius: '30px', border: '1px solid #e2e8f0' }}>
@@ -199,13 +231,31 @@ export default function Navbar({
                   Khách Hàng
                 </div>
               </div>
-              <button onClick={onLogout} style={{ background: 'none', border: 'none', color: '#dc2626', cursor: 'pointer', marginLeft: '0.2rem', display: 'flex' }} title="Đăng xuất">
-                <LogOut size={15} />
+              <button 
+                onClick={onLogout} 
+                style={{ 
+                  background: '#fee2e2', 
+                  border: '1px solid #fca5a5', 
+                  color: '#dc2626', 
+                  cursor: 'pointer', 
+                  marginLeft: '0.4rem', 
+                  padding: '0.25rem 0.65rem',
+                  borderRadius: '16px',
+                  fontSize: '0.75rem',
+                  fontWeight: 700,
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '4px'
+                }} 
+                title="Đăng xuất"
+              >
+                <span>Đăng xuất</span>
+                <LogOut size={13} />
               </button>
             </div>
           ) : (
             <div style={{ display: 'flex', gap: '0.5rem' }}>
-              <button className="btn btn-secondary" onClick={() => window.location.href='/admin'} style={{ borderRadius: '20px', fontSize: '0.82rem', padding: '0.45rem 0.95rem', border: '1px solid #cbd5e1' }}>
+              <button className="btn btn-secondary" onClick={() => onSwitchPortalMode('STAFF')} style={{ borderRadius: '20px', fontSize: '0.82rem', padding: '0.45rem 0.95rem', border: '1px solid #cbd5e1' }}>
                 <Shield size={15} color="#475569" />
                 Cổng Quản Trị
               </button>

@@ -96,12 +96,17 @@ export default function CustomerPortal({
 
   const handleCheckout = () => {
     if (cart.length === 0) return alert('Giỏ hàng của bạn đang trống!');
+    if (!currentUser) {
+      alert('Vui lòng đăng nhập để tiến hành đặt hàng & thanh toán!');
+      onOpenLogin();
+      return;
+    }
 
     onCheckoutOrder(cart, cartTotal);
 
     setCart([]);
     setShowCartModal(false);
-    alert('🎉 Thanh toán thành công! Đã ghi nhận đơn hàng và tự động cập nhật tồn kho PostgreSQL.');
+    alert('🎉 Thanh toán thành công! Đã ghi nhận đơn hàng.');
   };
 
   const applyPromoCode = () => {
@@ -316,7 +321,10 @@ export default function CustomerPortal({
             <div style={{ textAlign: 'center', padding: '3rem', background: 'rgba(255,255,255,0.02)', borderRadius: '16px', border: '1px solid var(--border-light)' }}>
               <Heart size={48} color="#ff8e53" style={{ marginBottom: '1rem' }} />
               <h3 style={{ fontSize: '1.2rem', fontWeight: 800, marginBottom: '0.5rem' }}>Vui lòng đăng nhập</h3>
-              <p style={{ color: 'var(--text-muted)' }}>Bạn cần đăng nhập để quản lý hồ sơ thú cưng của mình.</p>
+              <p style={{ color: 'var(--text-muted)', marginBottom: '1.25rem' }}>Bạn cần đăng nhập để quản lý hồ sơ thú cưng của mình.</p>
+              <button className="btn btn-coral" onClick={onOpenLogin}>
+                Đăng Nhập Khách Hàng Ngay
+              </button>
             </div>
           ) : myPets.length === 0 ? (
             <div style={{ textAlign: 'center', padding: '3rem', background: 'rgba(255,255,255,0.02)', borderRadius: '16px', border: '1px solid var(--border-light)' }}>
@@ -383,6 +391,10 @@ export default function CustomerPortal({
                     <Clock size={14} /> Thời gian: {s.durationMinutes} phút
                   </span>
                   <button className="btn btn-coral" onClick={() => {
+                    if (!currentUser) {
+                      onOpenLogin();
+                      return;
+                    }
                     setBookingForm(prev => ({ ...prev, serviceId: s.id }));
                     setShowBookingModal(true);
                   }}>

@@ -2,8 +2,8 @@ import React, { useState } from 'react';
 import { Shield, Lock, Mail, UserCheck, AlertCircle } from 'lucide-react';
 
 export default function StaffLoginModal({ isOpen = true, onClose, onLoginSuccess, isFullPage = false }) {
-  const [email, setEmail] = useState('admin@petcare.com');
-  const [password, setPassword] = useState('123456');
+  const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
   const [selectedRole, setSelectedRole] = useState('ADMIN');
   const [errorMessage, setErrorMessage] = useState('');
 
@@ -118,6 +118,7 @@ export default function StaffLoginModal({ isOpen = true, onClose, onLoginSuccess
               type="email" 
               className="form-control" 
               style={{ paddingLeft: '36px' }}
+              placeholder="Nhập email (vd: admin@petcare.com)..."
               value={email} 
               onChange={e => setEmail(e.target.value)} 
               required 
@@ -133,6 +134,7 @@ export default function StaffLoginModal({ isOpen = true, onClose, onLoginSuccess
               type="password" 
               className="form-control" 
               style={{ paddingLeft: '36px' }}
+              placeholder="Nhập mật khẩu (mẫu: 123456)..."
               value={password} 
               onChange={e => setPassword(e.target.value)} 
               required 

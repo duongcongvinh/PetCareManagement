@@ -13,6 +13,8 @@ export default function AdminDashboard({
   appointments = [], 
   products = [], 
   services = INITIAL_SERVICES, 
+  users = INITIAL_USERS,
+  onAddUser,
   reorderProposals = [], 
   onApproveProposal, 
   onRejectProposal,
@@ -20,10 +22,37 @@ export default function AdminDashboard({
   customerOrders = [],
   onUpdateOrderStatus
 }) {
-  const [users, setUsers] = useState(INITIAL_USERS);
   const [suppliers, setSuppliers] = useState(INITIAL_SUPPLIERS);
   const [promotions, setPromotions] = useState(INITIAL_PROMOTIONS);
   const [serviceList, setServiceList] = useState(services);
+  const [showAddUserModal, setShowAddUserModal] = useState(false);
+  const [newUserData, setNewUserData] = useState({
+    fullName: '',
+    email: '',
+    phone: '',
+    role: 'CUSTOMER',
+    password: 'password123'
+  });
+
+  const handleAddUserSubmit = async (e) => {
+    e.preventDefault();
+    if (!newUserData.fullName || !newUserData.email) {
+      alert('Vui lòng nhập đầy đủ Họ tên và Email!');
+      return;
+    }
+    if (onAddUser) {
+      await onAddUser(newUserData);
+    }
+    alert(`✅ Đã tạo thành công tài khoản [${newUserData.fullName}] với vai trò ${newUserData.role}!`);
+    setShowAddUserModal(false);
+    setNewUserData({
+      fullName: '',
+      email: '',
+      phone: '',
+      role: 'CUSTOMER',
+      password: 'password123'
+    });
+  };
 
   const handleConfirmOrder = (orderId) => {
     onUpdateOrderStatus(orderId, 'CONFIRMED');
@@ -1401,6 +1430,86 @@ export default function AdminDashboard({
               <div style={{ display: 'flex', gap: '0.75rem', justifyContent: 'flex-end', marginTop: '1rem' }}>
                 <button type="button" className="btn btn-secondary" onClick={() => setShowAddSupplierModal(false)}>Hủy</button>
                 <button type="submit" className="btn btn-primary">Lưu Nhà Cung Cấp</button>
+              </div>
+            </form>
+          </div>
+        </div>
+      {/* MODAL: THÊM TÀI KHOẢN MỚI */}
+      {showAddUserModal && (
+        <div className="modal-overlay">
+          <div className="modal-content animate-fade-in" style={{ maxWidth: 520 }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.25rem' }}>
+              <h3 style={{ fontSize: '1.25rem', fontWeight: 800, display: 'flex', alignItems: 'center', gap: '8px' }}>
+                <Shield size={20} color="#00f2fe" /> Thêm Tài Khoản Mới Vào Hệ Thống
+              </h3>
+              <button className="btn btn-secondary" style={{ padding: '0.2rem 0.5rem' }} onClick={() => setShowAddUserModal(false)}>✕</button>
+            </div>
+
+            <form onSubmit={handleAddUserSubmit}>
+              <div className="form-group" style={{ marginBottom: '1rem' }}>
+                <label style={{ fontSize: '0.85rem', fontWeight: 700, marginBottom: '4px', display: 'block' }}>Họ và Tên Người Dùng *</label>
+                <input 
+                  className="form-control" 
+                  value={newUserData.fullName} 
+                  onChange={e => setNewUserData({ ...newUserData, fullName: e.target.value })} 
+                  placeholder="Ví dụ: Hoàng Văn Bảo" 
+                  required 
+                />
+              </div>
+
+              <div className="grid-2" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem', marginBottom: '1rem' }}>
+                <div className="form-group">
+                  <label style={{ fontSize: '0.85rem', fontWeight: 700, marginBottom: '4px', display: 'block' }}>Email Đăng Nhập *</label>
+                  <input 
+                    type="email" 
+                    className="form-control" 
+                    value={newUserData.email} 
+                    onChange={e => setNewUserData({ ...newUserData, email: e.target.value })} 
+                    placeholder="email@petcare.com" 
+                    required 
+                  />
+                </div>
+                <div className="form-group">
+                  <label style={{ fontSize: '0.85rem', fontWeight: 700, marginBottom: '4px', display: 'block' }}>Số Điện Thoại</label>
+                  <input 
+                    className="form-control" 
+                    value={newUserData.phone} 
+                    onChange={e => setNewUserData({ ...newUserData, phone: e.target.value })} 
+                    placeholder="0912345678" 
+                  />
+                </div>
+              </div>
+
+              <div className="grid-2" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem', marginBottom: '1.25rem' }}>
+                <div className="form-group">
+                  <label style={{ fontSize: '0.85rem', fontWeight: 700, marginBottom: '4px', display: 'block' }}>Vai Trò (Role) *</label>
+                  <select 
+                    className="form-control" 
+                    value={newUserData.role} 
+                    onChange={e => setNewUserData({ ...newUserData, role: e.target.value })}
+                  >
+                    <option value="CUSTOMER">Khách Hàng (CUSTOMER)</option>
+                    <option value="CARE_STAFF">Nhân Viên Spa (CARE_STAFF)</option>
+                    <option value="WAREHOUSE_STAFF">Nhân Viên Kho (WAREHOUSE_STAFF)</option>
+                    <option value="ADMIN">Quản Trị Viên (ADMIN)</option>
+                  </select>
+                </div>
+                <div className="form-group">
+                  <label style={{ fontSize: '0.85rem', fontWeight: 700, marginBottom: '4px', display: 'block' }}>Mật Khẩu Khởi Tạo *</label>
+                  <input 
+                    type="password" 
+                    className="form-control" 
+                    value={newUserData.password} 
+                    onChange={e => setNewUserData({ ...newUserData, password: e.target.value })} 
+                    placeholder="Nhập mật khẩu..." 
+                    required 
+                  />
+                </div>
+              </div>
+
+              <div style={{ display: 'flex', gap: '0.75rem', justifyContent: 'flex-end', marginTop: '1.25rem' }}>
+                <button type="button" className="btn btn-secondary" onClick={() => setShowAddUserModal(false)}>Hủy</button>
+                <button type="submit" className="btn btn-primary">Xác Nhận Tạo Tài Khoản</button>
               </div>
             </form>
           </div>

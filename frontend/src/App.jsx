@@ -16,7 +16,8 @@ import {
   INITIAL_APPOINTMENTS, 
   INITIAL_PRODUCTS, 
   INITIAL_PROMOTIONS,
-  INITIAL_REORDER_PROPOSALS 
+  INITIAL_REORDER_PROPOSALS,
+  INITIAL_USERS
 } from './mockData';
 
 const getUrlPortalConfig = () => {
@@ -47,24 +48,35 @@ export default function App() {
   };
 
   const urlConfig = getUrlPortalConfig();
-  const userStorageKey = urlConfig.isStaffUrl ? 'petcare_staff_user' : 'petcare_customer_user';
-  const tokenStorageKey = urlConfig.isStaffUrl ? 'petcare_staff_token' : 'petcare_customer_token';
+  const isStaffUrl = urlConfig.isStaffUrl;
 
   const [currentUser, setCurrentUser] = useState(() => {
-    const saved = getInitialState(userStorageKey, null);
-    if (saved) return saved;
-    // Default demo session based on URL
-    if (urlConfig.isStaffUrl) {
-      return { id: 'u-2', fullName: 'Trần Thị Chăm Sóc (Spa Staff)', email: 'care@petcare.com', role: 'CARE_STAFF' };
+    try {
+      const storageKey = isStaffUrl ? 'petcare_staff_user' : 'petcare_customer_user';
+      const saved = localStorage.getItem(storageKey);
+      return saved ? JSON.parse(saved) : null;
+    } catch (e) {
+      return null;
     }
-    return { id: 'u-4', fullName: 'Phạm Minh Anh', email: 'khachhang@gmail.com', role: 'CUSTOMER' };
   });
 
-  const [authToken, setAuthToken] = useState(() => getInitialState(tokenStorageKey, 'mock-jwt-token-2026'));
+  const [authToken, setAuthToken] = useState(() => {
+    try {
+      const storageKey = isStaffUrl ? 'petcare_staff_token' : 'petcare_customer_token';
+      return localStorage.getItem(storageKey) || null;
+    } catch (e) {
+      return null;
+    }
+  });
   
   // Portal Navigation State ('CUSTOMER' or 'STAFF')
-  const [portalMode, setPortalMode] = useState(() => urlConfig.isStaffUrl ? 'STAFF' : 'CUSTOMER');
-  const [activeRole, setActiveRole] = useState(() => urlConfig.isStaffUrl ? (currentUser?.role || 'ADMIN') : 'CUSTOMER');
+  const [portalMode, setPortalMode] = useState(() => isStaffUrl ? 'STAFF' : 'CUSTOMER');
+
+  const [activeRole, setActiveRole] = useState(() => {
+    if (currentUser) return currentUser.role;
+    if (isStaffUrl) return 'ADMIN';
+    return 'CUSTOMER';
+  });
 
   const getDefaultTabForRole = (role) => {
     if (role === 'ADMIN') return 'overview';
@@ -73,7 +85,7 @@ export default function App() {
     return 'home';
   };
 
-  const initialRole = currentUser?.role || (urlConfig.isStaffUrl ? 'ADMIN' : 'CUSTOMER');
+  const initialRole = currentUser?.role || (isStaffUrl ? 'ADMIN' : 'CUSTOMER');
 
   const [activeTab, setActiveTab] = useState(() => {
     const saved = getInitialState('petcare_activeTab_' + initialRole, null);
@@ -88,13 +100,34 @@ export default function App() {
   useEffect(() => {
     const handleUrlChange = () => {
       const path = window.location.pathname.toLowerCase();
-      if (path.startsWith('/admin') || path.startsWith('/staff') || window.location.search.includes('portal=admin')) {
+      const isStaff = path.startsWith('/admin') || path.startsWith('/staff') || window.location.search.includes('portal=admin');
+      
+      if (isStaff) {
         setPortalMode('STAFF');
-        if (!currentUser || currentUser.role === 'CUSTOMER') {
-          const staffUser = getInitialState('petcare_staff_user', { id: 'u-1', fullName: 'Nguyễn Văn Admin (Quản Trị Admin)', email: 'admin@petcare.com', role: 'ADMIN' });
-          setCurrentUser(staffUser);
-          setActiveRole(staffUser.role);
-        }
+        try {
+          const savedStaff = localStorage.getItem('petcare_staff_user');
+          if (savedStaff) {
+            const parsed = JSON.parse(savedStaff);
+            setCurrentUser(parsed);
+            setActiveRole(parsed.role);
+          } else {
+            setCurrentUser(null);
+            setAuthToken(null);
+          }
+        } catch (e) {}
+      } else {
+        setPortalMode('CUSTOMER');
+        try {
+          const savedCust = localStorage.getItem('petcare_customer_user');
+          if (savedCust) {
+            const parsed = JSON.parse(savedCust);
+            setCurrentUser(parsed);
+            setActiveRole('CUSTOMER');
+          } else {
+            setCurrentUser(null);
+            setAuthToken(null);
+          }
+        } catch (e) {}
       }
     };
     handleUrlChange();
@@ -122,22 +155,33 @@ export default function App() {
     }
   }, [activeTab, activeRole]);
 
-  // Persist sessions separately
+  // Persist authenticated user session across page refreshes (F5)
   useEffect(() => { 
     if (currentUser) {
-      const key = ['CARE_STAFF', 'WAREHOUSE_STAFF', 'ADMIN'].includes(currentUser.role) ? 'petcare_staff_user' : 'petcare_customer_user';
-      localStorage.setItem(key, JSON.stringify(currentUser)); 
+      try {
+        if (['CARE_STAFF', 'WAREHOUSE_STAFF', 'ADMIN'].includes(currentUser.role)) {
+          localStorage.setItem('petcare_staff_user', JSON.stringify(currentUser));
+        } else {
+          localStorage.setItem('petcare_customer_user', JSON.stringify(currentUser));
+        }
+      } catch (e) {}
     }
   }, [currentUser]);
 
   useEffect(() => { 
     if (authToken) {
-      const key = urlConfig.isStaffUrl ? 'petcare_staff_token' : 'petcare_customer_token';
-      localStorage.setItem(key, JSON.stringify(authToken)); 
+      try {
+        if (currentUser && ['CARE_STAFF', 'WAREHOUSE_STAFF', 'ADMIN'].includes(currentUser.role)) {
+          localStorage.setItem('petcare_staff_token', authToken);
+        } else {
+          localStorage.setItem('petcare_customer_token', authToken);
+        }
+      } catch (e) {}
     }
   }, [authToken]);
   
   // Core Data State
+  const [users, setUsers] = useState(() => getInitialState('petcare_users', INITIAL_USERS));
   const [pets, setPets] = useState(() => getInitialState('petcare_pets', INITIAL_PETS));
   const [services, setServices] = useState(() => getInitialState('petcare_services', INITIAL_SERVICES));
   const [appointments, setAppointments] = useState(() => getInitialState('petcare_appointments', INITIAL_APPOINTMENTS));
@@ -156,6 +200,7 @@ export default function App() {
       channel = new BroadcastChannel('petcare_realtime_sync');
       channel.onmessage = (event) => {
         const { type, payload } = event.data || {};
+        if (type === 'SYNC_USERS') setUsers(payload);
         if (type === 'SYNC_APPOINTMENTS') setAppointments(payload);
         if (type === 'SYNC_ORDERS') setOrders(payload);
         if (type === 'SYNC_PETS') setPets(payload);
@@ -165,6 +210,7 @@ export default function App() {
 
     const handleStorageChange = (e) => {
       try {
+        if (e.key === 'petcare_users' && e.newValue) setUsers(JSON.parse(e.newValue));
         if (e.key === 'petcare_appointments' && e.newValue) setAppointments(JSON.parse(e.newValue));
         if (e.key === 'petcare_orders' && e.newValue) setOrders(JSON.parse(e.newValue));
         if (e.key === 'petcare_pets' && e.newValue) setPets(JSON.parse(e.newValue));
@@ -182,6 +228,10 @@ export default function App() {
         const res = await apiService.getLiveSyncState();
         if (res && res.data && res.data.lastUpdated && res.data.lastUpdated > lastSyncTimestamp) {
           lastSyncTimestamp = res.data.lastUpdated;
+          if (res.data.users) {
+            setUsers(res.data.users);
+            localStorage.setItem('petcare_users', JSON.stringify(res.data.users));
+          }
           if (res.data.appointments) {
             setAppointments(res.data.appointments);
             localStorage.setItem('petcare_appointments', JSON.stringify(res.data.appointments));
@@ -200,7 +250,7 @@ export default function App() {
           }
         } else if (res && !res.data) {
           // If server store is empty, push current active browser state to initialize server
-          apiService.postLiveSyncState({ appointments, orders, products, pets });
+          apiService.postLiveSyncState({ appointments, orders, products, pets, users });
         }
       } catch (err) {}
     };
@@ -231,6 +281,7 @@ export default function App() {
 
     // Push to backend sync engine for cross-browser (Chrome <-> Edge)
     const keyMap = {
+      'SYNC_USERS': 'users',
       'SYNC_APPOINTMENTS': 'appointments',
       'SYNC_ORDERS': 'orders',
       'SYNC_PRODUCTS': 'products',
@@ -241,7 +292,7 @@ export default function App() {
     }
   };
 
-  // Load Live Services & Product Data from Express API & PostgreSQL
+  // Load Live Services, Products & Users from Express API & MongoDB
   useEffect(() => {
     async function loadLiveData() {
       try {
@@ -252,45 +303,106 @@ export default function App() {
       } catch (err) {
         console.log('Using local fallback state for services');
       }
+
+      try {
+        const liveUsers = await apiService.getUsers();
+        if (Array.isArray(liveUsers) && liveUsers.length > 0) {
+          setUsers(liveUsers);
+          localStorage.setItem('petcare_users', JSON.stringify(liveUsers));
+        }
+      } catch (err) {
+        console.log('Using local fallback state for users');
+      }
     }
     loadLiveData();
   }, []);
 
-  const togglePortalMode = () => {
-    // If not logged in as Staff/Admin, prompt Staff & Admin Login modal!
-    if (!currentUser || currentUser.role === 'CUSTOMER') {
-      setShowStaffLoginModal(true);
-      return;
+  const handleAddUser = async (userData) => {
+    let created = null;
+    try {
+      const res = await apiService.createUser(userData);
+      if (res && res.user) {
+        created = {
+          ...res.user,
+          status: 'ACTIVE',
+          createdAt: res.user.createdAt ? res.user.createdAt.split('T')[0] : new Date().toISOString().split('T')[0]
+        };
+      }
+    } catch (err) {
+      console.warn('Backend user creation error:', err);
     }
 
-    if (portalMode === 'CUSTOMER') {
-      setPortalMode('STAFF');
-      if (currentUser.role === 'CARE_STAFF') setActiveTab('queue');
-      else if (currentUser.role === 'WAREHOUSE_STAFF') setActiveTab('inventory');
-      else setActiveTab('overview');
-    } else {
+    if (!created) {
+      created = {
+        id: 'u-' + Date.now(),
+        fullName: userData.fullName,
+        email: userData.email,
+        phone: userData.phone || '0901234567',
+        role: userData.role || 'CUSTOMER',
+        status: 'ACTIVE',
+        createdAt: new Date().toISOString().split('T')[0]
+      };
+    }
+
+    const updated = [created, ...users.filter(u => u.email !== created.email)];
+    setUsers(updated);
+    broadcastSync('SYNC_USERS', updated, 'petcare_users');
+    return created;
+  };
+
+  const togglePortalMode = (targetMode) => {
+    if (targetMode === 'CUSTOMER' || portalMode === 'STAFF') {
+      window.history.pushState({}, '', '/');
       setPortalMode('CUSTOMER');
       setActiveTab('home');
+      try {
+        const savedCust = localStorage.getItem('petcare_customer_user');
+        if (savedCust) {
+          const parsed = JSON.parse(savedCust);
+          setCurrentUser(parsed);
+          setActiveRole('CUSTOMER');
+        } else {
+          setCurrentUser(null);
+          setAuthToken(null);
+        }
+      } catch (e) {}
+    } else {
+      window.history.pushState({}, '', '/admin');
+      setPortalMode('STAFF');
+      try {
+        const savedStaff = localStorage.getItem('petcare_staff_user');
+        if (savedStaff) {
+          const parsed = JSON.parse(savedStaff);
+          setCurrentUser(parsed);
+          setActiveRole(parsed.role);
+        } else {
+          setCurrentUser(null);
+          setAuthToken(null);
+        }
+      } catch (e) {}
     }
   };
 
   const handleLogout = () => {
-    localStorage.removeItem('petcare_currentUser');
-    localStorage.removeItem('petcare_authToken');
-    localStorage.removeItem('petcare_portalMode');
-    localStorage.removeItem('petcare_activeRole');
-    localStorage.removeItem('petcare_activeTab');
-    
-    setCurrentUser(null);
-    setAuthToken(null);
-
     const path = window.location.pathname.toLowerCase();
-    if (path.startsWith('/admin') || path.startsWith('/staff')) {
-      setPortalMode('STAFF');
+    const isStaff = path.startsWith('/admin') || path.startsWith('/staff') || portalMode === 'STAFF';
+
+    if (isStaff) {
+      try {
+        localStorage.removeItem('petcare_staff_user');
+        localStorage.removeItem('petcare_staff_token');
+      } catch (e) {}
+      setCurrentUser(null);
+      setAuthToken(null);
       setActiveRole('ADMIN');
-      setShowStaffLoginModal(true);
+      setActiveTab('overview');
     } else {
-      setPortalMode('CUSTOMER');
+      try {
+        localStorage.removeItem('petcare_customer_user');
+        localStorage.removeItem('petcare_customer_token');
+      } catch (e) {}
+      setCurrentUser(null);
+      setAuthToken(null);
       setActiveRole('CUSTOMER');
       setActiveTab('home');
     }
@@ -575,6 +687,10 @@ export default function App() {
             isOpen={true}
             isFullPage={true}
             onLoginSuccess={(user, token) => {
+              try {
+                localStorage.setItem('petcare_staff_user', JSON.stringify(user));
+                if (token) localStorage.setItem('petcare_staff_token', token);
+              } catch (e) {}
               setCurrentUser(user);
               if (token) setAuthToken(token);
               setActiveRole(user.role);
@@ -618,6 +734,8 @@ export default function App() {
                   appointments={appointments}
                   products={products}
                   services={services}
+                  users={users}
+                  onAddUser={handleAddUser}
                   customerOrders={orders}
                   onUpdateOrderStatus={(id, status) => setOrders(orders.map(o => o.id === id ? { ...o, status } : o))}
                   reorderProposals={reorderProposals}
@@ -636,7 +754,12 @@ export default function App() {
       <LoginModal 
         isOpen={showLoginModal}
         onClose={() => setShowLoginModal(false)}
+        onAddUser={handleAddUser}
         onLoginSuccess={(user, token) => {
+          try {
+            localStorage.setItem('petcare_customer_user', JSON.stringify(user));
+            if (token) localStorage.setItem('petcare_customer_token', token);
+          } catch (e) {}
           setCurrentUser(user);
           if (token) setAuthToken(token);
           setPortalMode('CUSTOMER');
@@ -651,6 +774,10 @@ export default function App() {
         isFullPage={false}
         onClose={() => setShowStaffLoginModal(false)}
         onLoginSuccess={(user, token) => {
+          try {
+            localStorage.setItem('petcare_staff_user', JSON.stringify(user));
+            if (token) localStorage.setItem('petcare_staff_token', token);
+          } catch (e) {}
           setCurrentUser(user);
           if (token) setAuthToken(token);
           setActiveRole(user.role);

@@ -77,11 +77,12 @@ PetCareManagement/
 
 ## 🐳 KHỞI CHẠY BẰNG DOCKER COMPOSE (Khuyên Dùng - 1 Lệnh Duy Nhất)
 
-Chỉ cần chạy lệnh duy nhất tại thư mục gốc:
+Chạy lệnh Docker Compose (khuyên dùng Docker Compose v2 với khoảng trắng):
 
 ```bash
-docker-compose up --build
+docker compose up -d --build
 ```
+*(Nếu dùng Docker Compose v1 cũ, chạy: `docker-compose up -d --build`)*
 
 Sau khi khởi động xong, toàn bộ các dịch vụ sẽ sẵn sàng:
 

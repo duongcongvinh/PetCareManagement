@@ -1,7 +1,9 @@
 import React, { useState } from 'react';
 import { User, Lock, Mail, ShoppingBag } from 'lucide-react';
 
-export default function LoginModal({ isOpen, onClose, onLoginSuccess }) {
+import { apiService } from '../apiService';
+
+export default function LoginModal({ isOpen, onClose, onLoginSuccess, onAddUser }) {
   const [isRegister, setIsRegister] = useState(false);
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -9,20 +11,70 @@ export default function LoginModal({ isOpen, onClose, onLoginSuccess }) {
 
   if (!isOpen) return null;
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
     if (!email || !password) return alert('Vui lòng nhập đầy đủ Email và Mật khẩu!');
     if (isRegister && !fullName) return alert('Vui lòng nhập họ và tên!');
 
     const nameToUse = fullName || (email.split('@')[0]);
 
+    if (isRegister) {
+      try {
+        const res = await apiService.register({
+          email,
+          password,
+          fullName: nameToUse,
+          role: 'CUSTOMER'
+        });
+        if (res && res.user) {
+          const userItem = {
+            ...res.user,
+            status: 'ACTIVE',
+            createdAt: res.user.createdAt ? res.user.createdAt.split('T')[0] : new Date().toISOString().split('T')[0]
+          };
+          if (onAddUser) onAddUser(userItem);
+          onLoginSuccess(userItem, res.token);
+          alert('🎉 Chúc mừng bạn đã đăng ký tài khoản thành công!');
+          onClose();
+          return;
+        } else if (res && res.message) {
+          alert(res.message);
+          return;
+        }
+      } catch (err) {
+        console.warn('Backend register fallback:', err);
+      }
+    } else {
+      try {
+        const res = await apiService.login(email, password);
+        if (res && res.user) {
+          const userItem = {
+            ...res.user,
+            status: 'ACTIVE',
+            createdAt: res.user.createdAt ? res.user.createdAt.split('T')[0] : new Date().toISOString().split('T')[0]
+          };
+          onLoginSuccess(userItem, res.token);
+          onClose();
+          return;
+        } else if (res && res.message) {
+          alert(res.message);
+          return;
+        }
+      } catch (err) {
+        console.warn('Backend login fallback:', err);
+      }
+    }
+
     const userObj = {
       id: 'u-' + Date.now(),
       email,
       fullName: nameToUse,
-      role: 'CUSTOMER'
+      role: 'CUSTOMER',
+      status: 'ACTIVE',
+      createdAt: new Date().toISOString().split('T')[0]
     };
 
+    if (onAddUser) onAddUser(userObj);
     onLoginSuccess(userObj, 'customer-jwt-token-' + Date.now());
     onClose();
   };
@@ -91,6 +143,25 @@ export default function LoginModal({ isOpen, onClose, onLoginSuccess }) {
             onClick={() => setIsRegister(!isRegister)}
           >
             {isRegister ? 'Đăng nhập ngay' : 'Tạo tài khoản mới'}
+          </button>
+        </div>
+
+        <div style={{ marginTop: '1rem', borderTop: '1px solid #e2e8f0', paddingTop: '1rem' }}>
+          <button 
+            type="button" 
+            className="btn btn-secondary" 
+            style={{ width: '100%', borderRadius: '12px', fontSize: '0.82rem', justifyContent: 'center', background: '#f8fafc', border: '1px dashed #cbd5e1' }}
+            onClick={() => {
+              onLoginSuccess({
+                id: 'u-4',
+                email: 'khachhang@gmail.com',
+                fullName: 'Phạm Minh Anh',
+                role: 'CUSTOMER'
+              }, 'customer-jwt-token-demo');
+              onClose();
+            }}
+          >
+            ⚡ Đăng Nhập Nhanh Mẫu: Phạm Minh Anh (Khách Hàng)
           </button>
         </div>
 
