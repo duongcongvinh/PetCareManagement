@@ -112,7 +112,6 @@ export default function AdminDashboard({
   const displayForecasts = seasonalAIResult ? seasonalAIResult.seasonal_forecasts : DEFAULT_FORECASTS;
 
   // Modals
-  const [showAddUserModal, setShowAddUserModal] = useState(false);
   const [showAddSupplierModal, setShowAddSupplierModal] = useState(false);
   const [showAddPromoModal, setShowAddPromoModal] = useState(false);
   const [showAddServiceModal, setShowAddServiceModal] = useState(false);
@@ -1434,6 +1433,8 @@ export default function AdminDashboard({
             </form>
           </div>
         </div>
+      )}
+
       {/* MODAL: THÊM TÀI KHOẢN MỚI */}
       {showAddUserModal && (
         <div className="modal-overlay">
