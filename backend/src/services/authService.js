@@ -95,9 +95,30 @@ const getAllUsers = async () => {
   }));
 };
 
+const updateUserProfile = async (userId, { fullName, phone, password }) => {
+  const data = {};
+  if (fullName) data.fullName = fullName;
+  if (phone) data.phone = phone;
+  if (password) data.password = await bcrypt.hash(password, 10);
+
+  return await prisma.user.update({
+    where: { id: userId },
+    data,
+    select: {
+      id: true,
+      email: true,
+      fullName: true,
+      phone: true,
+      role: true,
+      createdAt: true,
+    },
+  });
+};
+
 module.exports = {
   registerUser,
   loginUser,
   getUserProfile,
   getAllUsers,
+  updateUserProfile,
 };

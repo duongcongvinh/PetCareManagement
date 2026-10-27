@@ -8,6 +8,7 @@ import WarehouseDashboard from './components/WarehouseDashboard';
 import AdminDashboard from './components/AdminDashboard';
 import LoginModal from './components/LoginModal';
 import StaffLoginModal from './components/StaffLoginModal';
+import ToastContainer, { toast, confirmModal } from './components/ToastNotification';
 
 import { apiService } from './apiService';
 import { 
@@ -17,7 +18,8 @@ import {
   INITIAL_PRODUCTS, 
   INITIAL_PROMOTIONS,
   INITIAL_REORDER_PROPOSALS,
-  INITIAL_USERS
+  INITIAL_USERS,
+  INITIAL_SUPPLIERS
 } from './mockData';
 
 const getUrlPortalConfig = () => {
@@ -41,7 +43,28 @@ export default function App() {
   const getInitialState = (key, defaultVal) => {
     try {
       const saved = localStorage.getItem(key);
-      return saved ? JSON.parse(saved) : defaultVal;
+      if (saved) {
+        const parsed = JSON.parse(saved);
+        if (Array.isArray(defaultVal) && Array.isArray(parsed)) {
+          const defaultMap = new Map(defaultVal.map(i => [i.id, i]));
+          const enrichedParsed = parsed.map(item => {
+            const def = defaultMap.get(item.id);
+            if (def) {
+              return { ...def, ...item, category: item.category || def.category };
+            }
+            return item;
+          });
+          const existingIds = new Set(enrichedParsed.map(i => i.id));
+          const missingItems = defaultVal.filter(i => !existingIds.has(i.id));
+          const merged = missingItems.length > 0 ? [...enrichedParsed, ...missingItems] : enrichedParsed;
+          try {
+            localStorage.setItem(key, JSON.stringify(merged));
+          } catch (e) {}
+          return merged;
+        }
+        return parsed;
+      }
+      return defaultVal;
     } catch {
       return defaultVal;
     }
@@ -95,6 +118,22 @@ export default function App() {
   
   const [showLoginModal, setShowLoginModal] = useState(false);
   const [showStaffLoginModal, setShowStaffLoginModal] = useState(false);
+
+  // Persistent shopping cart state
+  const [cart, setCart] = useState(() => {
+    try {
+      const saved = localStorage.getItem('petcare_cart');
+      return saved ? JSON.parse(saved) : [];
+    } catch (e) {
+      return [];
+    }
+  });
+
+  useEffect(() => {
+    try {
+      localStorage.setItem('petcare_cart', JSON.stringify(cart));
+    } catch (e) {}
+  }, [cart]);
 
   // Handle URL path changes & Admin URL detection (/admin)
   useEffect(() => {
@@ -188,6 +227,7 @@ export default function App() {
   const [products, setProducts] = useState(() => getInitialState('petcare_products', INITIAL_PRODUCTS));
   const [promotions, setPromotions] = useState(() => getInitialState('petcare_promotions', INITIAL_PROMOTIONS));
   const [reorderProposals, setReorderProposals] = useState(() => getInitialState('petcare_reorderProposals', INITIAL_REORDER_PROPOSALS));
+  const [suppliers, setSuppliers] = useState(() => getInitialState('petcare_suppliers', INITIAL_SUPPLIERS));
   const [orders, setOrders] = useState(() => getInitialState('petcare_orders', [
     { id: 'ORD-001', customerName: 'Phạm Minh Anh', phone: '0934567890', items: 'Hạt Royal Canin (2kg) x 2, Pate Cung Đình x 5', total: 600000, status: 'PENDING', date: '2026-08-25 10:30' },
     { id: 'ORD-002', customerName: 'Nguyễn Văn Nam', phone: '0912345678', items: 'Cát Đậu Nành Tofu x 3', total: 270000, status: 'CONFIRMED', date: '2026-08-25 09:15' }
@@ -205,6 +245,7 @@ export default function App() {
         if (type === 'SYNC_ORDERS') setOrders(payload);
         if (type === 'SYNC_PETS') setPets(payload);
         if (type === 'SYNC_PRODUCTS') setProducts(payload);
+        if (type === 'SYNC_SUPPLIERS') setSuppliers(payload);
       };
     } catch (e) {}
 
@@ -215,6 +256,7 @@ export default function App() {
         if (e.key === 'petcare_orders' && e.newValue) setOrders(JSON.parse(e.newValue));
         if (e.key === 'petcare_pets' && e.newValue) setPets(JSON.parse(e.newValue));
         if (e.key === 'petcare_products' && e.newValue) setProducts(JSON.parse(e.newValue));
+        if (e.key === 'petcare_suppliers' && e.newValue) setSuppliers(JSON.parse(e.newValue));
       } catch (err) {}
     };
 
@@ -400,9 +442,11 @@ export default function App() {
       try {
         localStorage.removeItem('petcare_customer_user');
         localStorage.removeItem('petcare_customer_token');
+        localStorage.removeItem('petcare_cart');
       } catch (e) {}
       setCurrentUser(null);
       setAuthToken(null);
+      setCart([]);
       setActiveRole('CUSTOMER');
       setActiveTab('home');
     }
@@ -487,12 +531,16 @@ export default function App() {
     return { success: true };
   };
 
-  const handleCheckoutOrder = (cartItems, total) => {
+  const handleCheckoutOrder = (cartItems, total, shippingInfo = {}) => {
     const newOrder = {
-      id: 'ORD-' + Date.now(),
+      id: shippingInfo.orderId || ('ORD-' + Date.now().toString().slice(-6)),
       customerId: currentUser?.id || 'u-4',
-      customerName: currentUser?.fullName || 'Phạm Minh Anh',
-      phone: '0901234567',
+      customerName: shippingInfo.recipientName || currentUser?.fullName || 'Phạm Minh Anh',
+      phone: shippingInfo.recipientPhone || currentUser?.phone || '0901234567',
+      address: shippingInfo.deliveryAddress || 'TP. Hồ Chí Minh',
+      paymentMethod: shippingInfo.paymentMethod === 'VIETQR' ? 'Chuyển Khoản VietQR' : shippingInfo.paymentMethod === 'MOMO' ? 'Ví MoMo' : 'Tiền Mặt COD',
+      shippingMethod: shippingInfo.shippingMethod === 'EXPRESS' ? 'Hỏa Tốc 2H' : 'Tiêu Chuẩn (1-2 ngày)',
+      notes: shippingInfo.deliveryNotes || '',
       items: cartItems.map(i => `${i.name} x ${i.quantity}`).join(', '),
       total: total,
       status: 'PENDING',
@@ -512,6 +560,50 @@ export default function App() {
     setOrders(updatedOrders);
     broadcastSync('SYNC_PRODUCTS', updatedProducts, 'petcare_products');
     broadcastSync('SYNC_ORDERS', updatedOrders, 'petcare_orders');
+  };
+
+  const handleCancelAppointment = async (appId) => {
+    try {
+      await apiService.cancelAppointment(appId, authToken);
+    } catch (e) {}
+
+    const updated = appointments.map(a => {
+      if (a.id === appId) {
+        return { ...a, status: 'CANCELLED' };
+      }
+      return a;
+    });
+    setAppointments(updated);
+    broadcastSync('SYNC_APPOINTMENTS', updated, 'petcare_appointments');
+    toast.success('Đã hủy ca hẹn thành công. Khung giờ đã được giải phóng!', 'Hủy Ca Hẹn');
+  };
+
+  const handleUpdateProfile = async (profileData) => {
+    try {
+      const res = await apiService.updateProfile(profileData, authToken);
+      if (res && res.user) {
+        setCurrentUser(res.user);
+        const storageKey = ['CARE_STAFF', 'WAREHOUSE_STAFF', 'ADMIN'].includes(res.user.role) 
+          ? 'petcare_staff_user' 
+          : 'petcare_customer_user';
+        localStorage.setItem(storageKey, JSON.stringify(res.user));
+        toast.success('Cập nhật hồ sơ thông tin cá nhân thành công!', 'Hồ Sơ Cá Nhân');
+        return { success: true };
+      }
+    } catch (e) {}
+
+    const updatedUser = { 
+      ...currentUser, 
+      fullName: profileData.fullName || currentUser?.fullName, 
+      phone: profileData.phone || currentUser?.phone 
+    };
+    setCurrentUser(updatedUser);
+    const storageKey = ['CARE_STAFF', 'WAREHOUSE_STAFF', 'ADMIN'].includes(updatedUser.role) 
+      ? 'petcare_staff_user' 
+      : 'petcare_customer_user';
+    localStorage.setItem(storageKey, JSON.stringify(updatedUser));
+    toast.success('Cập nhật hồ sơ thông tin cá nhân thành công!', 'Hồ Sơ Cá Nhân');
+    return { success: true };
   };
 
   // 2. Care Staff Actions
@@ -554,7 +646,26 @@ export default function App() {
     });
     setProducts(updated);
     broadcastSync('SYNC_PRODUCTS', updated, 'petcare_products');
-    alert('✅ Cập nhật giao dịch tồn kho thành công!');
+    toast.success('Cập nhật giao dịch tồn kho thành công!', 'Quản Lý Kho Hàng');
+  };
+
+  const handleAddSupplier = async (supData) => {
+    let created;
+    try {
+      const res = await apiService.createSupplier(supData, authToken);
+      if (res && res.supplier) created = res.supplier;
+    } catch (e) {}
+
+    if (!created) {
+      created = {
+        ...supData,
+        id: 'sup-' + Date.now()
+      };
+    }
+    const updated = [created, ...suppliers];
+    setSuppliers(updated);
+    broadcastSync('SYNC_SUPPLIERS', updated, 'petcare_suppliers');
+    toast.success(`Đã thêm nhà cung cấp mới: ${created.name}`, 'Nhà Cung Cấp');
   };
 
   // Add New Product Action
@@ -571,7 +682,7 @@ export default function App() {
       supplierName: newProdData.supplierName || 'Royal Canin Việt Nam'
     };
     setProducts([created, ...products]);
-    alert(`✅ Đã thêm sản phẩm mới thành công: ${created.name} (SKU: ${created.sku})`);
+    toast.success(`Đã thêm sản phẩm mới thành công: ${created.name}`, 'Kho Hàng');
   };
 
   // 4. AI Forecasting & Reorder Proposal Actions
@@ -631,7 +742,7 @@ export default function App() {
 
     setProducts(products.map(p => p.id === prop.productId ? { ...p, currentStock: p.currentStock + prop.suggestedQuantity } : p));
     setReorderProposals(reorderProposals.map(p => p.id === proposalId ? { ...p, status: 'APPROVED' } : p));
-    alert(`🎉 Đã phê duyệt kế hoạch! Đã tạo đơn nhập hàng sẵn sàng cho Nhân viên kho thực thi.`);
+    toast.success('Đã phê duyệt kế hoạch! Đã tạo đơn nhập hàng sẵn sàng cho Nhân viên kho thực thi.', 'Phê Duyệt Đề Xuất AI');
   };
 
   const handleRejectProposal = async (proposalId) => {
@@ -654,6 +765,7 @@ export default function App() {
         activeTab={activeTab}
         onTabChange={setActiveTab}
         activeRole={activeRole}
+        cartCount={cart.reduce((s, i) => s + i.quantity, 0)}
       />
 
       {/* PORTAL MODE 1: KHÁCH HÀNG (CUSTOMER PORTAL) */}
@@ -669,8 +781,12 @@ export default function App() {
             products={products}
             promotions={promotions}
             orders={orders}
+            cart={cart}
+            setCart={setCart}
             onAddPet={handleAddPet}
             onBookAppointment={handleBookAppointment}
+            onCancelAppointment={handleCancelAppointment}
+            onUpdateProfile={handleUpdateProfile}
             onCheckoutOrder={handleCheckoutOrder}
             onOpenLogin={() => setShowLoginModal(true)}
             onQuickLogin={(user) => {
@@ -712,7 +828,10 @@ export default function App() {
             <main style={{ flex: 1, padding: '1.75rem 2rem', overflowY: 'auto' }}>
               {currentUser.role === 'CARE_STAFF' && (
                 <CareStaffDashboard 
+                  activeTab={activeTab}
                   appointments={appointments}
+                  pets={pets}
+                  services={services}
                   onUpdateStatus={handleUpdateAppointmentStatus}
                 />
               )}
@@ -722,6 +841,8 @@ export default function App() {
                   activeTab={activeTab}
                   products={products}
                   reorderProposals={reorderProposals}
+                  suppliers={suppliers}
+                  onAddSupplier={handleAddSupplier}
                   onUpdateStock={handleUpdateStock}
                   onTriggerAI={handleTriggerAI}
                   onAddProduct={handleAddProduct}
@@ -842,6 +963,9 @@ export default function App() {
           </div>
         </div>
       )}
+
+      {/* GLOBAL TOAST & CONFIRMATION CONTAINER */}
+      <ToastContainer />
     </div>
   );
 }

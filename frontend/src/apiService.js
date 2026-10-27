@@ -34,6 +34,15 @@ export const apiService = {
     return res.json();
   },
 
+  updateProfile: async (profileData, token) => {
+    const res = await fetch(`${API_BASE_URL}/auth/profile`, {
+      method: 'PUT',
+      headers: getHeaders(token),
+      body: JSON.stringify(profileData)
+    });
+    return res.json();
+  },
+
   getUsers: async () => {
     const res = await fetch(`${API_BASE_URL}/users`);
     return res.json();
@@ -69,6 +78,23 @@ export const apiService = {
     return res.json();
   },
 
+  createService: async (serviceData, token) => {
+    const res = await fetch(`${API_BASE_URL}/services`, {
+      method: 'POST',
+      headers: getHeaders(token),
+      body: JSON.stringify(serviceData)
+    });
+    return res.json();
+  },
+
+  deleteService: async (id, token) => {
+    const res = await fetch(`${API_BASE_URL}/services/${id}`, {
+      method: 'DELETE',
+      headers: getHeaders(token)
+    });
+    return res.json();
+  },
+
   getAppointments: async (token) => {
     const res = await fetch(`${API_BASE_URL}/appointments`, { headers: getHeaders(token) });
     return res.json();
@@ -92,6 +118,14 @@ export const apiService = {
     return res.json();
   },
 
+  cancelAppointment: async (id, token) => {
+    const res = await fetch(`${API_BASE_URL}/appointments/${id}/cancel`, {
+      method: 'PUT',
+      headers: getHeaders(token)
+    });
+    return res.json();
+  },
+
   // Product & Inventory APIs
   getProducts: async (token) => {
     const res = await fetch(`${API_BASE_URL}/products`, { headers: getHeaders(token) });
@@ -103,6 +137,20 @@ export const apiService = {
       method: 'PUT',
       headers: getHeaders(token),
       body: JSON.stringify({ type, quantity, note })
+    });
+    return res.json();
+  },
+
+  getSuppliers: async (token) => {
+    const res = await fetch(`${API_BASE_URL}/suppliers`, { headers: getHeaders(token) });
+    return res.json();
+  },
+
+  createSupplier: async (supplierData, token) => {
+    const res = await fetch(`${API_BASE_URL}/suppliers`, {
+      method: 'POST',
+      headers: getHeaders(token),
+      body: JSON.stringify(supplierData)
     });
     return res.json();
   },

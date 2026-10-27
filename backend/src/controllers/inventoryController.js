@@ -52,10 +52,23 @@ const getSuppliers = async (req, res) => {
   }
 };
 
+const createSupplier = async (req, res) => {
+  try {
+    const supplier = await inventoryService.createNewSupplier(req.body);
+    return res.status(201).json({
+      message: 'Thêm nhà cung cấp mới thành công!',
+      supplier,
+    });
+  } catch (error) {
+    return res.status(500).json({ message: 'Lỗi khi thêm nhà cung cấp mới.' });
+  }
+};
+
 module.exports = {
   getProducts,
   createProduct,
   updateStock,
   getLowStockAlerts,
   getSuppliers,
+  createSupplier,
 };

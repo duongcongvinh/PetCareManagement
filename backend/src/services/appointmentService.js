@@ -77,15 +77,52 @@ const updateAppointmentStatus = async (id, { status, careSummary, staffId }, use
   });
 };
 
+const cancelAppointment = async (id, user) => {
+  const app = await prisma.appointment.findUnique({ where: { id } });
+  if (!app) {
+    throw new Error('Lịch hẹn không tồn tại.');
+  }
+  if (user.role === 'CUSTOMER' && app.customerId !== user.id) {
+    throw new Error('Bạn không có quyền hủy lịch hẹn này.');
+  }
+  if (app.status !== 'PENDING') {
+    throw new Error('Chỉ có thể hủy ca hẹn khi đang ở trạng thái chờ tiếp nhận (PENDING).');
+  }
+  return await prisma.appointment.update({
+    where: { id },
+    data: { status: 'CANCELLED' },
+    include: { pet: true, service: true },
+  });
+};
+
 const getAllServices = async () => {
   return await prisma.serviceCatalog.findMany({
-    orderBy: { name: 'asc' },
+    orderBy: { createdAt: 'desc' },
   });
+};
+
+const createNewService = async ({ name, description, durationMinutes, price, category }) => {
+  return await prisma.serviceCatalog.create({
+    data: {
+      name,
+      description,
+      durationMinutes: parseInt(durationMinutes || 45),
+      price: parseFloat(price),
+      category: category || 'Spa',
+    },
+  });
+};
+
+const deleteService = async (id) => {
+  return await prisma.serviceCatalog.delete({ where: { id } });
 };
 
 module.exports = {
   getAppointmentsByUser,
   createNewAppointment,
   updateAppointmentStatus,
+  cancelAppointment,
   getAllServices,
+  createNewService,
+  deleteService,
 };

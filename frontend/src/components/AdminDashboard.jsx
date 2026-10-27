@@ -7,6 +7,7 @@ import {
 
 import { INITIAL_USERS, INITIAL_SUPPLIERS, INITIAL_PROMOTIONS, INITIAL_PETS, INITIAL_SERVICES, FIVE_YEAR_HISTORICAL_DATA, PRODUCT_SEASONAL_FORECASTS, FIVE_YEAR_ORDER_HISTORY } from '../mockData';
 import { apiService } from '../apiService';
+import { toast } from './ToastNotification';
 
 export default function AdminDashboard({ 
   activeTab, 
@@ -25,6 +26,12 @@ export default function AdminDashboard({
   const [suppliers, setSuppliers] = useState(INITIAL_SUPPLIERS);
   const [promotions, setPromotions] = useState(INITIAL_PROMOTIONS);
   const [serviceList, setServiceList] = useState(services);
+
+  React.useEffect(() => {
+    if (services && services.length > 0) {
+      setServiceList(services);
+    }
+  }, [services]);
   const [showAddUserModal, setShowAddUserModal] = useState(false);
   const [newUserData, setNewUserData] = useState({
     fullName: '',
@@ -37,13 +44,13 @@ export default function AdminDashboard({
   const handleAddUserSubmit = async (e) => {
     e.preventDefault();
     if (!newUserData.fullName || !newUserData.email) {
-      alert('Vui lòng nhập đầy đủ Họ tên và Email!');
+      toast.warning('Vui lòng nhập đầy đủ Họ tên và Email!', 'Thiếu Thông Tin');
       return;
     }
     if (onAddUser) {
       await onAddUser(newUserData);
     }
-    alert(`✅ Đã tạo thành công tài khoản [${newUserData.fullName}] với vai trò ${newUserData.role}!`);
+    toast.success(`Đã tạo thành công tài khoản [${newUserData.fullName}] với vai trò ${newUserData.role}!`, 'Tài Khoản');
     setShowAddUserModal(false);
     setNewUserData({
       fullName: '',
@@ -56,7 +63,7 @@ export default function AdminDashboard({
 
   const handleConfirmOrder = (orderId) => {
     onUpdateOrderStatus(orderId, 'CONFIRMED');
-    alert(`✅ Đã xác nhận đơn hàng ${orderId}!`);
+    toast.success(`Đã xác nhận đơn hàng ${orderId}!`, 'Đơn Hàng');
   };
 
   // 5-Year Weather & Seasonality AI State
@@ -112,13 +119,11 @@ export default function AdminDashboard({
   const displayForecasts = seasonalAIResult ? seasonalAIResult.seasonal_forecasts : DEFAULT_FORECASTS;
 
   // Modals
-  const [showAddUserModal, setShowAddUserModal] = useState(false);
   const [showAddSupplierModal, setShowAddSupplierModal] = useState(false);
   const [showAddPromoModal, setShowAddPromoModal] = useState(false);
   const [showAddServiceModal, setShowAddServiceModal] = useState(false);
 
   // Forms
-  const [newUser, setNewUser] = useState({ fullName: '', email: '', phone: '', role: 'CUSTOMER' });
   const [newSupplier, setNewSupplier] = useState({ name: '', contactPerson: '', phone: '', email: '', address: '' });
   const [newPromo, setNewPromo] = useState({ code: '', name: '', discountPercent: 10, applicableTo: 'Tất cả' });
   const [newService, setNewService] = useState({ name: '', description: '', durationMinutes: 45, price: 200000, category: 'Spa & Grooming' });
@@ -127,27 +132,19 @@ export default function AdminDashboard({
   const draftProposals = reorderProposals.filter(p => p.status === 'DRAFT');
 
   // Handlers
-  const handleCreateUser = (e) => {
-    e.preventDefault();
-    if (!newUser.fullName || !newUser.email) return alert('Vui lòng nhập đủ thông tin!');
-    setUsers([...users, { ...newUser, id: 'u-' + Date.now(), status: 'ACTIVE', createdAt: new Date().toISOString().split('T')[0] }]);
-    setNewUser({ fullName: '', email: '', phone: '', role: 'CUSTOMER' });
-    setShowAddUserModal(false);
-    alert('✅ Đã tạo tài khoản mới thành công!');
-  };
 
   const handleCreateSupplier = (e) => {
     e.preventDefault();
-    if (!newSupplier.name) return alert('Vui lòng nhập tên nhà cung cấp!');
+    if (!newSupplier.name) return toast.warning('Vui lòng nhập tên nhà cung cấp!', 'Thiếu Thông Tin');
     setSuppliers([...suppliers, { ...newSupplier, id: 'sup-' + Date.now() }]);
     setNewSupplier({ name: '', contactPerson: '', phone: '', email: '', address: '' });
     setShowAddSupplierModal(false);
-    alert('✅ Đã thêm nhà cung cấp mới thành công!');
+    toast.success('Đã thêm nhà cung cấp mới thành công!', 'Nhà Cung Cấp');
   };
 
   const handleCreatePromo = (e) => {
     e.preventDefault();
-    if (!newPromo.code) return alert('Vui lòng nhập mã khuyến mãi!');
+    if (!newPromo.code) return toast.warning('Vui lòng nhập mã khuyến mãi!', 'Thiếu Thông Tin');
     setPromotions([...promotions, { 
       ...newPromo, 
       id: 'promo-' + Date.now(), 
@@ -158,7 +155,7 @@ export default function AdminDashboard({
     }]);
     setNewPromo({ code: '', name: '', discountPercent: 10, applicableTo: 'Tất cả' });
     setShowAddPromoModal(false);
-    alert('✅ Đã tạo chương trình khuyến mãi mới thành công!');
+    toast.success('Đã tạo chương trình khuyến mãi mới thành công!', 'Khuyến Mãi');
   };
 
   const handleCreateService = (e) => {
@@ -1283,43 +1280,6 @@ export default function AdminDashboard({
         </div>
       )}
 
-      {/* MODAL THÊM TÀI KHOẢN */}
-      {showAddUserModal && (
-        <div className="modal-overlay">
-          <div className="modal-content">
-            <h3 style={{ fontSize: '1.2rem', fontWeight: 800, marginBottom: '1rem' }}>Thêm Tài Khoản Mới</h3>
-            <form onSubmit={handleCreateUser}>
-              <div className="form-group">
-                <label>Họ và Tên *</label>
-                <input className="form-control" value={newUser.fullName} onChange={e => setNewUser({ ...newUser, fullName: e.target.value })} required />
-              </div>
-              <div className="form-group">
-                <label>Email *</label>
-                <input type="email" className="form-control" value={newUser.email} onChange={e => setNewUser({ ...newUser, email: e.target.value })} required />
-              </div>
-              <div className="grid-2">
-                <div className="form-group">
-                  <label>Số Điện Thoại</label>
-                  <input className="form-control" value={newUser.phone} onChange={e => setNewUser({ ...newUser, phone: e.target.value })} />
-                </div>
-                <div className="form-group">
-                  <label>Phân Quyền Role</label>
-                  <select className="form-control" value={newUser.role} onChange={e => setNewUser({ ...newUser, role: e.target.value })}>
-                    <option value="CUSTOMER">Khách Hàng (CUSTOMER)</option>
-                    <option value="CARE_STAFF">Nhân Viên Chăm Sóc (CARE_STAFF)</option>
-                    <option value="WAREHOUSE_STAFF">Nhân Viên Kho (WAREHOUSE_STAFF)</option>
-                    <option value="ADMIN">Quản Trị Viên (ADMIN)</option>
-                  </select>
-                </div>
-              </div>
-              <div style={{ display: 'flex', gap: '0.75rem', justifyContent: 'flex-end', marginTop: '1rem' }}>
-                <button type="button" className="btn btn-secondary" onClick={() => setShowAddUserModal(false)}>Hủy</button>
-                <button type="submit" className="btn btn-primary">Lưu Tài Khoản</button>
-              </div>
-            </form>
-          </div>
-        </div>
-      )}
 
       {/* MODAL THÊM DỊCH VỤ */}
       {showAddServiceModal && (
@@ -1434,6 +1394,8 @@ export default function AdminDashboard({
             </form>
           </div>
         </div>
+      )}
+
       {/* MODAL: THÊM TÀI KHOẢN MỚI */}
       {showAddUserModal && (
         <div className="modal-overlay">
