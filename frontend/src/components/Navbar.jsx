@@ -1,5 +1,6 @@
 import React from 'react';
 import { PawPrint, User, LogOut, Shield, Search, ShoppingBag, PhoneCall, Home, Calendar, Heart, Clock, ArrowRight, UserCheck } from 'lucide-react';
+import { toast } from './ToastNotification';
 
 export default function Navbar({ 
   currentUser, 
@@ -170,8 +171,22 @@ export default function Navbar({
             <button 
               className="btn btn-secondary" 
               style={{ padding: '0.55rem', borderRadius: '50%', position: 'relative', background: '#fff7ed', border: '1px solid #ffedd5' }} 
-              onClick={() => onTabChange('shop')}
-              title="Giỏ hàng"
+              onClick={() => {
+                if (!currentUser) {
+                  toast.warning('Vui lòng đăng nhập tài khoản khách hàng để xem giỏ hàng!', 'Yêu Cầu Đăng Nhập', {
+                    actionText: '🔐 Đăng Nhập',
+                    onAction: () => onOpenLogin && onOpenLogin()
+                  });
+                  if (onOpenLogin) onOpenLogin();
+                  return;
+                }
+                if (cartCount > 0) {
+                  onTabChange('checkout');
+                } else {
+                  onTabChange('shop');
+                }
+              }}
+              title="Giỏ hàng & Thanh toán"
             >
               <ShoppingBag size={18} color="#ea580c" />
               {cartCount > 0 && (

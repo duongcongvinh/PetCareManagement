@@ -92,10 +92,23 @@ const getAllSuppliers = async () => {
   return await prisma.supplier.findMany({ orderBy: { name: 'asc' } });
 };
 
+const createNewSupplier = async ({ name, contactPerson, phone, email, address }) => {
+  return await prisma.supplier.create({
+    data: {
+      name,
+      contactPerson,
+      phone,
+      email,
+      address,
+    },
+  });
+};
+
 module.exports = {
   getAllProducts,
   createNewProduct,
   updateProductStock,
   getLowStockProducts,
   getAllSuppliers,
+  createNewSupplier,
 };

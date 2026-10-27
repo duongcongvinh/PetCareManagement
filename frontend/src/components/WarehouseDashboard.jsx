@@ -1,5 +1,7 @@
 import React, { useState } from 'react';
-import { Package, AlertTriangle, ArrowUpRight, ArrowDownRight, Plus, Brain, CheckCircle, Clock } from 'lucide-react';
+import { Package, AlertTriangle, ArrowUpRight, ArrowDownRight, Plus, Brain, CheckCircle, Clock, Building2, Phone, Mail, MapPin, Users } from 'lucide-react';
+import { INITIAL_SUPPLIERS } from '../mockData';
+import { toast } from './ToastNotification';
 
 export default function WarehouseDashboard({ 
   activeTab, 
@@ -7,10 +9,40 @@ export default function WarehouseDashboard({
   reorderProposals = [], 
   onUpdateStock, 
   onTriggerAI,
-  onAddProduct
+  onAddProduct,
+  suppliers = INITIAL_SUPPLIERS,
+  onAddSupplier
 }) {
   const [selectedProduct, setSelectedProduct] = useState(null);
   const [stockTxForm, setStockTxForm] = useState({ type: 'IN', quantity: 10, note: '' });
+
+  // Modal Add New Supplier
+  const [showAddSupplierModal, setShowAddSupplierModal] = useState(false);
+  const [newSupplierForm, setNewSupplierForm] = useState({
+    name: '',
+    contactPerson: '',
+    phone: '',
+    email: '',
+    address: '',
+    productCategories: 'Thức ăn hạt, Pate'
+  });
+
+  const handleCreateSupplierSubmit = (e) => {
+    e.preventDefault();
+    if (!newSupplierForm.name) return;
+    if (onAddSupplier) {
+      onAddSupplier(newSupplierForm);
+    }
+    setShowAddSupplierModal(false);
+    setNewSupplierForm({
+      name: '',
+      contactPerson: '',
+      phone: '',
+      email: '',
+      address: '',
+      productCategories: 'Thức ăn hạt, Pate'
+    });
+  };
 
   // Modal Add New Product
   const [showAddProductModal, setShowAddProductModal] = useState(false);
@@ -56,7 +88,7 @@ export default function WarehouseDashboard({
 
   const handleExecuteInboundOrder = (proposal) => {
     onUpdateStock(proposal.productId, 'IN', proposal.suggestedQuantity, `Nhập kho theo đơn AI đã duyệt (Đề xuất #${proposal.id})`);
-    alert(`✅ Đã xử lý thực tế đơn nhập hàng: +${proposal.suggestedQuantity} ${proposal.productName} vào kho!`);
+    toast.success(`Đã xử lý thực tế đơn nhập hàng: +${proposal.suggestedQuantity} ${proposal.productName} vào kho!`, 'Nhập Kho Thành Công');
   };
 
   return (
@@ -223,6 +255,83 @@ export default function WarehouseDashboard({
           </div>
         </div>
       )}
+
+      {/* QUẢN LÝ NHÀ CUNG CẤP (SUPPLIERS TAB) */}
+      {activeTab === 'suppliers' && (
+        <div className="glass-panel" style={{ padding: '1.25rem' }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.25rem', flexWrap: 'wrap', gap: '1rem' }}>
+            <div>
+              <h2 style={{ fontSize: '1.25rem', fontWeight: 800, display: 'flex', alignItems: 'center', gap: '8px' }}>
+                <Building2 size={20} color="#00f2fe" /> Danh Sách Đối Tác & Nhà Cung Cấp
+              </h2>
+              <p style={{ fontSize: '0.82rem', color: 'var(--text-muted)' }}>
+                Quản lý thông tin đầu mối cung ứng thức ăn hạt, pate, cát vệ sinh và vật tư thú y
+              </p>
+            </div>
+            <button className="btn btn-coral" onClick={() => setShowAddSupplierModal(true)}>
+              <Plus size={16} /> Thêm Nhà Cung Cấp Mới
+            </button>
+          </div>
+
+          <div className="grid-3" style={{ marginBottom: '1.5rem' }}>
+            <div className="glass-card" style={{ padding: '1rem' }}>
+              <div style={{ fontSize: '0.8rem', color: 'var(--text-muted)' }}>Tổng Số Nhà Cung Cấp</div>
+              <div style={{ fontSize: '1.6rem', fontWeight: 800, color: '#00f2fe', marginTop: '4px' }}>{suppliers.length}</div>
+            </div>
+            <div className="glass-card" style={{ padding: '1rem' }}>
+              <div style={{ fontSize: '0.8rem', color: 'var(--text-muted)' }}>Tỷ Lệ Đáp Ứng Đơn AI</div>
+              <div style={{ fontSize: '1.6rem', fontWeight: 800, color: '#38ef7d', marginTop: '4px' }}>100%</div>
+            </div>
+            <div className="glass-card" style={{ padding: '1rem' }}>
+              <div style={{ fontSize: '0.8rem', color: 'var(--text-muted)' }}>Thời Gian Giao Trung Bình</div>
+              <div style={{ fontSize: '1.6rem', fontWeight: 800, color: '#fbbf24', marginTop: '4px' }}>24 - 48 Giờ</div>
+            </div>
+          </div>
+
+          <div className="table-container">
+            <table>
+              <thead>
+                <tr>
+                  <th>Tên Nhà Cung Cấp</th>
+                  <th>Người Đại Diện</th>
+                  <th>Số Điện Thoại</th>
+                  <th>Email</th>
+                  <th>Địa Chỉ Kho</th>
+                  <th>Mặt Hàng Cung Ứng</th>
+                </tr>
+              </thead>
+              <tbody>
+                {suppliers.map(sup => (
+                  <tr key={sup.id}>
+                    <td>
+                      <strong>{sup.name}</strong>
+                    </td>
+                    <td>{sup.contactPerson || 'Bộ phận Kinh doanh'}</td>
+                    <td>
+                      <span style={{ display: 'inline-flex', alignItems: 'center', gap: '4px', color: '#38bdf8' }}>
+                        <Phone size={13} /> {sup.phone || '028 3899 0011'}
+                      </span>
+                    </td>
+                    <td>
+                      <span style={{ display: 'inline-flex', alignItems: 'center', gap: '4px', color: 'var(--text-muted)' }}>
+                        <Mail size={13} /> {sup.email || 'contact@supplier.vn'}
+                      </span>
+                    </td>
+                    <td style={{ fontSize: '0.82rem', color: 'var(--text-muted)' }}>
+                      <span style={{ display: 'inline-flex', alignItems: 'center', gap: '4px' }}>
+                        <MapPin size={13} /> {sup.address || 'TP. Hồ Chí Minh'}
+                      </span>
+                    </td>
+                    <td>
+                      <span className="badge badge-info">{sup.productCategories || 'Thức ăn & Dược phẩm'}</span>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      )}
       </div>
 
       {/* MODAL CẬP NHẬT KHO */}
@@ -292,10 +401,13 @@ export default function WarehouseDashboard({
                     value={newProductForm.category} 
                     onChange={e => setNewProductForm({ ...newProductForm, category: e.target.value })}
                   >
-                    <option value="Thức ăn">🥣 Thức Ăn & Pate</option>
-                    <option value="Phụ kiện">🎾 Cát & Phụ Kiện</option>
-                    <option value="Mỹ phẩm Spa">🧴 Mỹ Phẩm & Spa</option>
-                    <option value="Y tế">🩺 Vắc Xin & Y Tế</option>
+                    <option value="Thức ăn">🥣 Thức Ăn Hạt & Pate</option>
+                    <option value="Bánh thưởng">🍖 Bánh Thưởng & Snack</option>
+                    <option value="Cát vệ sinh">📦 Cát Vệ Sinh</option>
+                    <option value="Phụ kiện">🎾 Đồ Chơi & Phụ Kiện</option>
+                    <option value="Mỹ phẩm Spa">🧴 Sữa Tắm & Mỹ Phẩm</option>
+                    <option value="Dinh dưỡng">💊 Dinh Dưỡng & Vitamin</option>
+                    <option value="Y tế">🏥 Thuốc Thú Y & Y Tế</option>
                   </select>
                 </div>
               </div>
@@ -357,6 +469,91 @@ export default function WarehouseDashboard({
               <div style={{ display: 'flex', gap: '0.85rem', justifyContent: 'flex-end', marginTop: '1.25rem' }}>
                 <button type="button" className="btn btn-secondary" onClick={() => setShowAddProductModal(false)}>Hủy</button>
                 <button type="submit" className="btn btn-coral">Lưu Sản Phẩm Mới</button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* MODAL THÊM NHÀ CUNG CẤP MỚI */}
+      {showAddSupplierModal && (
+        <div className="modal-overlay">
+          <div className="modal-content animate-fade-in" style={{ maxWidth: 540 }}>
+            <h3 style={{ fontSize: '1.3rem', fontWeight: 800, marginBottom: '1.25rem', display: 'flex', alignItems: 'center', gap: '8px' }}>
+              <Building2 size={22} color="#00f2fe" /> Thêm Đối Tác Nhà Cung Cấp Mới
+            </h3>
+            <form onSubmit={handleCreateSupplierSubmit}>
+              <div className="form-group">
+                <label>Tên Doanh Nghiệp / Nhà Cung Cấp *</label>
+                <input 
+                  className="form-control" 
+                  value={newSupplierForm.name} 
+                  onChange={e => setNewSupplierForm({ ...newSupplierForm, name: e.target.value })} 
+                  placeholder="VD: Công ty TNHH Nhập Khẩu Thức Ăn SmartHeart" 
+                  required 
+                />
+              </div>
+
+              <div className="grid-2">
+                <div className="form-group">
+                  <label>Người Đại Diện Liên Hệ</label>
+                  <input 
+                    className="form-control" 
+                    value={newSupplierForm.contactPerson} 
+                    onChange={e => setNewSupplierForm({ ...newSupplierForm, contactPerson: e.target.value })} 
+                    placeholder="VD: Trần Văn Bình" 
+                  />
+                </div>
+                <div className="form-group">
+                  <label>Số Điện Thoại</label>
+                  <input 
+                    className="form-control" 
+                    value={newSupplierForm.phone} 
+                    onChange={e => setNewSupplierForm({ ...newSupplierForm, phone: e.target.value })} 
+                    placeholder="VD: 0988776655" 
+                  />
+                </div>
+              </div>
+
+              <div className="grid-2">
+                <div className="form-group">
+                  <label>Email</label>
+                  <input 
+                    type="email"
+                    className="form-control" 
+                    value={newSupplierForm.email} 
+                    onChange={e => setNewSupplierForm({ ...newSupplierForm, email: e.target.value })} 
+                    placeholder="VD: sales@smartheart.vn" 
+                  />
+                </div>
+                <div className="form-group">
+                  <label>Danh Mục Cung Ứng</label>
+                  <select 
+                    className="form-control"
+                    value={newSupplierForm.productCategories}
+                    onChange={e => setNewSupplierForm({ ...newSupplierForm, productCategories: e.target.value })}
+                  >
+                    <option value="Thức ăn hạt, Pate">🥣 Thức ăn hạt & Pate</option>
+                    <option value="Cát & Phụ kiện">🎾 Cát & Phụ kiện</option>
+                    <option value="Mỹ phẩm Spa & Sữa tắm">🧴 Mỹ phẩm Spa & Sữa tắm</option>
+                    <option value="Dược phẩm & Vắc-xin">🩺 Dược phẩm & Vắc-xin</option>
+                  </select>
+                </div>
+              </div>
+
+              <div className="form-group">
+                <label>Địa Chỉ Kho / Văn Phòng</label>
+                <input 
+                  className="form-control" 
+                  value={newSupplierForm.address} 
+                  onChange={e => setNewSupplierForm({ ...newSupplierForm, address: e.target.value })} 
+                  placeholder="VD: KCN Tân Bình, TP. Hồ Chí Minh" 
+                />
+              </div>
+
+              <div style={{ display: 'flex', gap: '0.85rem', justifyContent: 'flex-end', marginTop: '1.25rem' }}>
+                <button type="button" className="btn btn-secondary" onClick={() => setShowAddSupplierModal(false)}>Hủy</button>
+                <button type="submit" className="btn btn-coral">Lưu Nhà Cung Cấp</button>
               </div>
             </form>
           </div>

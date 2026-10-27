@@ -53,6 +53,19 @@ const updateStatus = async (req, res) => {
   }
 };
 
+const cancelAppointment = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const cancelled = await appointmentService.cancelAppointment(id, req.user);
+    return res.json({
+      message: 'Hủy lịch hẹn thành công!',
+      appointment: cancelled,
+    });
+  } catch (error) {
+    return res.status(400).json({ message: error.message || 'Lỗi khi hủy lịch hẹn.' });
+  }
+};
+
 const getServices = async (req, res) => {
   try {
     const services = await appointmentService.getAllServices();
@@ -62,9 +75,33 @@ const getServices = async (req, res) => {
   }
 };
 
+const createService = async (req, res) => {
+  try {
+    const service = await appointmentService.createNewService(req.body);
+    return res.status(201).json({
+      message: 'Tạo dịch vụ mới thành công!',
+      service,
+    });
+  } catch (error) {
+    return res.status(500).json({ message: error.message || 'Lỗi khi tạo dịch vụ.' });
+  }
+};
+
+const deleteService = async (req, res) => {
+  try {
+    await appointmentService.deleteService(req.params.id);
+    return res.json({ message: 'Xóa dịch vụ thành công!' });
+  } catch (error) {
+    return res.status(500).json({ message: error.message || 'Lỗi khi xóa dịch vụ.' });
+  }
+};
+
 module.exports = {
   getAppointments,
   createAppointment,
   updateStatus,
+  cancelAppointment,
   getServices,
+  createService,
+  deleteService,
 };

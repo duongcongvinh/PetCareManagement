@@ -13,6 +13,7 @@ const forecastingController = require('../controllers/forecastingController');
 router.post('/auth/register', authController.register);
 router.post('/auth/login', authController.login);
 router.get('/auth/me', authenticateToken, authController.getProfile);
+router.put('/auth/profile', authenticateToken, authController.updateProfile);
 router.get('/users', authController.getUsers);
 router.post('/users', authController.createUser);
 
@@ -24,9 +25,12 @@ router.delete('/pets/:id', authenticateToken, petController.deletePet);
 
 // --- 3. Service & Appointment Routes ---
 router.get('/services', appointmentController.getServices);
+router.post('/services', authenticateToken, authorizeRoles('ADMIN'), appointmentController.createService);
+router.delete('/services/:id', authenticateToken, authorizeRoles('ADMIN'), appointmentController.deleteService);
 router.get('/appointments', authenticateToken, appointmentController.getAppointments);
 router.post('/appointments', authenticateToken, appointmentController.createAppointment);
 router.put('/appointments/:id/status', authenticateToken, authorizeRoles('CARE_STAFF', 'ADMIN'), appointmentController.updateStatus);
+router.put('/appointments/:id/cancel', authenticateToken, appointmentController.cancelAppointment);
 
 // --- 4. Inventory & Supplier Routes ---
 router.get('/products', authenticateToken, inventoryController.getProducts);
@@ -34,6 +38,7 @@ router.post('/products', authenticateToken, authorizeRoles('WAREHOUSE_STAFF', 'A
 router.put('/products/:id/stock', authenticateToken, authorizeRoles('WAREHOUSE_STAFF', 'ADMIN'), inventoryController.updateStock);
 router.get('/products/low-stock', authenticateToken, authorizeRoles('WAREHOUSE_STAFF', 'ADMIN'), inventoryController.getLowStockAlerts);
 router.get('/suppliers', authenticateToken, authorizeRoles('WAREHOUSE_STAFF', 'ADMIN'), inventoryController.getSuppliers);
+router.post('/suppliers', authenticateToken, authorizeRoles('WAREHOUSE_STAFF', 'ADMIN'), inventoryController.createSupplier);
 
 // --- 5. E-Commerce Order Routes ---
 router.post('/orders', authenticateToken, orderController.createOrder);

@@ -79,10 +79,21 @@ const createUser = async (req, res) => {
   }
 };
 
+const updateProfile = async (req, res) => {
+  try {
+    const { fullName, phone, password } = req.body;
+    const updated = await authService.updateUserProfile(req.user.id, { fullName, phone, password });
+    return res.json({ message: 'Cập nhật thông tin thành công!', user: updated });
+  } catch (error) {
+    return res.status(500).json({ message: error.message || 'Lỗi server khi cập nhật thông tin.' });
+  }
+};
+
 module.exports = {
   register,
   login,
   getProfile,
   getUsers,
   createUser,
+  updateProfile,
 };
