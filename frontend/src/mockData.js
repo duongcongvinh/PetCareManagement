@@ -1,4 +1,5 @@
 // Mock Data mapping 1-to-1 with the 29 Use Cases from the Use Case Diagram
+import { USER_AVATARS, PET_AVATARS, SERVICE_IMAGES, PRODUCT_IMAGES } from './mediaAssets';
 
 export const INITIAL_USERS = [
   { id: 'u-1', fullName: 'Nguyễn Văn Admin', email: 'admin@petcare.com', phone: '0901234567', role: 'ADMIN', status: 'ACTIVE', createdAt: '2026-01-10' },
@@ -6,13 +7,14 @@ export const INITIAL_USERS = [
   { id: 'u-3', fullName: 'Lê Văn Kho', email: 'warehouse@petcare.com', phone: '0923456789', role: 'WAREHOUSE_STAFF', status: 'ACTIVE', createdAt: '2026-03-01' },
   { id: 'u-4', fullName: 'Phạm Minh Anh', email: 'khachhang@gmail.com', phone: '0934567890', role: 'CUSTOMER', status: 'ACTIVE', createdAt: '2026-04-12' },
   { id: 'u-5', fullName: 'Hoàng Thị Yến', email: 'khachhang2@gmail.com', phone: '0945678901', role: 'CUSTOMER', status: 'ACTIVE', createdAt: '2026-05-20' },
-];
+].map((u) => ({ ...u, avatar: USER_AVATARS[u.id] }));
 
 export const INITIAL_SERVICES = [
   {
     id: 's1',
     name: 'Spa Grooming Trọn Gói (Cắt tỉa & Tắm mượt 7 bước)',
     description: 'Vệ sinh tai, cắt mài móng, vắt tuyến hôi, tắm thảo dược sấy chải phồng lông và cắt tỉa tạo kiểu chuyên nghiệp theo form chuẩn.',
+    durationMinutes: 60,
     durationMinutes: 60,
     price: 250000,
     category: 'Spa & Grooming',
@@ -134,8 +136,62 @@ export const INITIAL_SERVICES = [
     price: 220000,
     category: 'Khám Bệnh & Trị Liệu',
     status: 'ACTIVE'
+  },
+  {
+    id: 's15',
+    name: 'Siêu Âm Thai Kỹ Thuật Số Doppler & Dự Sinh Chuẩn Xác',
+    description: 'Chẩn đoán thai sớm từ ngày thứ 21. Đếm túi thai, đo nhịp tim thai bằng máy Doppler chuyên dụng và dự đoán ngày sinh chính xác.',
+    durationMinutes: 25,
+    price: 150000,
+    category: 'Khoa Sinh Sản',
+    status: 'ACTIVE'
+  },
+  {
+    id: 's16',
+    name: 'Gói Hộ Sinh Đỡ Đẻ & Hồi Sức Sơ Sinh An Toàn 24/7',
+    description: 'Bác sĩ thú y trực tiếp theo dõi gò tử cung, hỗ trợ thế thai khó sinh, cắt rốn tiệt trùng và kích thở lồng ấp sơ sinh.',
+    durationMinutes: 120,
+    price: 350000,
+    category: 'Khoa Sinh Sản',
+    status: 'ACTIVE'
+  },
+  {
+    id: 's17',
+    name: 'Phẫu Thuật Mổ Đẻ Cấp Cứu Vô Trùng (C-Section)',
+    description: 'Mổ lấy thai cấp cứu vô trùng khi khó sinh, suy thai hoặc kẹt xương chậu. Gây mê bay hơi Isoflurane an toàn tuyệt đối cho mẹ & con.',
+    durationMinutes: 60,
+    price: 850000,
+    category: 'Khoa Sinh Sản',
+    status: 'ACTIVE'
+  },
+  {
+    id: 's18',
+    name: 'Triệt Sản Mèo Cái / Chó Cái Công Nghệ Minilap Thẩm Mỹ',
+    description: 'Cắt tử cung buồng trứng đường rạch vi phẫu siêu nhỏ 1-1.5cm, khâu chỉ tự tiêu nội bì, không sẹo lồi, hồi phục nhanh sau 24h.',
+    durationMinutes: 45,
+    price: 450000,
+    category: 'Khoa Sinh Sản',
+    status: 'ACTIVE'
+  },
+  {
+    id: 's19',
+    name: 'Thiến Chó Đực / Mèo Đực An Toàn & Kháng Khuẩn',
+    description: 'Tiểu phẫu thiến 15 phút an toàn nhẹ nhàng, loại trừ nguy cơ ung thư tinh hoàn và kiểm soát triệt để hành vi xịt nước tiểu hôi đánh dấu.',
+    durationMinutes: 25,
+    price: 280000,
+    category: 'Khoa Sinh Sản',
+    status: 'ACTIVE'
+  },
+  {
+    id: 's20',
+    name: 'Phẫu Thuật Cấp Cứu Viêm Tử Cung Tích Mủ (Pyometra)',
+    description: 'Giải phóng ổ mủ trong tử cung cho thú cưng bị biến chứng do tiêm thuốc tránh thai dạo hoặc rối loạn nội tiết tố, cứu sống nhiễm trùng máu.',
+    durationMinutes: 75,
+    price: 900000,
+    category: 'Khoa Sinh Sản',
+    status: 'ACTIVE'
   }
-];
+].map((s) => ({ ...s, image: SERVICE_IMAGES[s.id] }));
 
 export const INITIAL_PETS = [
   {
@@ -174,7 +230,7 @@ export const INITIAL_PETS = [
     ownerName: 'Hoàng Thị Yến',
     ownerPhone: '0945678901'
   }
-];
+].map((p) => ({ ...p, avatar: PET_AVATARS[p.id] }));
 
 export const INITIAL_APPOINTMENTS = [
   {
@@ -666,7 +722,7 @@ export const INITIAL_PRODUCTS = [
     supplierId: 'sup-2',
     supplierName: 'Nhà Phân Phối VetCare'
   }
-];
+].map((p) => ({ ...p, image: PRODUCT_IMAGES[p.id] }));
 
 // PRODUCT-LEVEL 5-YEAR SEASONAL FORECASTS FOR SHOP OWNER
 export const PRODUCT_SEASONAL_FORECASTS = [
@@ -954,14 +1010,14 @@ export const FIVE_YEAR_ORDER_HISTORY = (() => {
   const startYear = 2022;
   const endYear = 2026; // 5 full years
   let orderId = 1000;
-  
+
   const productIds = INITIAL_PRODUCTS.map(p => p.id);
   const supplierIds = INITIAL_SUPPLIERS.map(s => s.id);
-  
+
   for (let year = startYear; year <= endYear; year++) {
     for (let month = 1; month <= 12; month++) {
       const isHighSeason = [1, 2, 6, 7, 12].includes(month); // Tết & Hè
-      
+
       // Số lượng đơn bán hàng mỗi tháng (120 - 220 đơn) - ĐỒNG BỘ DOANH THU
       const salesOrderCount = isHighSeason ? Math.floor(Math.random() * 50) + 180 : Math.floor(Math.random() * 50) + 120;
       let monthlyRevenue = 0;
@@ -971,7 +1027,7 @@ export const FIVE_YEAR_ORDER_HISTORY = (() => {
         const numItems = Math.floor(Math.random() * 3) + 1; // 1-3 items per sale
         const items = [];
         let totalAmount = 0;
-        
+
         for (let j = 0; j < numItems; j++) {
           const prod = INITIAL_PRODUCTS[Math.floor(Math.random() * INITIAL_PRODUCTS.length)];
           const qty = Math.floor(Math.random() * 3) + 1;
@@ -987,7 +1043,7 @@ export const FIVE_YEAR_ORDER_HISTORY = (() => {
           monthlyProductsSold += qty;
         }
         monthlyRevenue += totalAmount;
-        
+
         history.push({
           id: `SAL-${year}-${String(month).padStart(2, '0')}-${orderId++}`,
           type: 'SALES', // Bán hàng
@@ -1003,12 +1059,12 @@ export const FIVE_YEAR_ORDER_HISTORY = (() => {
       // Ta cần nhập số lượng hàng ~ bằng số hàng bán ra + một chút tồn kho
       const importOrderCount = isHighSeason ? Math.floor(Math.random() * 3) + 4 : Math.floor(Math.random() * 2) + 2;
       let remainingQtyToImport = Math.floor(monthlyProductsSold * (Math.random() * 0.2 + 0.9)); // Nhập 90-110% lượng bán ra
-      
+
       for (let i = 0; i < importOrderCount; i++) {
         const numItems = Math.floor(Math.random() * 5) + 4; // 4-8 items per import
         const items = [];
         let totalAmount = 0;
-        
+
         for (let j = 0; j < numItems; j++) {
           const prod = INITIAL_PRODUCTS[Math.floor(Math.random() * INITIAL_PRODUCTS.length)];
           // Chia nhỏ lượng cần nhập
@@ -1023,7 +1079,7 @@ export const FIVE_YEAR_ORDER_HISTORY = (() => {
           });
           totalAmount += qty * price;
         }
-        
+
         history.push({
           id: `IMP-${year}-${String(month).padStart(2, '0')}-${orderId++}`,
           type: 'IMPORT', // Nhập hàng
@@ -1036,7 +1092,7 @@ export const FIVE_YEAR_ORDER_HISTORY = (() => {
       }
     }
   }
-  
+
   // Sắp xếp theo ngày
   return history.sort((a, b) => new Date(a.date) - new Date(b.date));
 })();

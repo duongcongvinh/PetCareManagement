@@ -1,6 +1,8 @@
 import React from 'react';
-import { PawPrint, User, LogOut, Shield, Search, ShoppingBag, PhoneCall, Home, Calendar, Heart, Clock, ArrowRight, UserCheck } from 'lucide-react';
+import { PawPrint, User, LogOut, Shield, Search, ShoppingBag, PhoneCall, Home, Calendar, Heart, Clock, ArrowRight, UserCheck, Activity } from 'lucide-react';
 import { toast } from './ToastNotification';
+import { CONTACT_INFO } from '../contactConfig';
+import { getUserAvatar, FALLBACK_IMAGES } from '../mediaAssets';
 
 export default function Navbar({ 
   currentUser, 
@@ -46,29 +48,24 @@ export default function Navbar({
           <span style={{ background: 'rgba(255,255,255,0.25)', padding: '2px 8px', borderRadius: '12px', fontSize: '0.75rem' }}>🎁 ĐƠN ĐẦU TẠI APP</span>
           <span>Ưu đãi giảm ngay 50.000đ khi đặt lịch hoặc mua hàng online lần đầu!</span>
         </div>
-        <div style={{ display: 'flex', alignItems: 'center', gap: '1.5rem' }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
           <span>⚡ Giao Hàng Nhanh 2H</span>
           <span>•</span>
-          <span style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
-            <PhoneCall size={14} /> Hotline: <strong>076 240 9021</strong> (8:00 - 21:00)
-          </span>
+          <a 
+            href={`tel:${CONTACT_INFO.phoneRaw}`} 
+            style={{ display: 'flex', alignItems: 'center', gap: '4px', color: '#ffffff', textDecoration: 'none' }}
+            title="Gọi ngay Hotline tư vấn"
+          >
+            <PhoneCall size={14} /> Hotline: <strong>{CONTACT_INFO.phoneDisplay}</strong>
+          </a>
         </div>
       </div>
 
       {/* 2. Main Light Theme Header */}
-      <header style={{ 
-        background: 'var(--bg-nav)', 
-        borderBottom: '1px solid var(--border-light)', 
-        padding: '0.85rem 2.2rem', 
-        display: 'flex', 
-        alignItems: 'center', 
-        justifyContent: 'space-between',
-        boxShadow: '0 4px 20px rgba(0,0,0,0.03)',
-        zIndex: 100 
-      }}>
+      <header className="petopia-main-header">
         
         {/* Brand Logo */}
-        <div style={{ display: 'flex', alignItems: 'center', gap: '0.9rem', cursor: 'pointer' }} onClick={() => onTabChange('home')}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '0.9rem', cursor: 'pointer', flexShrink: 0 }} onClick={() => onTabChange('home')}>
           <div style={{ 
             background: 'linear-gradient(135deg, #ff6b35 0%, #ff8e53 100%)', 
             padding: '0.65rem 0.8rem', 
@@ -94,9 +91,10 @@ export default function Navbar({
 
         {/* Customer Main Navigation Tabs vs Staff Role Badge */}
         {portalMode === 'CUSTOMER' ? (
-          <nav style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', background: '#f8fafc', padding: '0.35rem 0.5rem', borderRadius: '30px', border: '1px solid #e2e8f0' }}>
+          <nav className="customer-nav-tabs">
             {[
               { id: 'home', label: 'Trang Chủ', icon: Home },
+              { id: 'reproduction', label: 'Khoa Sinh Sản', icon: Activity, isSpecial: true },
               { id: 'booking', label: 'Dịch Vụ Spa', icon: Calendar },
               { id: 'shop', label: 'Cửa Hàng', icon: ShoppingBag },
               { id: 'pets', label: 'Thú Cưng', icon: Heart },
@@ -118,14 +116,31 @@ export default function Navbar({
                     fontWeight: 700,
                     border: 'none',
                     background: isActive ? 'linear-gradient(135deg, #ff6b35 0%, #ff8e53 100%)' : 'transparent',
-                    color: isActive ? '#ffffff' : '#475569',
+                    color: isActive ? '#ffffff' : tab.isSpecial ? '#ea580c' : '#475569',
                     boxShadow: isActive ? '0 4px 15px rgba(255, 107, 53, 0.3)' : 'none',
                     cursor: 'pointer',
-                    transition: 'all 0.25s ease'
+                    transition: 'all 0.25s ease',
+                    position: 'relative'
                   }}
                 >
-                  <IconComp size={14} />
+                  <IconComp size={14} color={isActive ? '#ffffff' : tab.isSpecial ? '#ea580c' : undefined} />
                   {tab.label}
+                  {tab.isSpecial && !isActive && (
+                    <span style={{
+                      position: 'absolute',
+                      top: '-4px',
+                      right: '0px',
+                      background: '#ef4444',
+                      color: '#ffffff',
+                      fontSize: '0.6rem',
+                      fontWeight: 900,
+                      padding: '1px 5px',
+                      borderRadius: '8px',
+                      lineHeight: '1'
+                    }}>
+                      HOT
+                    </span>
+                  )}
                 </button>
               );
             })}
@@ -200,9 +215,12 @@ export default function Navbar({
           {/* User Account / Auth */}
           {isStaffUser ? (
             <div style={{ display: 'flex', alignItems: 'center', gap: '0.65rem', background: '#f8fafc', padding: '0.3rem 0.75rem', borderRadius: '30px', border: '1px solid #e2e8f0' }}>
-              <div style={{ width: 32, height: 32, borderRadius: '50%', background: 'linear-gradient(135deg, #0284c7 0%, #0369a1 100%)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#fff', fontWeight: 800, fontSize: '0.85rem', boxShadow: '0 2px 10px rgba(2,132,199,0.3)' }}>
-                {currentUser.fullName ? currentUser.fullName.charAt(0) : 'S'}
-              </div>
+              <img
+                src={getUserAvatar(currentUser)}
+                alt={currentUser.fullName || 'Nhân viên'}
+                onError={(e) => { e.currentTarget.src = FALLBACK_IMAGES.user; }}
+                style={{ width: 34, height: 34, borderRadius: '50%', objectFit: 'cover', border: '2px solid #0284c7', boxShadow: '0 2px 10px rgba(2,132,199,0.25)', flexShrink: 0 }}
+              />
               <div>
                 <div style={{ fontSize: '0.8rem', fontWeight: 700, color: '#0f172a' }}>{currentUser.fullName}</div>
                 <div style={{ fontSize: '0.68rem', color: '#0284c7', fontWeight: 800 }}>
@@ -237,9 +255,12 @@ export default function Navbar({
             </button>
           ) : currentUser ? (
             <div style={{ display: 'flex', alignItems: 'center', gap: '0.65rem', background: '#f8fafc', padding: '0.3rem 0.75rem', borderRadius: '30px', border: '1px solid #e2e8f0' }}>
-              <div style={{ width: 32, height: 32, borderRadius: '50%', background: 'linear-gradient(135deg, #ff6b35 0%, #ff8e53 100%)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#fff', fontWeight: 800, fontSize: '0.85rem', boxShadow: '0 2px 10px rgba(255,107,53,0.3)' }}>
-                {currentUser.fullName ? currentUser.fullName.charAt(0) : 'C'}
-              </div>
+              <img
+                src={getUserAvatar(currentUser)}
+                alt={currentUser.fullName || 'Khách hàng'}
+                onError={(e) => { e.currentTarget.src = FALLBACK_IMAGES.user; }}
+                style={{ width: 34, height: 34, borderRadius: '50%', objectFit: 'cover', border: '2px solid #ff6b35', boxShadow: '0 2px 10px rgba(255,107,53,0.25)', flexShrink: 0 }}
+              />
               <div>
                 <div style={{ fontSize: '0.8rem', fontWeight: 700, color: '#0f172a' }}>{currentUser.fullName}</div>
                 <div style={{ fontSize: '0.68rem', color: '#16a34a', fontWeight: 800 }}>
@@ -269,16 +290,10 @@ export default function Navbar({
               </button>
             </div>
           ) : (
-            <div style={{ display: 'flex', gap: '0.5rem' }}>
-              <button className="btn btn-secondary" onClick={() => onSwitchPortalMode('STAFF')} style={{ borderRadius: '20px', fontSize: '0.82rem', padding: '0.45rem 0.95rem', border: '1px solid #cbd5e1' }}>
-                <Shield size={15} color="#475569" />
-                Cổng Quản Trị
-              </button>
-              <button className="btn btn-coral" onClick={onOpenLogin} style={{ borderRadius: '20px', fontSize: '0.82rem', padding: '0.45rem 0.95rem' }}>
-                <User size={15} />
-                Đăng Nhập Khách
-              </button>
-            </div>
+            <button className="btn btn-coral" onClick={onOpenLogin} style={{ borderRadius: '20px', fontSize: '0.82rem', padding: '0.5rem 1.05rem', whiteSpace: 'nowrap' }}>
+              <User size={15} />
+              Đăng Nhập
+            </button>
           )}
         </div>
       </header>

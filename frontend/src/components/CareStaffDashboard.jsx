@@ -3,6 +3,7 @@ import {
   Calendar, CheckCircle2, Clock, PlayCircle, AlertCircle, FileText, 
   PawPrint, Search, Tag, Sparkles, TrendingUp, User, Heart, ShieldAlert
 } from 'lucide-react';
+import { getPetAvatar, FALLBACK_IMAGES } from '../mediaAssets';
 
 export default function CareStaffDashboard({ 
   appointments = [], 
@@ -222,7 +223,15 @@ export default function CareStaffDashboard({
             {filteredPets.map(p => (
               <div key={p.id} className="glass-card" style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                  <h4 style={{ fontSize: '1.1rem', fontWeight: 800, color: '#ff8e53' }}>{p.name}</h4>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '0.65rem' }}>
+                    <img
+                      src={getPetAvatar(p)}
+                      alt={p.name}
+                      onError={(e) => { e.currentTarget.src = FALLBACK_IMAGES.pet; }}
+                      style={{ width: 44, height: 44, borderRadius: '50%', objectFit: 'cover', border: '2px solid #fed7aa', flexShrink: 0 }}
+                    />
+                    <h4 style={{ fontSize: '1.1rem', fontWeight: 800, color: '#ff8e53' }}>{p.name}</h4>
+                  </div>
                   <span className="badge badge-info">{p.species}</span>
                 </div>
                 <div style={{ fontSize: '0.82rem', color: 'var(--text-secondary)' }}>Giống loài: <strong>{p.breed || 'Chưa rõ'}</strong></div>

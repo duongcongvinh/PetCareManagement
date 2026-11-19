@@ -9,6 +9,7 @@ import AdminDashboard from './components/AdminDashboard';
 import LoginModal from './components/LoginModal';
 import StaffLoginModal from './components/StaffLoginModal';
 import ToastContainer, { toast, confirmModal } from './components/ToastNotification';
+import FloatingContactWidget from './components/FloatingContactWidget';
 
 import { apiService } from './apiService';
 import { 
@@ -770,7 +771,7 @@ export default function App() {
 
       {/* PORTAL MODE 1: KHÁCH HÀNG (CUSTOMER PORTAL) */}
       {portalMode === 'CUSTOMER' ? (
-        <main style={{ flex: 1, padding: '2rem 3rem', maxWidth: '1400px', margin: '0 auto', width: '100%' }}>
+        <main className="main-app-container">
           <CustomerPortal 
             currentUser={currentUser}
             activeTab={activeTab}
@@ -962,6 +963,13 @@ export default function App() {
             </div>
           </div>
         </div>
+      )}
+
+      {/* FLOATING ACTION BUTTONS: GỌI ĐIỆN, CHAT ZALO & FACEBOOK */}
+      {portalMode === 'CUSTOMER' && (
+        <FloatingContactWidget 
+          onOpenBooking={() => setActiveTab('booking')}
+        />
       )}
 
       {/* GLOBAL TOAST & CONFIRMATION CONTAINER */}

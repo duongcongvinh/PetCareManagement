@@ -1,11 +1,14 @@
 import React, { useState, useEffect } from 'react';
+import ReproductionClinic from './ReproductionClinic';
 import { 
   PawPrint, Calendar, ShoppingBag, Plus, Minus, Trash2, Clock, ShieldCheck, HeartHandshake, 
   Truck, Award, Sparkles, Tag, Search, Filter, Star, ShoppingCart, CheckCircle, ArrowRight, ArrowLeft, 
   PhoneCall, Mail, MapPin, Heart, Zap, User, Edit3, Lock, CreditCard, QrCode, Copy, Check, AlertCircle, RefreshCw, X,
-  Gift, RotateCcw, Flame
+  Gift, RotateCcw, Flame, Activity
 } from 'lucide-react';
 import { toast, confirmModal } from './ToastNotification';
+import { CONTACT_INFO, openZaloQrModal } from '../contactConfig';
+import { HERO_IMAGES, FALLBACK_IMAGES, getUserAvatar, getPetAvatar, getServiceImage, getProductImage } from '../mediaAssets';
 
 const getCategoryVisual = (category) => {
   switch (category) {
@@ -458,7 +461,12 @@ export default function CustomerPortal({
                   </button>
                 </div>
               </div>
-              <div style={{ fontSize: '5rem', filter: 'drop-shadow(0 10px 15px rgba(255,107,53,0.4))' }}>🐶</div>
+              <img
+                src={HERO_IMAGES.spaBanner}
+                alt="Chăm sóc và Spa Grooming thú cưng"
+                className="hero-photo-thumb"
+                onError={(e) => { e.currentTarget.src = FALLBACK_IMAGES.service; }}
+              />
             </div>
 
             <div className="hero-card hero-card-cyan">
@@ -476,7 +484,60 @@ export default function CustomerPortal({
                   <ShoppingBag size={16} /> Khám Phá Cửa Hàng
                 </button>
               </div>
-              <div style={{ fontSize: '5rem', filter: 'drop-shadow(0 10px 15px rgba(0,180,216,0.4))' }}>🐱</div>
+              <img
+                src={HERO_IMAGES.shopBanner}
+                alt="Thức ăn dinh dưỡng và phụ kiện thú cưng"
+                className="hero-photo-thumb"
+                onError={(e) => { e.currentTarget.src = FALLBACK_IMAGES.pet; }}
+              />
+            </div>
+          </div>
+
+          {/* BANNER CHUYÊN KHOA SINH SẢN VPET'S */}
+          <div style={{
+            background: 'linear-gradient(135deg, #fff1f2 0%, #fff7ed 50%, #fed7aa 100%)',
+            borderRadius: '20px',
+            padding: '1.5rem 2rem',
+            border: '1.5px solid #fed7aa',
+            display: 'flex',
+            justifyContent: 'space-between',
+            alignItems: 'center',
+            flexWrap: 'wrap',
+            gap: '1.25rem',
+            boxShadow: '0 6px 22px rgba(234, 88, 12, 0.08)'
+          }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '1.25rem' }}>
+              <img
+                src={HERO_IMAGES.reproBanner}
+                alt="Khoa Sinh Sản Thú Cưng"
+                onError={(e) => { e.currentTarget.src = FALLBACK_IMAGES.service; }}
+                style={{ 
+                  width: 68, 
+                  height: 68, 
+                  borderRadius: '16px', 
+                  objectFit: 'cover',
+                  flexShrink: 0,
+                  border: '2px solid #ffffff',
+                  boxShadow: '0 6px 18px rgba(234, 88, 12, 0.25)'
+                }}
+              />
+              <div>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '2px' }}>
+                  <span className="badge badge-danger" style={{ fontSize: '0.72rem' }}>HOT • CHUYÊN KHOA VẬT NUÔI</span>
+                  <span style={{ fontSize: '0.78rem', color: '#9a3412', fontWeight: 700 }}>THEO TIÊU CHUẨN BỆNH VIỆN THÚ Y VPET'S</span>
+                </div>
+                <h3 style={{ fontSize: '1.25rem', fontWeight: 900, color: '#0f172a' }}>
+                  Khoa Sinh Sản & Hộ Sinh Thú Cưng 24/7
+                </h3>
+                <p style={{ fontSize: '0.85rem', color: '#475569', margin: 0 }}>
+                  Siêu âm thai Doppler, đỡ đẻ & mổ đẻ cấp cứu khẩn cấp, triệt sản Minilap vi phẫu không để sẹo chỉ từ 280.000đ.
+                </p>
+              </div>
+            </div>
+            <div style={{ display: 'flex', gap: '0.75rem' }}>
+              <button className="btn btn-coral" style={{ padding: '0.65rem 1.35rem', fontSize: '0.88rem' }} onClick={() => onTabChange('reproduction')}>
+                Khám Phá Khoa Sinh Sản ➔
+              </button>
             </div>
           </div>
 
@@ -496,19 +557,30 @@ export default function CustomerPortal({
 
             <div className="grid-3">
               {services.slice(0, 3).map(s => (
-                <div key={s.id} className="glass-card" style={{ display: 'flex', flexDirection: 'column', justifyContent: 'space-between' }}>
+                <div key={s.id} className="glass-card" style={{ display: 'flex', flexDirection: 'column', justifyContent: 'space-between', padding: 0, overflow: 'hidden' }}>
                   <div>
-                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.75rem' }}>
-                      <span className="badge badge-info">{s.category}</span>
-                      <span style={{ fontSize: '0.78rem', color: 'var(--text-muted)', display: 'flex', alignItems: 'center', gap: '4px' }}>
-                        <Clock size={14} /> {s.durationMinutes} phút
+                    <div style={{ position: 'relative', height: 170, overflow: 'hidden', background: '#f1f5f9' }}>
+                      <img
+                        src={getServiceImage(s)}
+                        alt={s.name}
+                        className="media-card-img"
+                        loading="lazy"
+                        onError={(e) => { e.currentTarget.src = FALLBACK_IMAGES.service; }}
+                      />
+                      <span className="badge badge-info" style={{ position: 'absolute', top: 10, left: 10, background: 'rgba(255,255,255,0.94)', backdropFilter: 'blur(4px)' }}>
+                        {s.category}
+                      </span>
+                      <span style={{ position: 'absolute', bottom: 10, right: 10, fontSize: '0.74rem', fontWeight: 700, color: '#0f172a', background: 'rgba(255,255,255,0.92)', padding: '3px 9px', borderRadius: '12px', display: 'flex', alignItems: 'center', gap: '4px' }}>
+                        <Clock size={12} color="#ea580c" /> {s.durationMinutes} phút
                       </span>
                     </div>
-                    <h4 style={{ fontSize: '1.15rem', fontWeight: 700, margin: '0.4rem 0' }}>{s.name}</h4>
-                    <p style={{ fontSize: '0.85rem', color: 'var(--text-secondary)', marginBottom: '1.2rem', lineHeight: '1.5' }}>{s.description}</p>
+                    <div style={{ padding: '1.15rem 1.3rem 0 1.3rem' }}>
+                      <h4 style={{ fontSize: '1.1rem', fontWeight: 700, margin: '0.2rem 0 0.5rem 0', lineHeight: 1.4 }}>{s.name}</h4>
+                      <p style={{ fontSize: '0.84rem', color: 'var(--text-secondary)', marginBottom: '1rem', lineHeight: '1.5' }}>{s.description}</p>
+                    </div>
                   </div>
-                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', paddingTop: '1rem', borderTop: '1px solid var(--border-light)' }}>
-                    <strong style={{ fontSize: '1.3rem', fontWeight: 800, color: '#38bdf8' }}>{s.price.toLocaleString('vi-VN')} đ</strong>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '0.95rem 1.3rem 1.25rem 1.3rem', borderTop: '1px solid var(--border-light)' }}>
+                    <strong style={{ fontSize: '1.25rem', fontWeight: 800, color: '#ea580c' }}>{s.price.toLocaleString('vi-VN')} đ</strong>
                     <button className="btn btn-coral" style={{ padding: '0.5rem 1rem', fontSize: '0.85rem' }} onClick={() => {
                       setBookingForm(prev => ({ ...prev, serviceId: s.id }));
                       setShowBookingModal(true);
@@ -546,8 +618,14 @@ export default function CustomerPortal({
                       </div>
                       <span className="badge badge-success">Còn {p.currentStock} sp</span>
                     </div>
-                    <div style={{ background: '#f8fafc', height: 130, borderRadius: '12px', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '3.5rem', margin: '0.5rem 0', border: '1px solid #e2e8f0' }}>
-                      {p.category === 'Thức ăn' ? '🥣' : p.category === 'Bánh thưởng' ? '🍖' : p.category === 'Cát vệ sinh' ? '📦' : p.category === 'Phụ kiện' ? '🎾' : p.category === 'Mỹ phẩm Spa' ? '🧴' : p.category === 'Dinh dưỡng' ? '💊' : '🏥'}
+                    <div style={{ background: '#f8fafc', height: 170, borderRadius: '14px', overflow: 'hidden', margin: '0.5rem 0 0.75rem 0', border: '1px solid #e2e8f0', position: 'relative' }}>
+                      <img
+                        src={getProductImage(p)}
+                        alt={p.name}
+                        className="media-card-img"
+                        loading="lazy"
+                        onError={(e) => { e.currentTarget.src = FALLBACK_IMAGES.product; }}
+                      />
                     </div>
                     <div style={{ display: 'flex', alignItems: 'center', gap: '4px', fontSize: '0.75rem', color: '#fbbf24', margin: '4px 0' }}>
                       <Star size={12} fill="#fbbf24" /> <Star size={12} fill="#fbbf24" /> <Star size={12} fill="#fbbf24" /> <Star size={12} fill="#fbbf24" /> <Star size={12} fill="#fbbf24" />
@@ -635,16 +713,19 @@ export default function CustomerPortal({
               {myPets.map((pet) => (
                 <div key={pet.id} className="glass-panel" style={{ padding: '1.5rem' }}>
                   <div style={{ display: 'flex', alignItems: 'center', gap: '1rem', marginBottom: '1.25rem' }}>
-                    <div style={{ width: 52, height: 52, borderRadius: '50%', background: 'linear-gradient(135deg, #ff6b35 0%, #ff8e53 100%)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '1.8rem', boxShadow: '0 6px 20px rgba(255,107,53,0.35)' }}>
-                      {pet.species === 'Mèo' ? '🐱' : '🐶'}
-                    </div>
+                    <img
+                      src={getPetAvatar(pet)}
+                      alt={pet.name}
+                      onError={(e) => { e.currentTarget.src = FALLBACK_IMAGES.pet; }}
+                      style={{ width: 64, height: 64, borderRadius: '50%', objectFit: 'cover', border: '3px solid #ffedd5', boxShadow: '0 6px 18px rgba(255,107,53,0.25)', flexShrink: 0 }}
+                    />
                     <div>
                       <h3 style={{ fontSize: '1.25rem', fontWeight: 800 }}>{pet.name}</h3>
-                      <div style={{ fontSize: '0.82rem', color: '#38bdf8', fontWeight: 600 }}>{pet.species} • {pet.breed || 'Chưa rõ giống'}</div>
+                      <div style={{ fontSize: '0.82rem', color: '#0284c7', fontWeight: 600 }}>{pet.species} • {pet.breed || 'Chưa rõ giống'}</div>
                     </div>
                   </div>
 
-                  <div style={{ fontSize: '0.88rem', background: 'rgba(0,0,0,0.3)', padding: '1rem', borderRadius: '12px', marginBottom: '1.25rem', border: '1px solid var(--border-light)' }}>
+                  <div style={{ fontSize: '0.88rem', background: '#f8fafc', padding: '1rem', borderRadius: '12px', marginBottom: '1.25rem', border: '1px solid var(--border-light)' }}>
                     <div style={{ marginBottom: '4px' }}><strong>Tuổi:</strong> {pet.ageMonths ? `${pet.ageMonths} tháng` : 'Chưa cập nhật'}</div>
                     <div style={{ marginBottom: '4px' }}><strong>Cân nặng:</strong> {pet.weightKg ? `${pet.weightKg} kg` : 'Chưa cập nhật'}</div>
                     <div style={{ marginTop: '6px', color: 'var(--text-muted)', fontSize: '0.82rem' }}>
@@ -665,6 +746,17 @@ export default function CustomerPortal({
         </div>
       )}
 
+      {/* 2.5 KHOA SINH SẢN & HỘ SINH THÚ CƯNG (THEO CHUẨN VPETS.VN) */}
+      {activeTab === 'reproduction' && (
+        <ReproductionClinic 
+          onBookService={(serviceId) => {
+            setBookingForm(prev => ({ ...prev, serviceId }));
+            setShowBookingModal(true);
+          }}
+          services={services}
+        />
+      )}
+
       {/* 3. DỊCH VỤ & ĐẶT LỊCH TAB (booking tab) */}
       {activeTab === 'booking' && (
         <div>
@@ -682,6 +774,7 @@ export default function CustomerPortal({
           <div style={{ display: 'flex', gap: '0.6rem', flexWrap: 'wrap', marginBottom: '1.75rem', background: '#ffffff', padding: '0.85rem 1.1rem', borderRadius: '16px', border: '1px solid var(--border-light)', boxShadow: '0 2px 10px rgba(0,0,0,0.03)' }}>
             {[
               { id: 'ALL', label: '🌟 Tất Cả Dịch Vụ' },
+              { id: 'Khoa Sinh Sản', label: '🏥 Khoa Sinh Sản (VPet\'s)' },
               { id: 'Spa & Grooming', label: '✂️ Spa & Grooming' },
               { id: 'Khách Sạn & Lưu Trú', label: '🏨 Khách Sạn & Lưu Trú' },
               { id: 'Y Tế & Tiêm Phòng', label: '💉 Tiêm Phòng & Vắc Xin' },
@@ -711,22 +804,32 @@ export default function CustomerPortal({
 
           <div className="grid-2">
             {filteredServices.map((s) => (
-              <div key={s.id} className="glass-panel" style={{ padding: '1.6rem', display: 'flex', flexDirection: 'column', justifyContent: 'space-between', borderRadius: '18px', transition: 'transform 0.2s ease', border: '1px solid var(--border-light)' }}>
+              <div key={s.id} className="glass-panel glass-card" style={{ padding: 0, display: 'flex', flexDirection: 'column', justifyContent: 'space-between', borderRadius: '18px', overflow: 'hidden', border: '1px solid var(--border-light)' }}>
                 <div>
-                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '0.75rem' }}>
-                    <span className="badge" style={{ background: '#f1f5f9', color: '#0f172a', fontWeight: 800, fontSize: '0.75rem', padding: '3px 10px', borderRadius: '20px', border: '1px solid #e2e8f0' }}>
-                      {s.category === 'Spa & Grooming' ? '✂️ Spa & Grooming' :
+                  <div style={{ position: 'relative', height: 195, overflow: 'hidden', background: '#f1f5f9' }}>
+                    <img
+                      src={getServiceImage(s)}
+                      alt={s.name}
+                      className="media-card-img"
+                      loading="lazy"
+                      onError={(e) => { e.currentTarget.src = FALLBACK_IMAGES.service; }}
+                    />
+                    <span className="badge" style={{ position: 'absolute', top: 12, left: 12, background: 'rgba(255,255,255,0.94)', backdropFilter: 'blur(4px)', color: '#0f172a', fontWeight: 800, fontSize: '0.75rem', padding: '4px 11px', borderRadius: '20px', boxShadow: '0 2px 8px rgba(0,0,0,0.1)' }}>
+                      {s.category === 'Khoa Sinh Sản' ? '🏥 Khoa Sinh Sản' :
+                       s.category === 'Spa & Grooming' ? '✂️ Spa & Grooming' :
                        s.category === 'Khách Sạn & Lưu Trú' ? '🏨 Khách Sạn' :
                        s.category === 'Y Tế & Tiêm Phòng' ? '💉 Tiêm Phòng' : '🩺 Thú Y & Trị Liệu'}
                     </span>
-                    <span style={{ fontSize: '1.35rem', fontWeight: 800, color: '#ff6b35' }}>
+                    <span style={{ position: 'absolute', bottom: 12, right: 12, background: 'rgba(15,23,42,0.82)', color: '#ffffff', fontSize: '0.95rem', fontWeight: 800, padding: '4px 12px', borderRadius: '12px', backdropFilter: 'blur(4px)' }}>
                       {s.price.toLocaleString('vi-VN')} đ
                     </span>
                   </div>
-                  <h3 style={{ fontSize: '1.2rem', fontWeight: 700, marginBottom: '0.6rem', color: '#0f172a' }}>{s.name}</h3>
-                  <p style={{ fontSize: '0.88rem', color: 'var(--text-secondary)', marginBottom: '1.2rem', lineHeight: '1.5' }}>{s.description}</p>
+                  <div style={{ padding: '1.35rem 1.5rem 0 1.5rem' }}>
+                    <h3 style={{ fontSize: '1.18rem', fontWeight: 800, marginBottom: '0.55rem', color: '#0f172a', lineHeight: 1.4 }}>{s.name}</h3>
+                    <p style={{ fontSize: '0.86rem', color: 'var(--text-secondary)', marginBottom: '1.1rem', lineHeight: '1.55' }}>{s.description}</p>
+                  </div>
                 </div>
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', paddingTop: '1rem', borderTop: '1px solid var(--border-light)' }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '1rem 1.5rem 1.35rem 1.5rem', borderTop: '1px solid var(--border-light)' }}>
                   <span style={{ fontSize: '0.82rem', color: 'var(--text-muted)', display: 'flex', alignItems: 'center', gap: '4px' }}>
                     <Clock size={14} color="#64748b" /> Thời gian: {s.durationMinutes >= 60 ? `${Math.floor(s.durationMinutes / 60)}h${s.durationMinutes % 60 ? ` ${s.durationMinutes % 60}p` : ''}` : `${s.durationMinutes} phút`}
                   </span>
@@ -1009,21 +1112,26 @@ export default function CustomerPortal({
                     )}
                   </div>
 
-                  {/* Product Visual Artwork Showcase */}
+                  {/* Product Real Photo Showcase */}
                   <div style={{ 
-                    background: visual.bg, 
-                    height: 165, 
+                    background: '#f8fafc', 
+                    height: 185, 
                     borderRadius: '16px', 
-                    display: 'flex', 
-                    alignItems: 'center', 
-                    justifyContent: 'center', 
                     margin: '0.5rem 0 0.85rem 0', 
                     border: '1px solid #e2e8f0',
                     position: 'relative',
                     overflow: 'hidden'
                   }}>
+                    <img
+                      src={getProductImage(p)}
+                      alt={p.name}
+                      className="media-card-img"
+                      loading="lazy"
+                      onError={(e) => { e.currentTarget.src = FALLBACK_IMAGES.product; }}
+                    />
+
                     {/* Brand Badge */}
-                    <div style={{ position: 'absolute', top: 10, left: 10, background: 'rgba(15,23,42,0.72)', backdropFilter: 'blur(6px)', color: '#ffffff', fontSize: '0.7rem', fontWeight: 800, padding: '2px 9px', borderRadius: '20px', letterSpacing: '0.3px', border: '1px solid rgba(255,255,255,0.2)' }}>
+                    <div style={{ position: 'absolute', top: 10, left: 10, background: 'rgba(15,23,42,0.78)', backdropFilter: 'blur(6px)', color: '#ffffff', fontSize: '0.7rem', fontWeight: 800, padding: '2px 9px', borderRadius: '20px', letterSpacing: '0.3px', border: '1px solid rgba(255,255,255,0.2)' }}>
                       {brand}
                     </div>
 
@@ -1033,13 +1141,8 @@ export default function CustomerPortal({
                     </div>
 
                     {/* Delivery Tag */}
-                    <div style={{ position: 'absolute', bottom: 10, left: 10, background: 'rgba(255,255,255,0.92)', color: '#0f172a', fontSize: '0.68rem', fontWeight: 700, padding: '2px 8px', borderRadius: '8px', boxShadow: '0 2px 4px rgba(0,0,0,0.06)' }}>
+                    <div style={{ position: 'absolute', bottom: 10, left: 10, background: 'rgba(255,255,255,0.94)', color: '#0f172a', fontSize: '0.68rem', fontWeight: 700, padding: '2px 8px', borderRadius: '8px', boxShadow: '0 2px 6px rgba(0,0,0,0.12)' }}>
                       ⚡ Giao 2h
-                    </div>
-
-                    {/* Center Emoji with Soft Shadow */}
-                    <div style={{ fontSize: '4.2rem', filter: 'drop-shadow(0 14px 18px rgba(0,0,0,0.18))' }}>
-                      {visual.emoji}
                     </div>
                   </div>
 
@@ -1620,8 +1723,14 @@ export default function CustomerPortal({
                   {/* Cart Items List */}
                   <div style={{ display: 'flex', flexDirection: 'column', gap: '0.85rem', maxHeight: '280px', overflowY: 'auto', paddingRight: '4px', marginBottom: '1.25rem' }}>
                     {cart.map((item) => (
-                      <div key={item.id} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', background: '#f8fafc', padding: '0.75rem 0.95rem', borderRadius: '12px', border: '1px solid #e2e8f0' }}>
-                        <div style={{ flex: 1, paddingRight: '8px' }}>
+                      <div key={item.id} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '10px', background: '#f8fafc', padding: '0.75rem 0.95rem', borderRadius: '12px', border: '1px solid #e2e8f0' }}>
+                        <img
+                          src={getProductImage(item)}
+                          alt={item.name}
+                          onError={(e) => { e.currentTarget.src = FALLBACK_IMAGES.product; }}
+                          style={{ width: 46, height: 46, borderRadius: '10px', objectFit: 'cover', border: '1px solid #e2e8f0', flexShrink: 0 }}
+                        />
+                        <div style={{ flex: 1, paddingRight: '6px' }}>
                           <strong style={{ fontSize: '0.92rem', color: '#0f172a', display: 'block' }}>{item.name}</strong>
                           <div style={{ fontSize: '0.78rem', color: 'var(--text-muted)' }}>
                             {item.unitPrice.toLocaleString('vi-VN')} đ / sp
@@ -1764,7 +1873,7 @@ export default function CustomerPortal({
                       <RefreshCw size={14} color="#0284c7" /> Đổi trả miễn phí trong 7 ngày nếu không hài lòng
                     </div>
                     <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-                      <PhoneCall size={14} color="#ea580c" /> Hotline hỗ trợ đơn hàng: <strong>1900 6868</strong>
+                      <PhoneCall size={14} color="#ea580c" /> Hotline hỗ trợ đơn hàng: <a href={`tel:${CONTACT_INFO.phoneRaw}`} style={{ color: '#ea580c', textDecoration: 'none', fontWeight: 800 }}>{CONTACT_INFO.phoneDisplay}</a>
                     </div>
                   </div>
 
@@ -1803,9 +1912,12 @@ export default function CustomerPortal({
               {/* User Profile Mini Banner */}
               <div style={{ background: 'rgba(2, 132, 199, 0.08)', border: '1px solid rgba(2, 132, 199, 0.25)', borderRadius: '14px', padding: '1rem 1.25rem', marginBottom: '1.5rem', display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '1rem' }}>
                 <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
-                  <div style={{ width: 44, height: 44, borderRadius: '50%', background: 'linear-gradient(135deg, #ff6b35 0%, #ff8e53 100%)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#fff', fontWeight: 800, fontSize: '1.2rem' }}>
-                    {currentUser.fullName ? currentUser.fullName.charAt(0) : 'U'}
-                  </div>
+                  <img
+                    src={getUserAvatar(currentUser)}
+                    alt={currentUser.fullName || 'Khách hàng'}
+                    onError={(e) => { e.currentTarget.src = FALLBACK_IMAGES.user; }}
+                    style={{ width: 50, height: 50, borderRadius: '50%', objectFit: 'cover', border: '2px solid #ff6b35', boxShadow: '0 4px 12px rgba(255,107,53,0.2)', flexShrink: 0 }}
+                  />
                   <div>
                     <h4 style={{ fontSize: '1rem', fontWeight: 800 }}>{currentUser.fullName}</h4>
                     <div style={{ fontSize: '0.8rem', color: 'var(--text-muted)' }}>
@@ -1928,17 +2040,58 @@ export default function CustomerPortal({
           <div>
             <h4 style={{ fontSize: '1rem', fontWeight: 700, marginBottom: '0.85rem' }}>Khám Phá</h4>
             <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem', fontSize: '0.85rem', color: 'var(--text-muted)' }}>
+              <span style={{ cursor: 'pointer', color: '#ea580c', fontWeight: 700 }} onClick={() => onTabChange('reproduction')}>🏥 Khoa Sinh Sản (VPet's)</span>
               <span style={{ cursor: 'pointer' }} onClick={() => onTabChange('booking')}>Dịch Vụ Spa</span>
               <span style={{ cursor: 'pointer' }} onClick={() => onTabChange('shop')}>Cửa Hàng Vật Phẩm</span>
               <span style={{ cursor: 'pointer' }} onClick={() => onTabChange('pets')}>Quản Lý Thú Cưng</span>
             </div>
           </div>
           <div>
-            <h4 style={{ fontSize: '1rem', fontWeight: 700, marginBottom: '0.85rem' }}>Liên Hệ</h4>
+            <h4 style={{ fontSize: '1rem', fontWeight: 700, marginBottom: '0.85rem' }}>Liên Hệ Trực Tuyến</h4>
             <div style={{ fontSize: '0.85rem', color: 'var(--text-muted)', display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
-              <span>Hotline: 076 240 9021</span>
-              <span>Email: hello@petopia.vn</span>
-              <span>Hỗ trợ: 8:00 - 21:00 hằng ngày</span>
+              <a href={`tel:${CONTACT_INFO.phoneRaw}`} style={{ color: '#ea580c', textDecoration: 'none', fontWeight: 800, display: 'flex', alignItems: 'center', gap: '6px' }}>
+                <PhoneCall size={14} /> Hotline 24/7: {CONTACT_INFO.phoneDisplay}
+              </a>
+              <div style={{ display: 'flex', gap: '8px', marginTop: '4px' }}>
+                <a
+                  href={CONTACT_INFO.zaloLink}
+                  onClick={openZaloQrModal}
+                  style={{
+                    background: '#0068FF',
+                    color: '#ffffff',
+                    padding: '4px 10px',
+                    borderRadius: '12px',
+                    fontSize: '0.75rem',
+                    textDecoration: 'none',
+                    fontWeight: 800,
+                    display: 'inline-flex',
+                    alignItems: 'center',
+                    gap: '4px'
+                  }}
+                >
+                  💬 Zalo QR
+                </a>
+                <a
+                  href={CONTACT_INFO.facebookLink}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  style={{
+                    background: 'linear-gradient(135deg, #0078ff 0%, #a033ff 100%)',
+                    color: '#ffffff',
+                    padding: '4px 10px',
+                    borderRadius: '12px',
+                    fontSize: '0.75rem',
+                    textDecoration: 'none',
+                    fontWeight: 800,
+                    display: 'inline-flex',
+                    alignItems: 'center',
+                    gap: '4px'
+                  }}
+                >
+                  📘 Facebook
+                </a>
+              </div>
+              <span style={{ fontSize: '0.78rem', color: '#64748b', marginTop: '2px' }}>Email: hello@petopia.vn</span>
             </div>
           </div>
           <div>
@@ -2012,8 +2165,14 @@ export default function CustomerPortal({
                 {/* Scrollable Items Container */}
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem', maxHeight: '280px', overflowY: 'auto', paddingRight: '4px' }}>
                   {cart.map((item) => (
-                    <div key={item.id} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', background: '#f8fafc', padding: '0.8rem 1rem', borderRadius: '14px', border: '1px solid var(--border-light)' }}>
-                      <div style={{ flex: 1, paddingRight: '10px' }}>
+                    <div key={item.id} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '10px', background: '#f8fafc', padding: '0.8rem 1rem', borderRadius: '14px', border: '1px solid var(--border-light)' }}>
+                      <img
+                        src={getProductImage(item)}
+                        alt={item.name}
+                        onError={(e) => { e.currentTarget.src = FALLBACK_IMAGES.product; }}
+                        style={{ width: 48, height: 48, borderRadius: '10px', objectFit: 'cover', border: '1px solid #e2e8f0', flexShrink: 0 }}
+                      />
+                      <div style={{ flex: 1, paddingRight: '8px' }}>
                         <strong style={{ fontSize: '0.95rem', color: '#0f172a' }}>{item.name}</strong>
                         <div style={{ fontSize: '0.78rem', color: 'var(--text-muted)', marginTop: '2px' }}>
                           Đơn giá: {item.unitPrice.toLocaleString('vi-VN')} đ • Tồn: {item.currentStock} sp
@@ -2275,7 +2434,15 @@ export default function CustomerPortal({
       {/* MODAL CHI TIẾT DỊCH VỤ (USE CASE: TRA CỨU & XEM CHI TIẾT DỊCH VỤ) */}
       {selectedDetailService && (
         <div className="modal-overlay">
-          <div className="modal-content animate-fade-in" style={{ maxWidth: 560 }}>
+          <div className="modal-content animate-fade-in" style={{ maxWidth: 560, overflow: 'hidden' }}>
+            <div style={{ height: 185, borderRadius: '14px', overflow: 'hidden', marginBottom: '1.15rem', background: '#f1f5f9' }}>
+              <img
+                src={getServiceImage(selectedDetailService)}
+                alt={selectedDetailService.name}
+                onError={(e) => { e.currentTarget.src = FALLBACK_IMAGES.service; }}
+                style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }}
+              />
+            </div>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '1rem' }}>
               <div>
                 <span className="badge badge-info" style={{ marginBottom: '6px' }}>{selectedDetailService.category}</span>
@@ -2290,21 +2457,21 @@ export default function CustomerPortal({
               {selectedDetailService.description}
             </p>
 
-            <div style={{ background: 'rgba(0,0,0,0.25)', borderRadius: '12px', padding: '1rem', border: '1px solid var(--border-light)', marginBottom: '1.25rem' }}>
-              <h4 style={{ fontSize: '0.95rem', fontWeight: 700, marginBottom: '0.6rem', display: 'flex', alignItems: 'center', gap: '6px', color: '#fbbf24' }}>
+            <div style={{ background: '#f8fafc', borderRadius: '12px', padding: '1rem', border: '1px solid var(--border-light)', marginBottom: '1.25rem' }}>
+              <h4 style={{ fontSize: '0.95rem', fontWeight: 700, marginBottom: '0.6rem', display: 'flex', alignItems: 'center', gap: '6px', color: '#ea580c' }}>
                 <Clock size={16} /> Quy Trình Chăm Sóc Chuẩn Spa ({selectedDetailService.durationMinutes} Phút)
               </h4>
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '0.6rem', fontSize: '0.85rem', color: 'var(--text-muted)' }}>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '0.6rem', fontSize: '0.85rem', color: 'var(--text-secondary)' }}>
                 <div style={{ display: 'flex', gap: '8px' }}>
-                  <span style={{ color: '#38ef7d', fontWeight: 700 }}>1.</span>
+                  <span style={{ color: '#059669', fontWeight: 800 }}>1.</span>
                   <span><strong>Tiếp nhận & Kiểm tra:</strong> Cân đo thể trạng, kiểm tra da lông, ghi nhận lưu ý tiền sử bệnh/dị ứng.</span>
                 </div>
                 <div style={{ display: 'flex', gap: '8px' }}>
-                  <span style={{ color: '#38ef7d', fontWeight: 700 }}>2.</span>
+                  <span style={{ color: '#059669', fontWeight: 800 }}>2.</span>
                   <span><strong>Thực hiện liệu trình:</strong> Thực hiện dịch vụ chuyên sâu theo đúng tiêu chuẩn vệ sinh và kỹ thuật Petopia.</span>
                 </div>
                 <div style={{ display: 'flex', gap: '8px' }}>
-                  <span style={{ color: '#38ef7d', fontWeight: 700 }}>3.</span>
+                  <span style={{ color: '#059669', fontWeight: 800 }}>3.</span>
                   <span><strong>Bàn giao & Care Summary:</strong> Nhân viên cập nhật kết quả và ghi chú dặn dò chăm sóc tại nhà.</span>
                 </div>
               </div>

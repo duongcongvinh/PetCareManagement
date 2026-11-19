@@ -1,6 +1,6 @@
 import React from 'react';
 import { 
-  LayoutDashboard, Calendar, PawPrint, Package, Brain, ShoppingBag, Users, Settings, Tag, Shield, Building2, FileText, CheckSquare
+  LayoutDashboard, Calendar, PawPrint, Package, Brain, ShoppingBag, Users, Settings, Tag, Shield, Building2, FileText, CheckSquare, Activity
 } from 'lucide-react';
 
 export default function Sidebar({ activeRole, activeTab, onTabChange }) {
@@ -9,6 +9,7 @@ export default function Sidebar({ activeRole, activeTab, onTabChange }) {
       case 'CUSTOMER':
         return [
           { id: 'pets', label: 'Hồ Sơ Thú Cưng', icon: PawPrint },
+          { id: 'reproduction', label: 'Khoa Sinh Sản', icon: Activity },
           { id: 'booking', label: 'Đặt Lịch Dịch Vụ', icon: Calendar },
           { id: 'shop', label: 'Mua Sắm Vật Phẩm', icon: ShoppingBag },
           { id: 'history', label: 'Tiến Độ & Lịch Hẹn', icon: LayoutDashboard },

@@ -129,6 +129,66 @@ async function main() {
     },
   });
 
+  const service4 = await prisma.serviceCatalog.create({
+    data: {
+      name: 'Siêu Âm Thai Kỹ Thuật Số Doppler & Dự Sinh Chuẩn Xác',
+      description: 'Chẩn đoán thai sớm từ ngày thứ 21. Đếm túi thai, đo nhịp tim thai bằng máy Doppler chuyên dụng và dự đoán ngày sinh chính xác.',
+      durationMinutes: 25,
+      price: 150000,
+      category: 'Khoa Sinh Sản',
+    },
+  });
+
+  const service5 = await prisma.serviceCatalog.create({
+    data: {
+      name: 'Gói Hộ Sinh Đỡ Đẻ & Hồi Sức Sơ Sinh An Toàn 24/7',
+      description: 'Bác sĩ thú y trực tiếp theo dõi gò tử cung, hỗ trợ thế thai khó sinh, cắt rốn tiệt trùng và kích thở lồng ấp sơ sinh.',
+      durationMinutes: 120,
+      price: 350000,
+      category: 'Khoa Sinh Sản',
+    },
+  });
+
+  const service6 = await prisma.serviceCatalog.create({
+    data: {
+      name: 'Phẫu Thuật Mổ Đẻ Cấp Cứu Vô Trùng (C-Section)',
+      description: 'Mổ lấy thai cấp cứu vô trùng khi khó sinh, suy thai hoặc kẹt xương chậu. Gây mê bay hơi Isoflurane an toàn tuyệt đối cho mẹ & con.',
+      durationMinutes: 60,
+      price: 850000,
+      category: 'Khoa Sinh Sản',
+    },
+  });
+
+  const service7 = await prisma.serviceCatalog.create({
+    data: {
+      name: 'Triệt Sản Mèo Cái / Chó Cái Công Nghệ Minilap Thẩm Mỹ',
+      description: 'Cắt tử cung buồng trứng đường rạch vi phẫu siêu nhỏ 1-1.5cm, khâu chỉ tự tiêu nội bì, không sẹo lồi, hồi phục nhanh sau 24h.',
+      durationMinutes: 45,
+      price: 450000,
+      category: 'Khoa Sinh Sản',
+    },
+  });
+
+  const service8 = await prisma.serviceCatalog.create({
+    data: {
+      name: 'Thiến Chó Đực / Mèo Đực An Toàn & Kháng Khuẩn',
+      description: 'Tiểu phẫu thiến 15 phút an toàn nhẹ nhàng, loại trừ nguy cơ ung thư tinh hoàn và kiểm soát triệt để hành vi xịt nước tiểu hôi đánh dấu.',
+      durationMinutes: 25,
+      price: 280000,
+      category: 'Khoa Sinh Sản',
+    },
+  });
+
+  const service9 = await prisma.serviceCatalog.create({
+    data: {
+      name: 'Phẫu Thuật Cấp Cứu Viêm Tử Cung Tích Mủ (Pyometra)',
+      description: 'Giải phóng ổ mủ trong tử cung cho thú cưng bị biến chứng do tiêm thuốc tránh thai dạo hoặc rối loạn nội tiết tố, cứu sống nhiễm trùng máu.',
+      durationMinutes: 75,
+      price: 900000,
+      category: 'Khoa Sinh Sản',
+    },
+  });
+
   console.log('✅ Services seeded');
 
   // 5. Suppliers
