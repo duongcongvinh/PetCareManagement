@@ -1,545 +1,1160 @@
 import React, { useState } from 'react';
-import { 
-  LayoutDashboard, Brain, Calendar, Package, Check, X, Sparkles, TrendingUp, 
-  DollarSign, Users, Tag, Building2, FileText, Plus, AlertCircle, Shield, PawPrint, Edit, Trash2,
-  Sun, CloudRain, Gift, CloudSun, Compass, ShieldAlert, ShoppingBag
+import {
+  Shield, Users, Plus, Search, Edit3, Trash2, Lock, Check, X, RefreshCw,
+  LayoutDashboard, DollarSign, AlertTriangle, CheckSquare, Building2, Settings,
+  Phone, Mail, MapPin, Download, Brain, Clock, TrendingUp, Calendar, ShoppingBag,
+  FileText, Activity, ArrowRight
 } from 'lucide-react';
+import { INITIAL_USERS, INITIAL_SUPPLIERS } from '../mockData';
+import { getProductImage, FALLBACK_IMAGES } from '../mediaAssets';
+import { toast, confirmModal } from './ToastNotification';
 
-import { INITIAL_USERS, INITIAL_SUPPLIERS, INITIAL_PROMOTIONS, INITIAL_PETS, INITIAL_SERVICES, FIVE_YEAR_HISTORICAL_DATA, PRODUCT_SEASONAL_FORECASTS, FIVE_YEAR_ORDER_HISTORY } from '../mockData';
-import { apiService } from '../apiService';
-import { toast } from './ToastNotification';
+// Ma trận phân quyền RBAC mặc định khớp 1-1 sơ đồ Use Case tổng quát (đã bổ sung đầy đủ quyền Admin)
+const DEFAULT_RBAC_MATRIX = [
+  // Khách hàng
+  { id: 'uc-cust-book', group: 'Khách hàng', label: 'Quản lý lịch hẹn cá nhân', CUSTOMER: true, CARE_STAFF: false, WAREHOUSE_STAFF: false, ADMIN: false },
+  { id: 'uc-cust-profile', group: 'Khách hàng', label: 'Quản lý thông tin cá nhân', CUSTOMER: true, CARE_STAFF: true, WAREHOUSE_STAFF: true, ADMIN: true },
+  { id: 'uc-cust-pets', group: 'Khách hàng', label: 'Quản lý thú cưng cá nhân', CUSTOMER: true, CARE_STAFF: false, WAREHOUSE_STAFF: false, ADMIN: false },
+  { id: 'uc-cust-search', group: 'Khách hàng', label: 'Tìm kiếm thông tin dịch vụ & sản phẩm', CUSTOMER: true, CARE_STAFF: true, WAREHOUSE_STAFF: true, ADMIN: true },
+  // Nhân viên
+  { id: 'uc-staff-app', group: 'Nhân viên', label: 'Quản lý lịch hẹn', CUSTOMER: false, CARE_STAFF: true, WAREHOUSE_STAFF: false, ADMIN: false },
+  { id: 'uc-staff-svc', group: 'Nhân viên', label: 'Quản lý dịch vụ', CUSTOMER: false, CARE_STAFF: true, WAREHOUSE_STAFF: false, ADMIN: false },
+  { id: 'uc-staff-promo', group: 'Nhân viên', label: 'Quản lý chương trình khuyến mãi', CUSTOMER: false, CARE_STAFF: true, WAREHOUSE_STAFF: false, ADMIN: false },
+  { id: 'uc-staff-pets', group: 'Nhân viên', label: 'Quản lý hồ sơ thú cưng', CUSTOMER: false, CARE_STAFF: true, WAREHOUSE_STAFF: false, ADMIN: false },
+  { id: 'uc-staff-report', group: 'Nhân viên', label: 'Báo cáo, thống kê vận hành', CUSTOMER: false, CARE_STAFF: true, WAREHOUSE_STAFF: false, ADMIN: true },
+  { id: 'uc-staff-wh', group: 'Nhân viên', label: 'Tra cứu & báo nhập kho', CUSTOMER: false, CARE_STAFF: true, WAREHOUSE_STAFF: true, ADMIN: false },
+  // Quản lý kho
+  { id: 'uc-wh-inv', group: 'Quản lý kho', label: 'Quản lý kho (Nhập / Xuất / Tồn kho)', CUSTOMER: false, CARE_STAFF: false, WAREHOUSE_STAFF: true, ADMIN: false },
+  { id: 'uc-wh-ai', group: 'Quản lý kho', label: 'Dự báo nhu cầu (AI)', CUSTOMER: false, CARE_STAFF: false, WAREHOUSE_STAFF: true, ADMIN: true },
+  { id: 'uc-wh-prop', group: 'Quản lý kho', label: 'Lập đề xuất nhập hàng', CUSTOMER: false, CARE_STAFF: false, WAREHOUSE_STAFF: true, ADMIN: false },
+  // Admin
+  { id: 'uc-admin-overview', group: 'Admin', label: 'Xem tổng quan & Báo cáo toàn hệ thống', CUSTOMER: false, CARE_STAFF: false, WAREHOUSE_STAFF: false, ADMIN: true },
+  { id: 'uc-admin-acc', group: 'Admin', label: 'Quản lý tài khoản', CUSTOMER: false, CARE_STAFF: false, WAREHOUSE_STAFF: false, ADMIN: true },
+  { id: 'uc-admin-role', group: 'Admin', label: 'Phân quyền người dùng (RBAC)', CUSTOMER: false, CARE_STAFF: false, WAREHOUSE_STAFF: false, ADMIN: true },
+  { id: 'uc-admin-approve', group: 'Admin', label: 'Phê duyệt kế hoạch nhập hàng', CUSTOMER: false, CARE_STAFF: false, WAREHOUSE_STAFF: false, ADMIN: true },
+  { id: 'uc-admin-supplier', group: 'Admin', label: 'Quản lý nhà cung cấp', CUSTOMER: false, CARE_STAFF: false, WAREHOUSE_STAFF: true, ADMIN: true },
+  { id: 'uc-admin-config', group: 'Admin', label: 'Cấu hình hệ thống & Nhật ký hoạt động', CUSTOMER: false, CARE_STAFF: false, WAREHOUSE_STAFF: false, ADMIN: true },
+];
 
-export default function AdminDashboard({ 
-  activeTab, 
-  appointments = [], 
-  products = [], 
-  services = INITIAL_SERVICES, 
+const ROLE_META = {
+  CUSTOMER: { label: 'Khách hàng', badge: 'badge-success', color: '#059669' },
+  CARE_STAFF: { label: 'Nhân viên', badge: 'badge-info', color: '#0284c7' },
+  WAREHOUSE_STAFF: { label: 'Quản lý kho', badge: 'badge-pending', color: '#d97706' },
+  ADMIN: { label: 'Admin', badge: 'badge-danger', color: '#7c3aed' },
+};
+
+const DEFAULT_SYSTEM_CONFIG = {
+  storeName: 'Petopia Pet Care & Smart AI Platform',
+  hotline: '0348 639 603',
+  supportEmail: 'hello@petopia.vn',
+  openHours: '08:00 - 21:00 (Thứ 2 - Chủ Nhật)',
+  freeShipThreshold: 500000,
+  expressShipFee: 30000,
+  aiConfidenceLevel: '95', // 90 | 95 | 99
+  defaultLeadTimeDays: 4,
+  safetyStockRatio: 20,
+  autoLowStockAlert: true,
+};
+
+export default function AdminDashboard({
+  activeTab = 'overview',
+  onTabChange,
+  currentUser,
   users = INITIAL_USERS,
+  appointments = [],
+  products = [],
+  services = [],
+  orders = [],
+  promotions = [],
+  reorderProposals = [],
+  suppliers = INITIAL_SUPPLIERS,
+  auditLogs = [],
   onAddUser,
-  reorderProposals = [], 
-  onApproveProposal, 
+  onUpdateUser,
+  onDeleteUser,
+  onUpdateUserRole,
+  onToggleUserStatus,
+  onApproveProposal,
   onRejectProposal,
-  onTriggerAI,
-  customerOrders = [],
-  onUpdateOrderStatus
+  onAddSupplier,
+  onUpdateSupplier,
+  onDeleteSupplier,
+  onAddAuditLog,
+  onClearAuditLogs
 }) {
-  const [suppliers, setSuppliers] = useState(INITIAL_SUPPLIERS);
-  const [promotions, setPromotions] = useState(INITIAL_PROMOTIONS);
-  const [serviceList, setServiceList] = useState(services);
-
-  React.useEffect(() => {
-    if (services && services.length > 0) {
-      setServiceList(services);
-    }
-  }, [services]);
-  const [showAddUserModal, setShowAddUserModal] = useState(false);
-  const [newUserData, setNewUserData] = useState({
+  // Accounts filter & modal state
+  const [searchQuery, setSearchQuery] = useState('');
+  const [roleFilter, setRoleFilter] = useState('ALL');
+  const [showUserModal, setShowUserModal] = useState(false);
+  const [editingUser, setEditingUser] = useState(null);
+  const [userForm, setUserForm] = useState({
     fullName: '',
     email: '',
     phone: '',
-    role: 'CUSTOMER',
+    role: 'CARE_STAFF',
     password: 'password123'
   });
 
-  const handleAddUserSubmit = async (e) => {
+  // RBAC state (auto-merge new default rows if old matrix exists in localStorage)
+  const [rbacMatrix, setRbacMatrix] = useState(() => {
+    try {
+      const saved = localStorage.getItem('petcare_rbac_matrix');
+      if (saved) {
+        const parsed = JSON.parse(saved);
+        if (Array.isArray(parsed)) {
+          const existingIds = new Set(parsed.map(r => r.id));
+          const missing = DEFAULT_RBAC_MATRIX.filter(r => !existingIds.has(r.id));
+          return [...parsed, ...missing];
+        }
+      }
+    } catch (e) {}
+    return DEFAULT_RBAC_MATRIX;
+  });
+
+  // Proposals approval filter
+  const [proposalFilter, setProposalFilter] = useState('ALL');
+
+  // Suppliers state
+  const [supplierSearch, setSupplierSearch] = useState('');
+  const [showSupplierModal, setShowSupplierModal] = useState(false);
+  const [editingSupplier, setEditingSupplier] = useState(null);
+  const [supplierForm, setSupplierForm] = useState({
+    name: '',
+    contactPerson: '',
+    phone: '',
+    email: '',
+    address: '',
+    productCategories: 'Thức ăn hạt, Pate'
+  });
+
+  // System Settings & Audit Log filter state
+  const [systemConfig, setSystemConfig] = useState(() => {
+    try {
+      const saved = localStorage.getItem('petcare_system_config');
+      if (saved) return { ...DEFAULT_SYSTEM_CONFIG, ...JSON.parse(saved) };
+    } catch (e) {}
+    return DEFAULT_SYSTEM_CONFIG;
+  });
+  const [auditFilter, setAuditFilter] = useState('ALL');
+
+  const validTabs = [
+    'overview',
+    'accounts-admin',
+    'roles-admin',
+    'approve-proposals',
+    'suppliers-admin',
+    'system-settings'
+  ];
+  const currentTab = validTabs.includes(activeTab) ? activeTab : 'overview';
+
+  // Computed metrics
+  const serviceRevenue = appointments
+    .filter(a => a.status !== 'CANCELLED')
+    .reduce((sum, a) => sum + (Number(a.price) || 0), 0);
+  const orderRevenue = orders.reduce((sum, o) => sum + (Number(o.total) || 0), 0);
+  const totalRevenue = serviceRevenue + orderRevenue;
+  const lowStockProducts = products.filter(p => p.currentStock <= p.minStockLevel);
+  const draftProposals = reorderProposals.filter(p => p.status === 'DRAFT');
+  const approvedProposals = reorderProposals.filter(p => p.status === 'APPROVED');
+  const completedProposals = reorderProposals.filter(p => p.status === 'COMPLETED');
+
+  const estimateProposalCost = (prop) => {
+    const matched = products.find(p => p.id === prop.productId || p.sku === prop.sku);
+    const unitCost = matched?.costPrice || Math.round((matched?.unitPrice || 150000) * 0.65);
+    return (Number(prop.suggestedQuantity) || 0) * unitCost;
+  };
+
+  const pendingBudgetTotal = draftProposals.reduce((sum, prop) => sum + estimateProposalCost(prop), 0);
+
+  const filteredUsers = users.filter(u => {
+    const matchRole = roleFilter === 'ALL' || u.role === roleFilter;
+    const q = searchQuery.trim().toLowerCase();
+    const matchQ = !q ||
+      (u.fullName || '').toLowerCase().includes(q) ||
+      (u.email || '').toLowerCase().includes(q) ||
+      (u.phone || '').toLowerCase().includes(q);
+    return matchRole && matchQ;
+  });
+
+  const filteredProposals = reorderProposals.filter(p =>
+    proposalFilter === 'ALL' ? true : p.status === proposalFilter
+  );
+
+  const filteredSuppliers = suppliers.filter(s => {
+    const q = supplierSearch.trim().toLowerCase();
+    if (!q) return true;
+    return (
+      (s.name || '').toLowerCase().includes(q) ||
+      (s.contactPerson || '').toLowerCase().includes(q) ||
+      (s.phone || '').toLowerCase().includes(q) ||
+      (s.productCategories || '').toLowerCase().includes(q)
+    );
+  });
+
+  const filteredAuditLogs = auditLogs.filter(log =>
+    auditFilter === 'ALL' ? true : log.category === auditFilter
+  );
+
+  // Handlers: Overview CSV Export
+  const handleExportReportCSV = () => {
+    const rows = [
+      ['Chi So He Thong', 'Gia Tri'],
+      ['Tong Doanh Thu (VND)', totalRevenue],
+      ['Doanh Thu Dich Vu Spa (VND)', serviceRevenue],
+      ['Doanh Thu Ban Le Pet Shop (VND)', orderRevenue],
+      ['Tong Tai Khoan Nguoi Dung', users.length],
+      ['Tong Lich Hen Cham Soc', appointments.length],
+      ['Tong Don Hang Ban Le', orders.length],
+      ['San Pham Ton Kho Thap', lowStockProducts.length],
+      ['De Xuat Nhap Hang Cho Duyet', draftProposals.length],
+      ['Nha Cung Cap Doi Tac', suppliers.length]
+    ];
+    const csvContent = '\uFEFF' + rows.map(r => r.join(',')).join('\n');
+    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = `Petopia_BaoCao_HeThong_${new Date().toISOString().split('T')[0]}.csv`;
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    URL.revokeObjectURL(url);
+    if (onAddAuditLog) {
+      onAddAuditLog('SYSTEM', 'Xuất báo cáo tổng hợp', 'Đã xuất file CSV tổng hợp doanh thu & vận hành toàn hệ thống.');
+    }
+    toast.success('Đã xuất file báo cáo tổng hợp CSV thành công!', 'Báo Cáo Hệ Thống');
+  };
+
+  // Handlers: Accounts
+  const openCreateUser = () => {
+    setEditingUser(null);
+    setUserForm({ fullName: '', email: '', phone: '', role: 'CARE_STAFF', password: 'password123' });
+    setShowUserModal(true);
+  };
+
+  const openEditUser = (u) => {
+    setEditingUser(u);
+    setUserForm({
+      fullName: u.fullName || '',
+      email: u.email || '',
+      phone: u.phone || '',
+      role: u.role || 'CUSTOMER',
+      password: ''
+    });
+    setShowUserModal(true);
+  };
+
+  const handleSaveUser = async (e) => {
     e.preventDefault();
-    if (!newUserData.fullName || !newUserData.email) {
-      toast.warning('Vui lòng nhập đầy đủ Họ tên và Email!', 'Thiếu Thông Tin');
+    if (!userForm.fullName.trim() || !userForm.email.trim()) {
+      toast.warning('Vui lòng nhập đầy đủ Họ tên và Tài khoản (Email/SĐT)!', 'Thiếu Thông Tin');
       return;
     }
-    if (onAddUser) {
-      await onAddUser(newUserData);
+
+    if (editingUser) {
+      if (onUpdateUser) {
+        onUpdateUser(editingUser.id, {
+          fullName: userForm.fullName.trim(),
+          phone: userForm.phone.trim(),
+          role: userForm.role,
+          ...(userForm.password ? { password: userForm.password } : {})
+        });
+      }
+      toast.success(`Đã cập nhật tài khoản "${userForm.fullName}"!`, 'Quản Lý Tài Khoản');
+    } else {
+      if (onAddUser) {
+        await onAddUser({
+          fullName: userForm.fullName.trim(),
+          email: userForm.email.trim(),
+          phone: userForm.phone.trim(),
+          role: userForm.role,
+          password: userForm.password || '123456'
+        });
+      }
+      toast.success(`Đã tạo tài khoản "${userForm.fullName}" (${ROLE_META[userForm.role]?.label})!`, 'Quản Lý Tài Khoản');
     }
-    toast.success(`Đã tạo thành công tài khoản [${newUserData.fullName}] với vai trò ${newUserData.role}!`, 'Tài Khoản');
-    setShowAddUserModal(false);
-    setNewUserData({
-      fullName: '',
-      email: '',
+
+    setShowUserModal(false);
+  };
+
+  const handleDeleteUserClick = async (u) => {
+    if (currentUser && (u.id === currentUser.id || u.email === currentUser.email)) {
+      toast.warning('Không thể tự xóa tài khoản Admin đang đăng nhập!', 'Bảo Vệ Hệ Thống');
+      return;
+    }
+    const ok = await confirmModal(
+      `Bạn có chắc chắn muốn xóa tài khoản "${u.fullName}" (${u.email})?`,
+      'Xác Nhận Xóa Tài Khoản',
+      { type: 'danger', confirmText: 'Xóa Tài Khoản', cancelText: 'Hủy' }
+    );
+    if (ok && onDeleteUser) {
+      onDeleteUser(u.id);
+    }
+  };
+
+  // Handlers: RBAC
+  const handleTogglePermission = (permId, roleKey) => {
+    if (roleKey === 'ADMIN' && (permId === 'uc-admin-acc' || permId === 'uc-admin-role')) {
+      toast.warning('Không thể tắt quyền quản trị cốt lõi của vai trò Admin!', 'Bảo Vệ Phân Quyền');
+      return;
+    }
+    setRbacMatrix(prev =>
+      prev.map(row => row.id === permId ? { ...row, [roleKey]: !row[roleKey] } : row)
+    );
+  };
+
+  const handleSaveRbac = () => {
+    try {
+      localStorage.setItem('petcare_rbac_matrix', JSON.stringify(rbacMatrix));
+    } catch (e) {}
+    if (onAddAuditLog) {
+      onAddAuditLog('SECURITY', 'Cập nhật ma trận phân quyền RBAC', 'Lưu cấu hình phân quyền 4 vai trò trên hệ thống.');
+    }
+    toast.success('Đã lưu cấu hình ma trận phân quyền RBAC thành công!', 'Phân Quyền Người Dùng');
+  };
+
+  const handleResetRbac = () => {
+    setRbacMatrix(DEFAULT_RBAC_MATRIX);
+    try {
+      localStorage.setItem('petcare_rbac_matrix', JSON.stringify(DEFAULT_RBAC_MATRIX));
+    } catch (e) {}
+    if (onAddAuditLog) {
+      onAddAuditLog('SECURITY', 'Khôi phục RBAC mặc định', 'Đặt lại ma trận phân quyền theo sơ đồ Use Case chuẩn.');
+    }
+    toast.info('Đã khôi phục phân quyền mặc định theo sơ đồ Use Case.', 'Phân Quyền Người Dùng');
+  };
+
+  // Handlers: Bulk Approve Proposals
+  const handleApproveAllDrafts = async () => {
+    if (draftProposals.length === 0) return;
+    const ok = await confirmModal(
+      `Phê duyệt toàn bộ ${draftProposals.length} phiếu đề xuất nhập hàng đang chờ (ước tính ${pendingBudgetTotal.toLocaleString('vi-VN')} đ)?`,
+      'Phê Duyệt Hàng Loạt',
+      { type: 'warning', confirmText: 'Phê Duyệt Tất Cả', cancelText: 'Hủy' }
+    );
+    if (ok && onApproveProposal) {
+      draftProposals.forEach(prop => onApproveProposal(prop.id));
+    }
+  };
+
+  // Handlers: Suppliers CRUD
+  const openCreateSupplier = () => {
+    setEditingSupplier(null);
+    setSupplierForm({
+      name: '',
+      contactPerson: '',
       phone: '',
-      role: 'CUSTOMER',
-      password: 'password123'
+      email: '',
+      address: '',
+      productCategories: 'Thức ăn hạt, Pate'
     });
+    setShowSupplierModal(true);
   };
 
-  const handleConfirmOrder = (orderId) => {
-    onUpdateOrderStatus(orderId, 'CONFIRMED');
-    toast.success(`Đã xác nhận đơn hàng ${orderId}!`, 'Đơn Hàng');
+  const openEditSupplier = (sup) => {
+    setEditingSupplier(sup);
+    setSupplierForm({
+      name: sup.name || '',
+      contactPerson: sup.contactPerson || '',
+      phone: sup.phone || '',
+      email: sup.email || '',
+      address: sup.address || '',
+      productCategories: sup.productCategories || ''
+    });
+    setShowSupplierModal(true);
   };
 
-  // 5-Year Weather & Seasonality AI State
-  const [selectedYearFilter, setSelectedYearFilter] = useState('ALL');
-  const [selectedProdFilter, setSelectedProdFilter] = useState('ALL');
-  const [selectedSeasonFilter, setSelectedSeasonFilter] = useState('ALL');
-  const [seasonalAIResult, setSeasonalAIResult] = useState(null);
-  const [isProcessingSeasonalAI, setIsProcessingSeasonalAI] = useState(false);
-
-  const [orderHistoryForecast, setOrderHistoryForecast] = useState(null);
-  const [isProcessingOrderHistory, setIsProcessingOrderHistory] = useState(false);
-
-  const handleRunOrderHistoryAI = async () => {
-    setIsProcessingOrderHistory(true);
-    try {
-      const res = await apiService.triggerOrderHistoryForecast(FIVE_YEAR_ORDER_HISTORY);
-      if (res && res.status === 'success') {
-        setOrderHistoryForecast(res);
-        alert(`🤖 [FastAPI Order Analysis Engine]: Đã phân tích ${res.totalOrdersAnalyzed} đơn hàng thành công!`);
-      } else {
-        alert(`Lỗi từ AI Backend: ${res?.detail || 'Không xác định'}. Vui lòng kiểm tra lại server Python!`);
-      }
-    } catch (err) {
-      console.log('Error analyzing order history', err);
-      alert('Có lỗi khi kết nối với AI Backend! ' + err.message);
+  const handleSaveSupplier = (e) => {
+    e.preventDefault();
+    if (!supplierForm.name.trim()) {
+      toast.warning('Vui lòng nhập tên nhà cung cấp!', 'Thiếu Thông Tin');
+      return;
     }
-    setIsProcessingOrderHistory(false);
-  };
-
-  const DEFAULT_FORECASTS = [
-    { year: 2026, month: 9, predicted_revenue: 195000000, predicted_spa_demand: 520, predicted_product_demand: 830, season_type: 'RAINY_SEASON', weather_factor_notes: '🌧️ Mùa Mưa (>300mm): Scikit-Learn dự báo nhu cầu Tiêm phòng, Khám da liễu & Cát Tofu tăng +35%.' },
-    { year: 2026, month: 10, predicted_revenue: 188000000, predicted_spa_demand: 500, predicted_product_demand: 810, season_type: 'RAINY_SEASON', weather_factor_notes: '🌧️ Mùa Mưa (>300mm): Scikit-Learn dự báo nhu cầu Khám bệnh da liễu & Tiêm phòng vắc-xin tăng +35%.' },
-    { year: 2026, month: 11, predicted_revenue: 182000000, predicted_spa_demand: 485, predicted_product_demand: 790, season_type: 'RAINY_SEASON', weather_factor_notes: '🌧️ Mùa Mưa (>300mm): Scikit-Learn dự báo tiêu thụ Cát đậu nành Tofu sấy tăng +40%.' },
-    { year: 2026, month: 12, predicted_revenue: 260000000, predicted_spa_demand: 720, predicted_product_demand: 1150, season_type: 'HOLIDAY_TET', weather_factor_notes: '🧧 Dịp Lễ Tết & Mùa Du Lịch: Scikit-Learn dự báo Lưu trú & Làm đẹp Tết tăng vọt +80%.' },
-    { year: 2027, month: 1, predicted_revenue: 285000000, predicted_spa_demand: 790, predicted_product_demand: 1260, season_type: 'HOLIDAY_TET', weather_factor_notes: '🧧 Dịp Lễ Tết & Mùa Du Lịch: Scikit-Learn dự báo Đỉnh doanh thu cao nhất năm cho Khách sạn Thú cưng.' },
-    { year: 2027, month: 2, predicted_revenue: 240000000, predicted_spa_demand: 660, predicted_product_demand: 1050, season_type: 'HOLIDAY_TET', weather_factor_notes: '🧧 Dịp Lễ Tết & Mùa Du Lịch: Scikit-Learn dự báo Nhu cầu Spa Grooming đầu xuân tăng +65%.' }
-  ];
-
-  const handleRunSeasonalAI = async () => {
-    setIsProcessingSeasonalAI(true);
-    try {
-      const res = await apiService.triggerSeasonalForecast(FIVE_YEAR_HISTORICAL_DATA);
-      if (res && res.seasonal_forecasts) {
-        setSeasonalAIResult(res);
-        alert('🤖 [FastAPI Scikit-Learn ML Engine]: Đã huấn luyện RandomForestRegressor thành công trên 60 tháng dữ liệu!');
-      }
-    } catch (err) {
-      console.log('Using fallback seasonal analysis');
+    if (editingSupplier) {
+      if (onUpdateSupplier) onUpdateSupplier(editingSupplier.id, supplierForm);
+      toast.success(`Đã cập nhật thông tin đối tác "${supplierForm.name}"!`, 'Nhà Cung Cấp');
+    } else {
+      if (onAddSupplier) onAddSupplier(supplierForm);
     }
-    setIsProcessingSeasonalAI(false);
+    setShowSupplierModal(false);
   };
 
-  const displayForecasts = seasonalAIResult ? seasonalAIResult.seasonal_forecasts : DEFAULT_FORECASTS;
+  const handleDeleteSupplierClick = async (sup) => {
+    const ok = await confirmModal(
+      `Bạn có chắc muốn xóa nhà cung cấp "${sup.name}" khỏi danh mục đối tác?`,
+      'Xác Nhận Xóa Nhà Cung Cấp',
+      { type: 'danger', confirmText: 'Xóa Đối Tác', cancelText: 'Hủy' }
+    );
+    if (ok && onDeleteSupplier) {
+      onDeleteSupplier(sup.id);
+    }
+  };
 
-  // Modals
-  const [showAddSupplierModal, setShowAddSupplierModal] = useState(false);
-  const [showAddPromoModal, setShowAddPromoModal] = useState(false);
-  const [showAddServiceModal, setShowAddServiceModal] = useState(false);
-
-  // Forms
-  const [newSupplier, setNewSupplier] = useState({ name: '', contactPerson: '', phone: '', email: '', address: '' });
-  const [newPromo, setNewPromo] = useState({ code: '', name: '', discountPercent: 10, applicableTo: 'Tất cả' });
-  const [newService, setNewService] = useState({ name: '', description: '', durationMinutes: 45, price: 200000, category: 'Spa & Grooming' });
-
-  const totalRevenue = appointments.reduce((sum, a) => sum + (a.price || 200000), 0) + 2150000;
-  const draftProposals = reorderProposals.filter(p => p.status === 'DRAFT');
-
-  // Handlers
-
-  const handleCreateSupplier = (e) => {
+  // Handlers: System Settings
+  const handleSaveSystemConfig = (e) => {
     e.preventDefault();
-    if (!newSupplier.name) return toast.warning('Vui lòng nhập tên nhà cung cấp!', 'Thiếu Thông Tin');
-    setSuppliers([...suppliers, { ...newSupplier, id: 'sup-' + Date.now() }]);
-    setNewSupplier({ name: '', contactPerson: '', phone: '', email: '', address: '' });
-    setShowAddSupplierModal(false);
-    toast.success('Đã thêm nhà cung cấp mới thành công!', 'Nhà Cung Cấp');
+    try {
+      localStorage.setItem('petcare_system_config', JSON.stringify(systemConfig));
+    } catch (err) {}
+    if (onAddAuditLog) {
+      onAddAuditLog(
+        'SYSTEM',
+        'Cập nhật cấu hình hệ thống & AI',
+        `Độ tin cậy AI: ${systemConfig.aiConfidenceLevel}% • Lead-time: ${systemConfig.defaultLeadTimeDays} ngày • Freeship từ ${Number(systemConfig.freeShipThreshold).toLocaleString('vi-VN')}đ.`
+      );
+    }
+    toast.success('Đã lưu cấu hình cửa hàng & tham số AI Dự báo thành công!', 'Cấu Hình Hệ Thống');
   };
-
-  const handleCreatePromo = (e) => {
-    e.preventDefault();
-    if (!newPromo.code) return toast.warning('Vui lòng nhập mã khuyến mãi!', 'Thiếu Thông Tin');
-    setPromotions([...promotions, { 
-      ...newPromo, 
-      id: 'promo-' + Date.now(), 
-      code: newPromo.code.toUpperCase(),
-      startDate: '2026-08-01',
-      endDate: '2026-09-30',
-      status: 'ACTIVE' 
-    }]);
-    setNewPromo({ code: '', name: '', discountPercent: 10, applicableTo: 'Tất cả' });
-    setShowAddPromoModal(false);
-    toast.success('Đã tạo chương trình khuyến mãi mới thành công!', 'Khuyến Mãi');
-  };
-
-  const handleCreateService = (e) => {
-    e.preventDefault();
-    if (!newService.name) return alert('Vui lòng nhập tên dịch vụ!');
-    setServiceList([...serviceList, {
-      ...newService,
-      id: 's-' + Date.now(),
-      durationMinutes: parseInt(newService.durationMinutes),
-      price: parseFloat(newService.price),
-      status: 'ACTIVE'
-    }]);
-    setNewService({ name: '', description: '', durationMinutes: 45, price: 200000, category: 'Spa & Grooming' });
-    setShowAddServiceModal(false);
-    alert('✅ Đã thêm dịch vụ Spa/Y tế mới thành công!');
-  };
-
-  const validAdminTabs = ['overview', 'ai-forecasting', 'accounts-admin', 'customers-admin', 'pets-admin', 'services-admin', 'appointments-all', 'catalog', 'inventory-admin', 'orders-admin'];
-  const currentTab = validAdminTabs.includes(activeTab) ? activeTab : 'overview';
 
   return (
     <div className="animate-fade-in" style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
       
-      {/* 1. BÁO CÁO TỔNG QUAN HỆ THỐNG */}
-      {(currentTab === 'overview') && (
-        <div style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
-          <div>
-            <h2 style={{ fontSize: '1.4rem', fontWeight: 800 }}>Báo Cáo Tổng Quan Hệ Thống (Admin Executive Dashboard)</h2>
-            <p style={{ fontSize: '0.85rem', color: 'var(--text-muted)' }}>Theo dõi KPI doanh thu, hiệu suất ca hẹn, tồn kho & đơn khuyến nghị từ AI</p>
+      {/* ==================== 1. TỔNG QUAN & THỐNG KÊ HỆ THỐNG ==================== */}
+      {currentTab === 'overview' && (
+        <>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '1rem' }}>
+            <div>
+              <h2 style={{ fontSize: '1.45rem', fontWeight: 800, color: '#0f172a', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                <LayoutDashboard size={22} color="#7c3aed" /> Tổng Quan & Báo Cáo Toàn Hệ Thống
+              </h2>
+              <p style={{ fontSize: '0.85rem', color: 'var(--text-muted)' }}>
+                Trung tâm giám sát doanh thu, vận hành Spa, tình trạng kho và các đề xuất nhập hàng cần phê duyệt
+              </p>
+            </div>
+            <button type="button" className="btn btn-primary" onClick={handleExportReportCSV}>
+              <Download size={16} /> Xuất Báo Cáo CSV
+            </button>
           </div>
 
-          {/* KPI CARDS */}
+          {/* 4 EXECUTIVE KPI CARDS */}
           <div className="grid-4">
-            <div className="glass-panel" style={{ padding: '1.25rem' }}>
-              <div style={{ display: 'flex', justifyContent: 'space-between', color: 'var(--text-muted)', fontSize: '0.8rem' }}>
-                <span>Doanh Thu Hệ Thống</span>
-                <DollarSign size={18} color="#38ef7d" />
+            <div className="glass-panel" style={{ padding: '1.2rem', borderLeft: '4px solid #059669' }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.78rem', color: '#64748b', fontWeight: 700 }}>
+                <span>TỔNG DOANH THU</span>
+                <DollarSign size={17} color="#059669" />
               </div>
-              <div style={{ fontSize: '1.6rem', fontWeight: 800, color: '#38ef7d', marginTop: '0.4rem' }}>
+              <div style={{ fontSize: '1.55rem', fontWeight: 900, color: '#059669', marginTop: '6px' }}>
                 {totalRevenue.toLocaleString('vi-VN')} đ
               </div>
-              <div style={{ fontSize: '0.75rem', color: '#34d399', marginTop: '4px' }}>↑ +18.5% so với tháng trước</div>
-            </div>
-
-            <div className="glass-panel" style={{ padding: '1.25rem' }}>
-              <div style={{ display: 'flex', justifyContent: 'space-between', color: 'var(--text-muted)', fontSize: '0.8rem' }}>
-                <span>Tổng Số Lịch Hẹn</span>
-                <Calendar size={18} color="#00f2fe" />
-              </div>
-              <div style={{ fontSize: '1.6rem', fontWeight: 800, color: '#00f2fe', marginTop: '0.4rem' }}>
-                {appointments.length} ca
-              </div>
-              <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)', marginTop: '4px' }}>Spa Grooming & Tiêm phòng</div>
-            </div>
-
-            <div className="glass-panel" style={{ padding: '1.25rem' }}>
-              <div style={{ display: 'flex', justifyContent: 'space-between', color: 'var(--text-muted)', fontSize: '0.8rem' }}>
-                <span>Sản Phẩm Kho</span>
-                <Package size={18} color="#60a5fa" />
-              </div>
-              <div style={{ fontSize: '1.6rem', fontWeight: 800, color: '#60a5fa', marginTop: '0.4rem' }}>
-                {products.length} mã
-              </div>
-              <div style={{ fontSize: '0.75rem', color: '#f87171', marginTop: '4px' }}>
-                {products.filter(p => p.currentStock <= p.minStockLevel).length} sp vi phạm ngưỡng minStock
+              <div style={{ fontSize: '0.74rem', color: '#64748b', marginTop: '4px' }}>
+                Spa: {serviceRevenue.toLocaleString('vi-VN')}đ • Shop: {orderRevenue.toLocaleString('vi-VN')}đ
               </div>
             </div>
 
-            <div className="glass-panel" style={{ padding: '1.25rem', border: '1px solid var(--border-glow)' }}>
-              <div style={{ display: 'flex', justifyContent: 'space-between', color: '#fbbf24', fontSize: '0.8rem' }}>
-                <span>Đề Xuất AI Chờ Duyệt</span>
-                <Brain size={18} color="#fbbf24" />
+            <div className="glass-panel" style={{ padding: '1.2rem', borderLeft: '4px solid #7c3aed' }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.78rem', color: '#64748b', fontWeight: 700 }}>
+                <span>TÀI KHOẢN HỆ THỐNG</span>
+                <Users size={17} color="#7c3aed" />
               </div>
-              <div style={{ fontSize: '1.6rem', fontWeight: 800, color: '#fbbf24', marginTop: '0.4rem' }}>
-                {draftProposals.length} đơn
+              <div style={{ fontSize: '1.55rem', fontWeight: 900, color: '#7c3aed', marginTop: '6px' }}>
+                {users.length} người dùng
               </div>
-              <div style={{ fontSize: '0.75rem', color: '#fbbf24', marginTop: '4px' }}>Cần Admin duyệt nhập hàng</div>
+              <div style={{ fontSize: '0.74rem', color: '#64748b', marginTop: '4px' }}>
+                {users.filter(u => u.role === 'CUSTOMER').length} khách • {users.filter(u => u.role !== 'CUSTOMER').length} nội bộ
+              </div>
+            </div>
+
+            <div
+              className="glass-panel"
+              onClick={() => onTabChange && onTabChange('approve-proposals')}
+              style={{ padding: '1.2rem', borderLeft: '4px solid #ea580c', cursor: 'pointer' }}
+            >
+              <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.78rem', color: '#64748b', fontWeight: 700 }}>
+                <span>PHIẾU CHỜ PHÊ DUYỆT</span>
+                <CheckSquare size={17} color="#ea580c" />
+              </div>
+              <div style={{ fontSize: '1.55rem', fontWeight: 900, color: '#ea580c', marginTop: '6px' }}>
+                {draftProposals.length} đề xuất
+              </div>
+              <div style={{ fontSize: '0.74rem', color: '#ea580c', fontWeight: 700, marginTop: '4px', display: 'flex', alignItems: 'center', gap: '4px' }}>
+                Dự trù: {pendingBudgetTotal.toLocaleString('vi-VN')} đ <ArrowRight size={12} />
+              </div>
+            </div>
+
+            <div className="glass-panel" style={{ padding: '1.2rem', borderLeft: `4px solid ${lowStockProducts.length > 0 ? '#dc2626' : '#0284c7'}` }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.78rem', color: '#64748b', fontWeight: 700 }}>
+                <span>CẢNH BÁO TỒN KHO</span>
+                <AlertTriangle size={17} color={lowStockProducts.length > 0 ? '#dc2626' : '#0284c7'} />
+              </div>
+              <div style={{ fontSize: '1.55rem', fontWeight: 900, color: lowStockProducts.length > 0 ? '#dc2626' : '#0284c7', marginTop: '6px' }}>
+                {lowStockProducts.length} / {products.length} SP
+              </div>
+              <div style={{ fontSize: '0.74rem', color: '#64748b', marginTop: '4px' }}>
+                Chạm/dưới ngưỡng an toàn minStock
+              </div>
             </div>
           </div>
 
-          {/* VISUAL CHART SIMULATION */}
-          <div className="glass-panel" style={{ padding: '1.5rem' }}>
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem' }}>
-              <h3 style={{ fontSize: '1.1rem', fontWeight: 700, display: 'flex', alignItems: 'center', gap: '8px' }}>
-                <TrendingUp size={18} color="#00f2fe" /> Biểu Đồ Phân Tích Doanh Thu & Nhu Cầu Tiêu Thụ Kho (6 Tháng)
-              </h3>
-              <span className="badge badge-info">FastAPI AI Time-Series Algorithm</span>
-            </div>
-
-            <div style={{ height: 180, display: 'flex', alignItems: 'flex-end', gap: '1.5rem', padding: '1rem 0', borderBottom: '1px solid var(--border-glass)' }}>
-              {[
-                { month: 'Tháng 3', rev: 40, demand: 30 },
-                { month: 'Tháng 4', rev: 55, demand: 45 },
-                { month: 'Tháng 5', rev: 70, demand: 60 },
-                { month: 'Tháng 6', rev: 65, demand: 55 },
-                { month: 'Tháng 7', rev: 85, demand: 75 },
-                { month: 'Tháng 8 (AI Forecast)', rev: 100, demand: 90, forecast: true },
-              ].map((bar, idx) => (
-                <div key={idx} style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', height: '100%', justifyContent: 'flex-end' }}>
-                  <div style={{ display: 'flex', gap: '4px', alignItems: 'flex-end', width: '100%', justifyContent: 'center', height: '100%' }}>
-                    <div 
-                      style={{ 
-                        width: '35%', 
-                        height: `${bar.rev}%`, 
-                        background: bar.forecast ? 'var(--accent-gradient)' : 'rgba(0, 242, 254, 0.4)', 
-                        borderRadius: '4px 4px 0 0' 
-                      }} 
-                    />
-                    <div 
-                      style={{ 
-                        width: '35%', 
-                        height: `${bar.demand}%`, 
-                        background: bar.forecast ? 'var(--accent-emerald)' : 'rgba(56, 239, 125, 0.4)', 
-                        borderRadius: '4px 4px 0 0' 
-                      }} 
-                    />
-                  </div>
-                  <span style={{ fontSize: '0.72rem', color: bar.forecast ? '#00f2fe' : 'var(--text-muted)', marginTop: '8px', fontWeight: bar.forecast ? 700 : 400 }}>
-                    {bar.month}
-                  </span>
+          {/* CHART + OPERATIONAL SUMMARY */}
+          <div className="grid-2">
+            <div className="glass-panel" style={{ padding: '1.4rem' }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem', flexWrap: 'wrap', gap: '0.5rem' }}>
+                <h3 style={{ fontSize: '1.08rem', fontWeight: 800, color: '#0f172a', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                  <TrendingUp size={18} color="#7c3aed" /> Tăng Trưởng Doanh Thu 6 Tháng
+                </h3>
+                <div style={{ display: 'flex', gap: '0.75rem', fontSize: '0.74rem', fontWeight: 700 }}>
+                  <span style={{ color: '#7c3aed' }}>■ Dịch vụ Spa</span>
+                  <span style={{ color: '#059669' }}>■ Pet Shop</span>
                 </div>
-              ))}
+              </div>
+              <div style={{ height: 195, display: 'flex', alignItems: 'flex-end', gap: '1rem', padding: '1rem 0.5rem 0.5rem 0.5rem', background: '#f8fafc', borderRadius: '14px', border: '1px solid #e2e8f0' }}>
+                {[
+                  { month: 'T3', spa: 48, shop: 38 },
+                  { month: 'T4', spa: 62, shop: 52 },
+                  { month: 'T5', spa: 74, shop: 64 },
+                  { month: 'T6', spa: 82, shop: 71 },
+                  { month: 'T7', spa: 79, shop: 69 },
+                  { month: 'T8', spa: 94, shop: 85 },
+                ].map((bar, idx) => (
+                  <div key={idx} style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', height: '100%', justifyContent: 'flex-end' }}>
+                    <div style={{ display: 'flex', gap: '5px', alignItems: 'flex-end', width: '100%', justifyContent: 'center', height: '100%' }}>
+                      <div style={{ width: '36%', maxWidth: 22, height: `${bar.spa}%`, background: 'linear-gradient(180deg, #7c3aed 0%, #a78bfa 100%)', borderRadius: '6px 6px 0 0' }} />
+                      <div style={{ width: '36%', maxWidth: 22, height: `${bar.shop}%`, background: 'linear-gradient(180deg, #059669 0%, #34d399 100%)', borderRadius: '6px 6px 0 0' }} />
+                    </div>
+                    <span style={{ fontSize: '0.75rem', color: '#475569', fontWeight: 700, marginTop: '6px' }}>{bar.month}</span>
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            <div className="glass-panel" style={{ padding: '1.4rem', display: 'flex', flexDirection: 'column', justifyContent: 'space-between', gap: '0.85rem' }}>
+              <h3 style={{ fontSize: '1.08rem', fontWeight: 800, color: '#0f172a', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                <Activity size={18} color="#0284c7" /> Chỉ Số Vận Hành Toàn Cửa Hàng
+              </h3>
+              <div className="grid-2" style={{ gap: '0.85rem' }}>
+                <div style={{ background: '#f0f9ff', padding: '0.9rem', borderRadius: '12px', border: '1px solid #bae6fd' }}>
+                  <div style={{ fontSize: '0.74rem', color: '#0369a1', fontWeight: 700, display: 'flex', alignItems: 'center', gap: '5px' }}>
+                    <Calendar size={14} /> Lịch Hẹn Dịch Vụ
+                  </div>
+                  <div style={{ fontSize: '1.35rem', fontWeight: 900, color: '#0284c7', marginTop: '4px' }}>{appointments.length} ca</div>
+                  <div style={{ fontSize: '0.72rem', color: '#475569' }}>
+                    Hoàn thành: {appointments.filter(a => a.status === 'COMPLETED').length} ca
+                  </div>
+                </div>
+                <div style={{ background: '#fff7ed', padding: '0.9rem', borderRadius: '12px', border: '1px solid #fed7aa' }}>
+                  <div style={{ fontSize: '0.74rem', color: '#c2410c', fontWeight: 700, display: 'flex', alignItems: 'center', gap: '5px' }}>
+                    <ShoppingBag size={14} /> Đơn Hàng Shop
+                  </div>
+                  <div style={{ fontSize: '1.35rem', fontWeight: 900, color: '#ea580c', marginTop: '4px' }}>{orders.length} đơn</div>
+                  <div style={{ fontSize: '0.72rem', color: '#475569' }}>
+                    Chờ xác nhận: {orders.filter(o => o.status === 'PENDING').length} đơn
+                  </div>
+                </div>
+                <div style={{ background: '#ecfdf5', padding: '0.9rem', borderRadius: '12px', border: '1px solid #a7f3d0' }}>
+                  <div style={{ fontSize: '0.74rem', color: '#047857', fontWeight: 700, display: 'flex', alignItems: 'center', gap: '5px' }}>
+                    <FileText size={14} /> Danh Mục Dịch Vụ
+                  </div>
+                  <div style={{ fontSize: '1.35rem', fontWeight: 900, color: '#059669', marginTop: '4px' }}>{services.length} gói</div>
+                  <div style={{ fontSize: '0.72rem', color: '#475569' }}>
+                    KM đang chạy: {promotions.filter(p => p.status === 'ACTIVE').length} mã
+                  </div>
+                </div>
+                <div style={{ background: '#faf5ff', padding: '0.9rem', borderRadius: '12px', border: '1px solid #e9d5ff' }}>
+                  <div style={{ fontSize: '0.74rem', color: '#6d28d9', fontWeight: 700, display: 'flex', alignItems: 'center', gap: '5px' }}>
+                    <Building2 size={14} /> Nhà Cung Cấp
+                  </div>
+                  <div style={{ fontSize: '1.35rem', fontWeight: 900, color: '#7c3aed', marginTop: '4px' }}>{suppliers.length} đối tác</div>
+                  <div style={{ fontSize: '0.72rem', color: '#475569' }}>
+                    AI độ tin cậy: {systemConfig.aiConfidenceLevel}%
+                  </div>
+                </div>
+              </div>
             </div>
           </div>
-        </div>
+
+          {/* QUICK ACTION PANELS: PENDING PROPOSALS + RECENT AUDIT LOGS */}
+          <div className="grid-2">
+            <div className="glass-panel" style={{ padding: '1.4rem' }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.9rem' }}>
+                <h3 style={{ fontSize: '1.05rem', fontWeight: 800, color: '#0f172a' }}>
+                  Đề Xuất Nhập Hàng Cần Admin Duyệt ({draftProposals.length})
+                </h3>
+                <button
+                  type="button"
+                  className="btn btn-secondary"
+                  style={{ padding: '0.35rem 0.75rem', fontSize: '0.76rem' }}
+                  onClick={() => onTabChange && onTabChange('approve-proposals')}
+                >
+                  Xem tất cả →
+                </button>
+              </div>
+              {draftProposals.length === 0 ? (
+                <div style={{ textAlign: 'center', padding: '1.5rem', color: '#64748b', fontSize: '0.84rem' }}>
+                  Tất cả đề xuất nhập hàng đã được xử lý!
+                </div>
+              ) : (
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '0.65rem' }}>
+                  {draftProposals.slice(0, 3).map(prop => (
+                    <div key={prop.id} className="glass-card" style={{ padding: '0.85rem', display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '0.75rem' }}>
+                      <div style={{ minWidth: 0 }}>
+                        <strong style={{ fontSize: '0.88rem', color: '#0f172a', display: 'block' }}>{prop.productName}</strong>
+                        <div style={{ fontSize: '0.75rem', color: '#64748b' }}>
+                          Đề xuất: <strong style={{ color: '#059669' }}>+{prop.suggestedQuantity} sp</strong> • Dự trù: <strong>{estimateProposalCost(prop).toLocaleString('vi-VN')} đ</strong>
+                        </div>
+                      </div>
+                      <button
+                        type="button"
+                        className="btn btn-emerald"
+                        style={{ padding: '0.35rem 0.7rem', fontSize: '0.75rem', flexShrink: 0 }}
+                        onClick={() => onApproveProposal && onApproveProposal(prop.id)}
+                      >
+                        <Check size={13} /> Duyệt
+                      </button>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+
+            <div className="glass-panel" style={{ padding: '1.4rem' }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.9rem' }}>
+                <h3 style={{ fontSize: '1.05rem', fontWeight: 800, color: '#0f172a' }}>
+                  Nhật Ký Hoạt Động Gần Đây
+                </h3>
+                <button
+                  type="button"
+                  className="btn btn-secondary"
+                  style={{ padding: '0.35rem 0.75rem', fontSize: '0.76rem' }}
+                  onClick={() => onTabChange && onTabChange('system-settings')}
+                >
+                  Chi tiết →
+                </button>
+              </div>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '0.55rem' }}>
+                {auditLogs.slice(0, 4).map(log => (
+                  <div key={log.id} style={{ background: '#f8fafc', border: '1px solid #e2e8f0', borderRadius: '10px', padding: '0.65rem 0.85rem', display: 'flex', justifyContent: 'space-between', gap: '0.75rem', alignItems: 'center' }}>
+                    <div style={{ minWidth: 0 }}>
+                      <strong style={{ fontSize: '0.82rem', color: '#0f172a' }}>{log.action}</strong>
+                      <div style={{ fontSize: '0.74rem', color: '#64748b', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                        {log.actor} — {log.detail}
+                      </div>
+                    </div>
+                    <span style={{ fontSize: '0.72rem', color: '#94a3b8', whiteSpace: 'nowrap' }}>{log.time}</span>
+                  </div>
+                ))}
+              </div>
+            </div>
+          </div>
+        </>
       )}
 
-      {/* 2. QUẢN LÝ TÀI KHOẢN */}
+      {/* ==================== 2. QUẢN LÝ TÀI KHOẢN ==================== */}
       {currentTab === 'accounts-admin' && (
-        <div className="glass-panel" style={{ padding: '1.25rem' }}>
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.25rem' }}>
+        <>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '1rem' }}>
             <div>
-              <h2 style={{ fontSize: '1.25rem', fontWeight: 800, display: 'flex', alignItems: 'center', gap: '8px' }}>
-                <Shield size={20} color="#00f2fe" /> Quản Lý Tài Khoản & Phân Quyền Hệ Thống
+              <h2 style={{ fontSize: '1.45rem', fontWeight: 800, color: '#0f172a', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                <Users size={22} color="#7c3aed" /> Quản Lý Tài Khoản Hệ Thống
               </h2>
-              <p style={{ fontSize: '0.82rem', color: 'var(--text-muted)' }}>Quản lý người dùng, gán role (CUSTOMER, CARE_STAFF, WAREHOUSE_STAFF, ADMIN)</p>
+              <p style={{ fontSize: '0.85rem', color: 'var(--text-muted)' }}>
+                Tạo mới, chỉnh sửa thông tin, khóa/mở khóa và xóa tài khoản người dùng trên toàn hệ thống
+              </p>
             </div>
-            <button className="btn btn-primary" onClick={() => setShowAddUserModal(true)}>
+            <button type="button" className="btn btn-coral" onClick={openCreateUser}>
               <Plus size={16} /> Thêm Tài Khoản Mới
             </button>
           </div>
 
-          <div className="table-container">
-            <table>
-              <thead>
-                <tr>
-                  <th>Họ và Tên</th>
-                  <th>Email</th>
-                  <th>Số Điện Thoại</th>
-                  <th>Vai Trò (Role)</th>
-                  <th>Trạng Thái</th>
-                  <th>Ngày Tạo</th>
-                </tr>
-              </thead>
-              <tbody>
-                {users.map(u => (
-                  <tr key={u.id}>
-                    <td><strong>{u.fullName}</strong></td>
-                    <td>{u.email}</td>
-                    <td>{u.phone || '---'}</td>
-                    <td>
-                      <span className={`badge ${u.role === 'ADMIN' ? 'badge-danger' : u.role === 'CARE_STAFF' ? 'badge-info' : u.role === 'WAREHOUSE_STAFF' ? 'badge-pending' : 'badge-success'}`}>
-                        {u.role}
-                      </span>
-                    </td>
-                    <td><span className="badge badge-success">{u.status || 'ACTIVE'}</span></td>
-                    <td>{u.createdAt}</td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        </div>
-      )}
-
-      {/* 3. QUẢN LÝ KHÁCH HÀNG */}
-      {currentTab === 'customers-admin' && (
-        <div className="glass-panel" style={{ padding: '1.25rem' }}>
-          <div style={{ marginBottom: '1.25rem' }}>
-            <h2 style={{ fontSize: '1.25rem', fontWeight: 800, display: 'flex', alignItems: 'center', gap: '8px' }}>
-              <Users size={20} color="#ff8e53" /> Danh Sách Quản Lý Khách Hàng
-            </h2>
-            <p style={{ fontSize: '0.82rem', color: 'var(--text-muted)' }}>Thông tin liên hệ, tổng số thú cưng sở hữu và lịch sử mua hàng</p>
-          </div>
-
-          <div className="table-container">
-            <table>
-              <thead>
-                <tr>
-                  <th>Tên Khách Hàng</th>
-                  <th>Email Liên Hệ</th>
-                  <th>Số Điện Thoại</th>
-                  <th>Số Lượng Thú Cưng</th>
-                  <th>Trạng Thái Tài Khoản</th>
-                </tr>
-              </thead>
-              <tbody>
-                {users.filter(u => u.role === 'CUSTOMER').map(c => (
-                  <tr key={c.id}>
-                    <td><strong>{c.fullName}</strong></td>
-                    <td>{c.email}</td>
-                    <td>{c.phone || '0934567890'}</td>
-                    <td><span className="badge badge-info">{INITIAL_PETS.filter(p => p.ownerId === c.id).length || 1} bé</span></td>
-                    <td><span className="badge badge-success">Đang Hoạt Động</span></td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        </div>
-      )}
-
-      {/* 4. QUẢN LÝ THÚ CƯNG (ADMIN VIEW) */}
-      {currentTab === 'pets-admin' && (
-        <div className="glass-panel" style={{ padding: '1.25rem' }}>
-          <div style={{ marginBottom: '1.25rem' }}>
-            <h2 style={{ fontSize: '1.25rem', fontWeight: 800, display: 'flex', alignItems: 'center', gap: '8px' }}>
-              <PawPrint size={20} color="#34d399" /> Danh Mục Quản Lý Thú Cưng Hệ Thống
-            </h2>
-            <p style={{ fontSize: '0.82rem', color: 'var(--text-muted)' }}>Tra cứu hồ sơ sức khỏe, loài, giống, tuổi và chủ sở hữu</p>
-          </div>
-
-          <div className="table-container">
-            <table>
-              <thead>
-                <tr>
-                  <th>Tên Bé</th>
-                  <th>Loài / Giống</th>
-                  <th>Tuổi / Cân Nặng</th>
-                  <th>Chủ Sở Hữu</th>
-                  <th>Tiền Sử Y Tế / Ghi Chú</th>
-                </tr>
-              </thead>
-              <tbody>
-                {INITIAL_PETS.map(p => (
-                  <tr key={p.id}>
-                    <td><strong>{p.name}</strong></td>
-                    <td>{p.species} ({p.breed})</td>
-                    <td>{p.ageMonths} tháng • {p.weightKg} kg</td>
-                    <td>{p.ownerName} ({p.ownerPhone})</td>
-                    <td style={{ color: 'var(--text-muted)', fontSize: '0.8rem' }}>{p.medicalHistory}</td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        </div>
-      )}
-
-      {/* 5. QUẢN LÝ DỊCH VỤ (CRUD) */}
-      {currentTab === 'services-admin' && (
-        <div className="glass-panel" style={{ padding: '1.25rem' }}>
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.25rem' }}>
-            <div>
-              <h2 style={{ fontSize: '1.25rem', fontWeight: 800, display: 'flex', alignItems: 'center', gap: '8px' }}>
-                <FileText size={20} color="#60a5fa" /> Danh Mục Quản Lý Dịch Vụ Spa & Khám Thú Y
-              </h2>
-              <p style={{ fontSize: '0.82rem', color: 'var(--text-muted)' }}>Cập nhật đơn giá, thời lượng thực hiện và mô tả dịch vụ</p>
+          <div className="grid-4">
+            <div className="glass-panel" style={{ padding: '1.15rem', borderLeft: '4px solid #7c3aed' }}>
+              <div style={{ fontSize: '0.78rem', color: '#64748b', fontWeight: 600 }}>Tổng Tài Khoản</div>
+              <div style={{ fontSize: '1.7rem', fontWeight: 800, color: '#7c3aed', marginTop: '4px' }}>{users.length}</div>
             </div>
-            <button className="btn btn-coral" onClick={() => setShowAddServiceModal(true)}>
-              <Plus size={16} /> Thêm Dịch Vụ Mới
-            </button>
+            <div className="glass-panel" style={{ padding: '1.15rem', borderLeft: '4px solid #059669' }}>
+              <div style={{ fontSize: '0.78rem', color: '#64748b', fontWeight: 600 }}>Khách Hàng</div>
+              <div style={{ fontSize: '1.7rem', fontWeight: 800, color: '#059669', marginTop: '4px' }}>
+                {users.filter(u => u.role === 'CUSTOMER').length}
+              </div>
+            </div>
+            <div className="glass-panel" style={{ padding: '1.15rem', borderLeft: '4px solid #0284c7' }}>
+              <div style={{ fontSize: '0.78rem', color: '#64748b', fontWeight: 600 }}>Nhân Viên & Quản Lý Kho</div>
+              <div style={{ fontSize: '1.7rem', fontWeight: 800, color: '#0284c7', marginTop: '4px' }}>
+                {users.filter(u => u.role === 'CARE_STAFF' || u.role === 'WAREHOUSE_STAFF').length}
+              </div>
+            </div>
+            <div className="glass-panel" style={{ padding: '1.15rem', borderLeft: '4px solid #dc2626' }}>
+              <div style={{ fontSize: '0.78rem', color: '#64748b', fontWeight: 600 }}>Tài Khoản Bị Khóa</div>
+              <div style={{ fontSize: '1.7rem', fontWeight: 800, color: '#dc2626', marginTop: '4px' }}>
+                {users.filter(u => u.status === 'LOCKED').length}
+              </div>
+            </div>
           </div>
 
-          <div className="table-container">
-            <table>
-              <thead>
-                <tr>
-                  <th>Tên Dịch Vụ</th>
-                  <th>Danh Mục</th>
-                  <th>Thời Lượng</th>
-                  <th>Đơn Giá</th>
-                  <th>Trạng Thái</th>
-                </tr>
-              </thead>
-              <tbody>
-                {serviceList.map(s => (
-                  <tr key={s.id}>
-                    <td><strong>{s.name}</strong></td>
-                    <td><span className="badge badge-info">{s.category}</span></td>
-                    <td>{s.durationMinutes} phút</td>
-                    <td><strong style={{ color: '#34d399' }}>{s.price.toLocaleString('vi-VN')} đ</strong></td>
-                    <td><span className="badge badge-success">ACTIVE</span></td>
-                  </tr>
+          <div className="glass-panel" style={{ padding: '1.4rem' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '0.75rem', marginBottom: '1.15rem' }}>
+              <div style={{ display: 'flex', gap: '0.45rem', flexWrap: 'wrap' }}>
+                {[
+                  { id: 'ALL', label: 'Tất cả' },
+                  { id: 'ADMIN', label: 'Admin' },
+                  { id: 'CARE_STAFF', label: 'Nhân viên' },
+                  { id: 'WAREHOUSE_STAFF', label: 'Quản lý kho' },
+                  { id: 'CUSTOMER', label: 'Khách hàng' }
+                ].map(r => (
+                  <button
+                    key={r.id}
+                    type="button"
+                    onClick={() => setRoleFilter(r.id)}
+                    style={{
+                      padding: '0.38rem 0.85rem',
+                      borderRadius: '18px',
+                      fontSize: '0.78rem',
+                      fontWeight: 700,
+                      border: roleFilter === r.id ? '1.5px solid #7c3aed' : '1px solid #cbd5e1',
+                      background: roleFilter === r.id ? '#f3e8ff' : '#ffffff',
+                      color: roleFilter === r.id ? '#6d28d9' : '#475569',
+                      cursor: 'pointer'
+                    }}
+                  >
+                    {r.label}
+                  </button>
                 ))}
-              </tbody>
-            </table>
+              </div>
+
+              <div style={{ display: 'flex', alignItems: 'center', background: '#f8fafc', borderRadius: '10px', padding: '0.45rem 0.85rem', border: '1px solid #cbd5e1', minWidth: 240 }}>
+                <Search size={15} color="#64748b" style={{ marginRight: '6px' }} />
+                <input
+                  type="text"
+                  value={searchQuery}
+                  onChange={e => setSearchQuery(e.target.value)}
+                  placeholder="Tìm tên, email, số điện thoại..."
+                  style={{ background: 'transparent', border: 'none', color: '#0f172a', fontSize: '0.84rem', outline: 'none', width: '100%' }}
+                />
+              </div>
+            </div>
+
+            <div className="table-container">
+              <table>
+                <thead>
+                  <tr>
+                    <th>Họ và Tên</th>
+                    <th>Tài Khoản (Email / SĐT)</th>
+                    <th>Số Điện Thoại</th>
+                    <th>Vai Trò</th>
+                    <th>Trạng Thái</th>
+                    <th>Ngày Tạo</th>
+                    <th>Thao Tác</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {filteredUsers.map(u => {
+                    const meta = ROLE_META[u.role] || ROLE_META.CUSTOMER;
+                    const isLocked = u.status === 'LOCKED';
+                    return (
+                      <tr key={u.id} style={{ background: isLocked ? '#fef2f2' : 'transparent' }}>
+                        <td><strong style={{ color: '#0f172a' }}>{u.fullName}</strong></td>
+                        <td>{u.email}</td>
+                        <td>{u.phone || '---'}</td>
+                        <td><span className={`badge ${meta.badge}`}>{meta.label}</span></td>
+                        <td>
+                          <span className={`badge ${isLocked ? 'badge-danger' : 'badge-success'}`}>
+                            {isLocked ? 'Đang khóa' : 'Hoạt động'}
+                          </span>
+                        </td>
+                        <td style={{ fontSize: '0.82rem', color: '#64748b' }}>{u.createdAt || '2026-01-01'}</td>
+                        <td>
+                          <div style={{ display: 'flex', gap: '0.4rem', flexWrap: 'nowrap' }}>
+                            <button
+                              type="button"
+                              className="btn btn-secondary"
+                              style={{ padding: '0.35rem 0.65rem', fontSize: '0.76rem' }}
+                              onClick={() => openEditUser(u)}
+                              title="Chỉnh sửa thông tin"
+                            >
+                              <Edit3 size={13} /> Sửa
+                            </button>
+                            <button
+                              type="button"
+                              className="btn btn-secondary"
+                              style={{ padding: '0.35rem 0.65rem', fontSize: '0.76rem', color: isLocked ? '#059669' : '#d97706' }}
+                              onClick={() => {
+                                if (currentUser && u.id === currentUser.id) {
+                                  toast.warning('Không thể tự khóa tài khoản Admin đang đăng nhập!', 'Bảo Vệ Hệ Thống');
+                                  return;
+                                }
+                                onToggleUserStatus && onToggleUserStatus(u.id);
+                              }}
+                              title={isLocked ? 'Mở khóa tài khoản' : 'Khóa tài khoản'}
+                            >
+                              <Lock size={13} /> {isLocked ? 'Mở khóa' : 'Khóa'}
+                            </button>
+                            <button
+                              type="button"
+                              className="btn btn-danger"
+                              style={{ padding: '0.35rem 0.6rem', fontSize: '0.76rem' }}
+                              onClick={() => handleDeleteUserClick(u)}
+                              title="Xóa tài khoản"
+                            >
+                              <Trash2 size={13} />
+                            </button>
+                          </div>
+                        </td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </>
+      )}
+
+      {/* ==================== 3. PHÂN QUYỀN NGƯỜI DÙNG (RBAC) ==================== */}
+      {currentTab === 'roles-admin' && (
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
+          <div>
+            <h2 style={{ fontSize: '1.45rem', fontWeight: 800, color: '#0f172a', display: 'flex', alignItems: 'center', gap: '8px' }}>
+              <Shield size={22} color="#7c3aed" /> Phân Quyền Người Dùng (RBAC)
+            </h2>
+            <p style={{ fontSize: '0.85rem', color: 'var(--text-muted)' }}>
+              Gán vai trò truy cập cho từng tài khoản và quản lý ma trận quyền hạn theo 4 nhóm người dùng
+            </p>
+          </div>
+
+          <div className="grid-4">
+            {[
+              { key: 'CUSTOMER', title: 'Khách hàng', desc: 'Đặt lịch, quản lý thú cưng, mua sắm', color: '#059669', bg: '#ecfdf5' },
+              { key: 'CARE_STAFF', title: 'Nhân viên', desc: 'Lịch hẹn, dịch vụ, KM, thú cưng, báo cáo', color: '#0284c7', bg: '#f0f9ff' },
+              { key: 'WAREHOUSE_STAFF', title: 'Quản lý kho', desc: 'Nhập/xuất/tồn, dự báo AI, đề xuất nhập', color: '#d97706', bg: '#fffbeb' },
+              { key: 'ADMIN', title: 'Admin', desc: 'Tổng quan, TK, RBAC, duyệt nhập, NCC, cấu hình', color: '#7c3aed', bg: '#faf5ff' },
+            ].map(r => (
+              <div key={r.key} className="glass-panel" style={{ padding: '1.15rem', background: r.bg, borderColor: `${r.color}40` }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                  <strong style={{ color: r.color, fontSize: '1rem' }}>{r.title}</strong>
+                  <span style={{ background: '#ffffff', color: r.color, fontWeight: 900, fontSize: '0.85rem', padding: '2px 10px', borderRadius: '14px', border: `1px solid ${r.color}40` }}>
+                    {users.filter(u => u.role === r.key).length} TK
+                  </span>
+                </div>
+                <div style={{ fontSize: '0.78rem', color: '#475569', marginTop: '6px', lineHeight: 1.45 }}>{r.desc}</div>
+              </div>
+            ))}
+          </div>
+
+          <div className="glass-panel" style={{ padding: '1.4rem' }}>
+            <h3 style={{ fontSize: '1.12rem', fontWeight: 800, color: '#0f172a', marginBottom: '0.35rem' }}>
+              1. Gán & Thay Đổi Vai Trò Tài Khoản
+            </h3>
+            <p style={{ fontSize: '0.82rem', color: 'var(--text-muted)', marginBottom: '1rem' }}>
+              Chọn vai trò mới để cấp quyền truy cập ngay lập tức cho tài khoản tương ứng
+            </p>
+            <div className="table-container">
+              <table>
+                <thead>
+                  <tr>
+                    <th>Họ và Tên</th>
+                    <th>Tài Khoản</th>
+                    <th>Vai Trò Hiện Tại</th>
+                    <th>Thay Đổi Vai Trò (Gán Quyền)</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {users.map(u => {
+                    const meta = ROLE_META[u.role] || ROLE_META.CUSTOMER;
+                    const isSelf = currentUser && (u.id === currentUser.id || u.email === currentUser.email);
+                    return (
+                      <tr key={u.id}>
+                        <td><strong>{u.fullName}</strong></td>
+                        <td style={{ color: '#475569' }}>{u.email}</td>
+                        <td><span className={`badge ${meta.badge}`}>{meta.label}</span></td>
+                        <td>
+                          <select
+                            className="form-control"
+                            disabled={isSelf}
+                            value={u.role}
+                            onChange={(e) => {
+                              if (onUpdateUserRole) {
+                                onUpdateUserRole(u.id, e.target.value);
+                              }
+                            }}
+                            style={{ padding: '0.4rem 0.75rem', fontSize: '0.82rem', maxWidth: 220, cursor: isSelf ? 'not-allowed' : 'pointer' }}
+                          >
+                            <option value="CUSTOMER">Khách hàng (CUSTOMER)</option>
+                            <option value="CARE_STAFF">Nhân viên (CARE_STAFF)</option>
+                            <option value="WAREHOUSE_STAFF">Quản lý kho (WAREHOUSE_STAFF)</option>
+                            <option value="ADMIN">Admin (ADMIN)</option>
+                          </select>
+                        </td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
+            </div>
+          </div>
+
+          <div className="glass-panel" style={{ padding: '1.4rem' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem', flexWrap: 'wrap', gap: '0.75rem' }}>
+              <div>
+                <h3 style={{ fontSize: '1.12rem', fontWeight: 800, color: '#0f172a' }}>
+                  2. Ma Trận Phân Quyền Chức Năng (RBAC Permission Matrix)
+                </h3>
+                <p style={{ fontSize: '0.82rem', color: 'var(--text-muted)' }}>
+                  Cấu hình quyền truy cập chi tiết theo từng Use Case của 4 nhóm vai trò
+                </p>
+              </div>
+              <div style={{ display: 'flex', gap: '0.5rem' }}>
+                <button type="button" className="btn btn-secondary" style={{ padding: '0.45rem 0.85rem', fontSize: '0.8rem' }} onClick={handleResetRbac}>
+                  <RefreshCw size={14} /> Khôi Phục Mặc Định
+                </button>
+                <button type="button" className="btn btn-primary" style={{ padding: '0.45rem 0.95rem', fontSize: '0.8rem' }} onClick={handleSaveRbac}>
+                  <Check size={15} /> Lưu Cấu Hình Quyền
+                </button>
+              </div>
+            </div>
+
+            <div className="table-container">
+              <table>
+                <thead>
+                  <tr>
+                    <th>Nhóm</th>
+                    <th>Chức Năng (Use Case)</th>
+                    <th style={{ textAlign: 'center' }}>Khách hàng</th>
+                    <th style={{ textAlign: 'center' }}>Nhân viên</th>
+                    <th style={{ textAlign: 'center' }}>Quản lý kho</th>
+                    <th style={{ textAlign: 'center' }}>Admin</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {rbacMatrix.map(row => (
+                    <tr key={row.id}>
+                      <td><span className="badge badge-info" style={{ fontSize: '0.72rem' }}>{row.group}</span></td>
+                      <td><strong style={{ fontSize: '0.86rem', color: '#0f172a' }}>{row.label}</strong></td>
+                      {['CUSTOMER', 'CARE_STAFF', 'WAREHOUSE_STAFF', 'ADMIN'].map(roleKey => (
+                        <td key={roleKey} style={{ textAlign: 'center' }}>
+                          <input
+                            type="checkbox"
+                            checked={!!row[roleKey]}
+                            onChange={() => handleTogglePermission(row.id, roleKey)}
+                            style={{ width: 17, height: 17, accentColor: ROLE_META[roleKey].color, cursor: 'pointer' }}
+                          />
+                        </td>
+                      ))}
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
           </div>
         </div>
       )}
 
-      {/* 6. QUẢN LÝ LỊCH HẸN & NHẬT KÝ CHĂM SÓC */}
-      {currentTab === 'appointments-all' && (
-        <div className="glass-panel" style={{ padding: '1.25rem' }}>
-          <div style={{ marginBottom: '1.25rem' }}>
-            <h2 style={{ fontSize: '1.25rem', fontWeight: 800, display: 'flex', alignItems: 'center', gap: '8px' }}>
-              <Calendar size={20} color="#00f2fe" /> Quản Lý Tất Cả Lịch Hẹn & Hồ Sơ Chăm Sóc Thú Cưng
-            </h2>
-            <p style={{ fontSize: '0.82rem', color: 'var(--text-muted)' }}>Điều phối nhân viên chăm sóc, theo dõi tiến độ ca làm và nhật ký y tế</p>
+      {/* ==================== 4. PHÊ DUYỆT KẾ HOẠCH NHẬP HÀNG ==================== */}
+      {currentTab === 'approve-proposals' && (
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '1rem' }}>
+            <div>
+              <h2 style={{ fontSize: '1.45rem', fontWeight: 800, color: '#0f172a', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                <CheckSquare size={22} color="#ea580c" /> Phê Duyệt Kế Hoạch Nhập Hàng Thông Minh
+              </h2>
+              <p style={{ fontSize: '0.85rem', color: 'var(--text-muted)' }}>
+                Thẩm định ngân sách, kiểm tra căn cứ AI Dự báo từ bộ phận Quản lý kho và phê duyệt đơn nhập hàng
+              </p>
+            </div>
+            {draftProposals.length > 0 && (
+              <button type="button" className="btn btn-emerald" onClick={handleApproveAllDrafts}>
+                <Check size={16} /> Phê Duyệt Tất Cả ({draftProposals.length})
+              </button>
+            )}
           </div>
 
-          <div className="table-container">
-            <table>
-              <thead>
-                <tr>
-                  <th>Thú Cưng / Chủ Hẹn</th>
-                  <th>Dịch Vụ</th>
-                  <th>Ngày & Slot Giờ</th>
-                  <th>Nhân Viên Phụ Trách</th>
-                  <th>Trạng Thái Ca</th>
-                  <th>Nhật Ký Chăm Sóc</th>
-                </tr>
-              </thead>
-              <tbody>
-                {appointments.map(a => (
-                  <tr key={a.id}>
-                    <td>
-                      <strong>{a.petName}</strong> ({a.species})
-                      <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>Chủ: {a.customerName}</div>
-                    </td>
-                    <td>{a.serviceName}</td>
-                    <td>{a.appointmentDate} ({a.timeSlot})</td>
-                    <td>{a.staffName || 'Chưa phân công'}</td>
-                    <td>
-                      <span className={`badge ${a.status === 'COMPLETED' ? 'badge-success' : a.status === 'IN_PROGRESS' ? 'badge-info' : 'badge-pending'}`}>
-                        {a.status}
-                      </span>
-                    </td>
-                    <td style={{ color: a.careSummary ? '#34d399' : 'var(--text-muted)', fontStyle: 'italic', fontSize: '0.8rem' }}>
-                      {a.careSummary || 'Đang chờ hoàn thành...'}
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
+          <div className="grid-4">
+            <div className="glass-panel" style={{ padding: '1.1rem', borderLeft: '4px solid #f59e0b' }}>
+              <div style={{ fontSize: '0.78rem', color: '#64748b', fontWeight: 600 }}>Đang Chờ Admin Duyệt</div>
+              <div style={{ fontSize: '1.65rem', fontWeight: 800, color: '#d97706', marginTop: '4px' }}>{draftProposals.length}</div>
+            </div>
+            <div className="glass-panel" style={{ padding: '1.1rem', borderLeft: '4px solid #ea580c' }}>
+              <div style={{ fontSize: '0.78rem', color: '#64748b', fontWeight: 600 }}>Ngân Sách Dự Kiến (Chờ Duyệt)</div>
+              <div style={{ fontSize: '1.4rem', fontWeight: 900, color: '#ea580c', marginTop: '6px' }}>
+                {pendingBudgetTotal.toLocaleString('vi-VN')} đ
+              </div>
+            </div>
+            <div className="glass-panel" style={{ padding: '1.1rem', borderLeft: '4px solid #059669' }}>
+              <div style={{ fontSize: '0.78rem', color: '#64748b', fontWeight: 600 }}>Đã Duyệt Chờ Kho Nhập</div>
+              <div style={{ fontSize: '1.65rem', fontWeight: 800, color: '#059669', marginTop: '4px' }}>{approvedProposals.length}</div>
+            </div>
+            <div className="glass-panel" style={{ padding: '1.1rem', borderLeft: '4px solid #7c3aed' }}>
+              <div style={{ fontSize: '0.78rem', color: '#64748b', fontWeight: 600 }}>Đã Nhập Kho Hoàn Tất</div>
+              <div style={{ fontSize: '1.65rem', fontWeight: 800, color: '#7c3aed', marginTop: '4px' }}>{completedProposals.length}</div>
+            </div>
+          </div>
+
+          {/* Filter Pills */}
+          <div style={{ display: 'flex', gap: '0.45rem', flexWrap: 'wrap' }}>
+            {[
+              { id: 'ALL', label: `Tất cả (${reorderProposals.length})` },
+              { id: 'DRAFT', label: `Chờ duyệt (${draftProposals.length})` },
+              { id: 'APPROVED', label: `Đã duyệt (${approvedProposals.length})` },
+              { id: 'COMPLETED', label: `Đã nhập kho (${completedProposals.length})` },
+              { id: 'REJECTED', label: `Đã từ chối (${reorderProposals.filter(p => p.status === 'REJECTED').length})` },
+            ].map(f => (
+              <button
+                key={f.id}
+                type="button"
+                onClick={() => setProposalFilter(f.id)}
+                style={{
+                  padding: '0.4rem 0.9rem',
+                  borderRadius: '18px',
+                  fontSize: '0.78rem',
+                  fontWeight: 700,
+                  border: proposalFilter === f.id ? '1.5px solid #7c3aed' : '1px solid #cbd5e1',
+                  background: proposalFilter === f.id ? '#f3e8ff' : '#ffffff',
+                  color: proposalFilter === f.id ? '#6d28d9' : '#475569',
+                  cursor: 'pointer'
+                }}
+              >
+                {f.label}
+              </button>
+            ))}
+          </div>
+
+          <div className="glass-panel" style={{ padding: '1.4rem', display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+            {filteredProposals.length === 0 ? (
+              <div style={{ textAlign: 'center', padding: '2.5rem', color: '#64748b' }}>
+                Không có phiếu đề xuất nhập hàng nào trong mục này.
+              </div>
+            ) : (
+              filteredProposals.map(prop => {
+                const matchedProd = products.find(p => p.id === prop.productId || p.sku === prop.sku);
+                const estCost = estimateProposalCost(prop);
+                return (
+                  <div
+                    key={prop.id}
+                    className="glass-card"
+                    style={{
+                      display: 'flex',
+                      justifyContent: 'space-between',
+                      alignItems: 'center',
+                      flexWrap: 'wrap',
+                      gap: '1rem',
+                      borderLeft: `4px solid ${prop.status === 'COMPLETED' ? '#7c3aed' : prop.status === 'APPROVED' ? '#059669' : prop.status === 'REJECTED' ? '#dc2626' : '#f59e0b'}`
+                    }}
+                  >
+                    <div style={{ display: 'flex', gap: '0.9rem', flex: 1, minWidth: 290, alignItems: 'flex-start' }}>
+                      <img
+                        src={getProductImage(matchedProd || { name: prop.productName, category: 'Thức ăn' })}
+                        alt={prop.productName}
+                        referrerPolicy="no-referrer"
+                        onError={(e) => { e.currentTarget.onerror = null; e.currentTarget.src = FALLBACK_IMAGES.product; }}
+                        style={{ width: 58, height: 58, borderRadius: '12px', objectFit: 'contain', background: '#ffffff', padding: '3px', border: '1px solid #e2e8f0', flexShrink: 0 }}
+                      />
+                      <div style={{ flex: 1 }}>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap', marginBottom: '4px' }}>
+                          <strong style={{ fontSize: '1rem', color: '#0f172a' }}>{prop.productName}</strong>
+                          <span className={`badge ${prop.status === 'COMPLETED' ? 'badge-info' : prop.status === 'APPROVED' ? 'badge-success' : prop.status === 'REJECTED' ? 'badge-danger' : 'badge-pending'}`}>
+                            {prop.status === 'DRAFT' ? 'Chờ Admin duyệt' : prop.status === 'APPROVED' ? 'Đã duyệt • Chờ nhập kho' : prop.status === 'COMPLETED' ? 'Đã nhập kho' : 'Đã từ chối'}
+                          </span>
+                          {prop.confidenceScore && (
+                            <span style={{ fontSize: '0.72rem', fontWeight: 800, color: '#0284c7', background: '#f0f9ff', border: '1px solid #bae6fd', padding: '2px 8px', borderRadius: '12px', display: 'inline-flex', alignItems: 'center', gap: '4px' }}>
+                              <Brain size={11} /> AI {(prop.confidenceScore * 100).toFixed(0)}%
+                            </span>
+                          )}
+                        </div>
+                        <div style={{ fontSize: '0.79rem', color: '#64748b' }}>
+                          SKU: <strong>{prop.sku}</strong> • Tồn lúc lập: <strong style={{ color: '#dc2626' }}>{prop.currentStock}</strong> (min {prop.minStockLevel}) • NCC: <strong>{prop.suggestedSupplier || 'Royal Canin Việt Nam'}</strong>
+                        </div>
+                        <div style={{ background: '#f8fafc', border: '1px solid #e2e8f0', borderRadius: '8px', padding: '0.55rem 0.75rem', fontSize: '0.8rem', color: '#334155', marginTop: '6px' }}>
+                          {prop.reason}
+                        </div>
+                      </div>
+                    </div>
+
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '1.15rem', flexWrap: 'wrap' }}>
+                      <div style={{ textAlign: 'right' }}>
+                        <div style={{ fontSize: '0.72rem', color: '#64748b' }}>Số lượng đề xuất</div>
+                        <div style={{ fontSize: '1.3rem', fontWeight: 900, color: '#059669' }}>+{prop.suggestedQuantity} sp</div>
+                        <div style={{ fontSize: '0.78rem', fontWeight: 800, color: '#ea580c' }}>
+                          Dự chi: {estCost.toLocaleString('vi-VN')} đ
+                        </div>
+                        <div style={{ fontSize: '0.71rem', color: '#64748b' }}>Ngày đặt: {prop.suggestedOrderDate || 'Hôm nay'}</div>
+                      </div>
+
+                      {prop.status === 'DRAFT' && (
+                        <div style={{ display: 'flex', flexDirection: 'column', gap: '0.45rem' }}>
+                          <button type="button" className="btn btn-emerald" style={{ padding: '0.45rem 0.9rem', fontSize: '0.8rem' }} onClick={() => onApproveProposal && onApproveProposal(prop.id)}>
+                            <Check size={15} /> Phê Duyệt
+                          </button>
+                          <button type="button" className="btn btn-danger" style={{ padding: '0.4rem 0.9rem', fontSize: '0.78rem' }} onClick={() => onRejectProposal && onRejectProposal(prop.id)}>
+                            <X size={14} /> Từ Chối
+                          </button>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                );
+              })
+            )}
           </div>
         </div>
       )}
 
-      {/* 8. QUẢN LÝ ĐƠN HÀNG KHÁCH ĐẶT */}
-      {currentTab === 'orders-admin' && (
-        <div className="glass-panel" style={{ padding: '1.25rem' }}>
-          <div style={{ marginBottom: '1.25rem' }}>
-            <h2 style={{ fontSize: '1.25rem', fontWeight: 800, display: 'flex', alignItems: 'center', gap: '8px' }}>
-              <ShoppingBag size={20} color="#ff8e53" /> Quản Lý Đơn Hàng Khách Đặt
-            </h2>
-            <p style={{ fontSize: '0.82rem', color: 'var(--text-muted)' }}>Xác nhận và theo dõi trạng thái các đơn đặt hàng thức ăn & phụ kiện của khách</p>
+      {/* ==================== 5. QUẢN LÝ NHÀ CUNG CẤP ==================== */}
+      {currentTab === 'suppliers-admin' && (
+        <div className="glass-panel" style={{ padding: '1.5rem' }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.25rem', flexWrap: 'wrap', gap: '1rem' }}>
+            <div>
+              <h2 style={{ fontSize: '1.4rem', fontWeight: 800, color: '#0f172a', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                <Building2 size={22} color="#0284c7" /> Quản Lý Danh Mục Nhà Cung Cấp ({filteredSuppliers.length})
+              </h2>
+              <p style={{ fontSize: '0.84rem', color: 'var(--text-muted)' }}>
+                Quản lý hồ sơ đối tác cung ứng thức ăn, phụ kiện, mỹ phẩm Spa và vật tư thú y chính hãng
+              </p>
+            </div>
+            <div style={{ display: 'flex', gap: '0.65rem', flexWrap: 'wrap', alignItems: 'center' }}>
+              <div style={{ display: 'flex', alignItems: 'center', background: '#f8fafc', borderRadius: '10px', padding: '0.45rem 0.85rem', border: '1px solid #cbd5e1', minWidth: 220 }}>
+                <Search size={15} color="#64748b" style={{ marginRight: '6px' }} />
+                <input
+                  type="text"
+                  value={supplierSearch}
+                  onChange={e => setSupplierSearch(e.target.value)}
+                  placeholder="Tìm tên NCC, liên hệ, mặt hàng..."
+                  style={{ background: 'transparent', border: 'none', color: '#0f172a', fontSize: '0.84rem', outline: 'none', width: '100%' }}
+                />
+              </div>
+              <button type="button" className="btn btn-coral" onClick={openCreateSupplier}>
+                <Plus size={16} /> Thêm Nhà Cung Cấp
+              </button>
+            </div>
           </div>
 
           <div className="table-container">
             <table>
               <thead>
                 <tr>
-                  <th>Mã Đơn</th>
-                  <th>Khách Hàng</th>
-                  <th>Sản Phẩm Đặt</th>
-                  <th>Tổng Tiền</th>
-                  <th>Ngày Đặt</th>
-                  <th>Trạng Thái</th>
+                  <th>Tên Nhà Cung Cấp</th>
+                  <th>Người Đại Diện</th>
+                  <th>Thông Tin Liên Hệ</th>
+                  <th>Địa Chỉ</th>
+                  <th>Mặt Hàng Cung Ứng</th>
                   <th>Thao Tác</th>
                 </tr>
               </thead>
               <tbody>
-                {customerOrders.map(order => (
-                  <tr key={order.id}>
-                    <td><strong>{order.id}</strong></td>
+                {filteredSuppliers.map(sup => (
+                  <tr key={sup.id}>
+                    <td><strong style={{ color: '#0f172a' }}>{sup.name}</strong></td>
+                    <td>{sup.contactPerson || 'Bộ phận kinh doanh'}</td>
                     <td>
-                      <div><strong>{order.customerName}</strong></div>
-                      <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>{order.phone}</div>
+                      <div style={{ fontSize: '0.82rem', color: '#0284c7', display: 'flex', alignItems: 'center', gap: '4px' }}>
+                        <Phone size={12} /> {sup.phone || '---'}
+                      </div>
+                      <div style={{ fontSize: '0.76rem', color: '#64748b', display: 'flex', alignItems: 'center', gap: '4px' }}>
+                        <Mail size={12} /> {sup.email || '---'}
+                      </div>
                     </td>
-                    <td style={{ maxWidth: 200 }}>{order.items}</td>
-                    <td><strong style={{ color: '#34d399' }}>{order.total.toLocaleString('vi-VN')} đ</strong></td>
-                    <td>{order.date}</td>
-                    <td>
-                      <span className={`badge ${order.status === 'PENDING' ? 'badge-pending' : 'badge-success'}`}>
-                        {order.status === 'PENDING' ? 'Chờ Xác Nhận' : 'Đã Xác Nhận'}
+                    <td style={{ fontSize: '0.82rem', color: '#64748b' }}>
+                      <span style={{ display: 'inline-flex', alignItems: 'center', gap: '4px' }}>
+                        <MapPin size={12} /> {sup.address || 'TP. Hồ Chí Minh'}
                       </span>
                     </td>
+                    <td><span className="badge badge-info">{sup.productCategories || 'Thức ăn & Vật tư'}</span></td>
                     <td>
-                      {order.status === 'PENDING' && (
-                        <button className="btn btn-emerald" style={{ padding: '0.4rem 0.8rem', fontSize: '0.8rem' }} onClick={() => handleConfirmOrder(order.id)}>
-                          <Check size={14} /> Xác Nhận
+                      <div style={{ display: 'flex', gap: '0.4rem' }}>
+                        <button type="button" className="btn btn-secondary" style={{ padding: '0.35rem 0.65rem', fontSize: '0.76rem' }} onClick={() => openEditSupplier(sup)}>
+                          <Edit3 size={13} /> Sửa
                         </button>
-                      )}
+                        <button type="button" className="btn btn-danger" style={{ padding: '0.35rem 0.6rem', fontSize: '0.76rem' }} onClick={() => handleDeleteSupplierClick(sup)}>
+                          <Trash2 size={13} />
+                        </button>
+                      </div>
                     </td>
                   </tr>
                 ))}
@@ -549,671 +1164,217 @@ export default function AdminDashboard({
         </div>
       )}
 
-      {/* 7. AI FORECASTING & DỰ BÁO MÙA VỤ 3-5 NĂM */}
-      {(currentTab === 'ai-forecasting') && (
+      {/* ==================== 6. CẤU HÌNH HỆ THỐNG & NHẬT KÝ HOẠT ĐỘNG ==================== */}
+      {currentTab === 'system-settings' && (
         <div style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
-          <div className="glass-panel" style={{ padding: '1.5rem', background: 'linear-gradient(135deg, rgba(15, 23, 42, 0.98) 0%, rgba(30, 41, 59, 0.98) 100%)', border: '1px solid rgba(56, 239, 125, 0.4)', boxShadow: '0 8px 32px rgba(56, 239, 125, 0.15)' }}>
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.5rem', flexWrap: 'wrap', gap: '1rem' }}>
-              <div>
-                <h3 style={{ fontSize: '1.35rem', fontWeight: 800, color: '#38ef7d', display: 'flex', alignItems: 'center', gap: '10px' }}>
-                  <Brain size={26} color="#38ef7d" /> Phân Tích Lịch Sử Giao Dịch & Đề Xuất Nhập Hàng Tương Lai
-                </h3>
-                <p style={{ fontSize: '0.85rem', color: '#94a3b8', marginTop: '4px' }}>
-                  Sử dụng mô hình học máy (Machine Learning) đọc toàn bộ {FIVE_YEAR_ORDER_HISTORY.length} đơn hàng mua/bán trong 5 năm qua để dự báo nhu cầu.
-                </p>
-              </div>
-
-              <button className="btn btn-emerald" onClick={handleRunOrderHistoryAI} disabled={isProcessingOrderHistory} style={{ padding: '0.65rem 1.25rem', borderRadius: '12px' }}>
-                <Sparkles size={18} /> {isProcessingOrderHistory ? 'Đang Xử Lý AI...' : 'Khởi Chạy Phân Tích AI'}
-              </button>
-            </div>
-
-            {orderHistoryForecast && (
-              <div className="animate-fade-in">
-                {/* METRICS */}
-                <div className="grid-3" style={{ marginBottom: '1.5rem' }}>
-                  <div style={{ background: 'rgba(0, 0, 0, 0.4)', padding: '1.25rem', borderRadius: '12px', border: '1px solid rgba(255,255,255,0.05)' }}>
-                    <div style={{ fontSize: '0.82rem', color: '#cbd5e1', marginBottom: '8px' }}>💰 Tổng Doanh Thu 5 Năm</div>
-                    <strong style={{ fontSize: '1.6rem', fontWeight: 800, color: '#38bdf8' }}>
-                      {orderHistoryForecast.totalRevenue.toLocaleString('vi-VN')} đ
-                    </strong>
-                  </div>
-                  <div style={{ background: 'rgba(0, 0, 0, 0.4)', padding: '1.25rem', borderRadius: '12px', border: '1px solid rgba(255,255,255,0.05)' }}>
-                    <div style={{ fontSize: '0.82rem', color: '#cbd5e1', marginBottom: '8px' }}>📦 Tổng Chi Phí Nhập Hàng</div>
-                    <strong style={{ fontSize: '1.6rem', fontWeight: 800, color: '#f87171' }}>
-                      {orderHistoryForecast.totalImportCost.toLocaleString('vi-VN')} đ
-                    </strong>
-                  </div>
-                  <div style={{ background: 'rgba(56, 239, 125, 0.1)', padding: '1.25rem', borderRadius: '12px', border: '1px solid rgba(56, 239, 125, 0.3)' }}>
-                    <div style={{ fontSize: '0.82rem', color: '#38ef7d', marginBottom: '8px', fontWeight: 700 }}>📈 Dự Báo Doanh Thu Tháng Tới</div>
-                    <strong style={{ fontSize: '1.6rem', fontWeight: 800, color: '#38ef7d' }}>
-                      {orderHistoryForecast.predictedRevenueNextMonth.toLocaleString('vi-VN')} đ
-                    </strong>
-                  </div>
-                </div>
-
-                {/* STRATEGIC ADVICE */}
-                <div style={{ background: 'rgba(251, 191, 36, 0.1)', padding: '1.25rem', borderRadius: '12px', border: '1px solid rgba(251, 191, 36, 0.3)', marginBottom: '1.5rem' }}>
-                  <h4 style={{ color: '#fbbf24', fontSize: '1.1rem', fontWeight: 800, marginBottom: '0.85rem' }}>🧭 Khuyến Nghị Chiến Lược Doanh Nghiệp</h4>
-                  <ul style={{ listStyleType: 'none', padding: 0, margin: 0, color: '#fde68a', fontSize: '0.9rem', lineHeight: '1.6', display: 'flex', flexDirection: 'column', gap: '8px' }}>
-                    {orderHistoryForecast.strategicAdvice.map((adv, idx) => (
-                      <li key={idx}>{adv}</li>
-                    ))}
-                  </ul>
-                </div>
-
-                {/* PRODUCT RECOMMENDATIONS */}
-                <h4 style={{ color: '#ffffff', fontSize: '1.15rem', fontWeight: 800, marginBottom: '1rem' }}>Danh Sách Sản Phẩm Cần Nhập Trong Tháng Tới (AI Suggested)</h4>
-                <div className="grid-2">
-                  {orderHistoryForecast.recommendations.map((rec, idx) => (
-                    <div key={idx} style={{ background: 'rgba(255,255,255,0.03)', padding: '1.25rem', borderRadius: '12px', border: '1px solid rgba(255,255,255,0.08)' }}>
-                      <div style={{ fontSize: '1.1rem', fontWeight: 800, color: '#ffffff', marginBottom: '8px' }}>{rec.productName}</div>
-                      <div style={{ display: 'flex', gap: '1rem', marginBottom: '12px' }}>
-                        <div>
-                          <span style={{ fontSize: '0.75rem', color: '#94a3b8' }}>Tiêu thụ TB/Tháng: </span>
-                          <strong style={{ color: '#cbd5e1' }}>{rec.historicalAvgMonthly} sp</strong>
-                        </div>
-                        <div>
-                          <span style={{ fontSize: '0.75rem', color: '#94a3b8' }}>AI Dự báo Tới: </span>
-                          <strong style={{ color: '#00f2fe' }}>{rec.predictedNextMonthDemand} sp</strong>
-                        </div>
-                      </div>
-                      <div style={{ background: 'rgba(56, 239, 125, 0.1)', padding: '0.65rem', borderRadius: '8px', color: '#38ef7d', fontSize: '0.85rem', fontWeight: 700, marginBottom: '10px' }}>
-                        👉 Đề xuất nhập thêm: +{rec.suggestedImportQty} sản phẩm
-                      </div>
-                      <div style={{ fontSize: '0.8rem', color: '#94a3b8', fontStyle: 'italic' }}>
-                        {rec.reason}
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              </div>
-            )}
+          <div>
+            <h2 style={{ fontSize: '1.45rem', fontWeight: 800, color: '#0f172a', display: 'flex', alignItems: 'center', gap: '8px' }}>
+              <Settings size={22} color="#7c3aed" /> Cấu Hình Hệ Thống & Nhật Ký Hoạt Động
+            </h2>
+            <p style={{ fontSize: '0.85rem', color: 'var(--text-muted)' }}>
+              Thiết lập tham số vận hành cửa hàng, tùy chỉnh thuật toán AI Dự báo nhập kho và kiểm tra nhật ký hệ thống
+            </p>
           </div>
 
-          
-          
-          {/* SECTION A: 5-YEAR SEASONAL WEATHER ANALYSIS CHART */}
-          <div className="glass-panel" style={{ padding: '1.5rem', border: '1px solid var(--border-glow)' }}>
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.25rem', flexWrap: 'wrap', gap: '1rem' }}>
+          <form onSubmit={handleSaveSystemConfig} className="grid-2">
+            {/* Store & Operations Config */}
+            <div className="glass-panel" style={{ padding: '1.4rem' }}>
+              <h3 style={{ fontSize: '1.08rem', fontWeight: 800, color: '#0f172a', marginBottom: '1rem', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                <Settings size={17} color="#0284c7" /> 1. Thông Số Cửa Hàng & Vận Hành
+              </h3>
+              <div className="form-group">
+                <label>Tên Hệ Thống / Thương Hiệu</label>
+                <input
+                  className="form-control"
+                  value={systemConfig.storeName}
+                  onChange={e => setSystemConfig({ ...systemConfig, storeName: e.target.value })}
+                />
+              </div>
+              <div className="grid-2" style={{ gap: '0.85rem' }}>
+                <div className="form-group">
+                  <label>Hotline Hỗ Trợ</label>
+                  <input
+                    className="form-control"
+                    value={systemConfig.hotline}
+                    onChange={e => setSystemConfig({ ...systemConfig, hotline: e.target.value })}
+                  />
+                </div>
+                <div className="form-group">
+                  <label>Email Liên Hệ</label>
+                  <input
+                    className="form-control"
+                    value={systemConfig.supportEmail}
+                    onChange={e => setSystemConfig({ ...systemConfig, supportEmail: e.target.value })}
+                  />
+                </div>
+              </div>
+              <div className="form-group">
+                <label>Giờ Hoạt Động</label>
+                <input
+                  className="form-control"
+                  value={systemConfig.openHours}
+                  onChange={e => setSystemConfig({ ...systemConfig, openHours: e.target.value })}
+                />
+              </div>
+              <div className="grid-2" style={{ gap: '0.85rem' }}>
+                <div className="form-group">
+                  <label>Ngưỡng Freeship (VNĐ)</label>
+                  <input
+                    type="number"
+                    className="form-control"
+                    value={systemConfig.freeShipThreshold}
+                    onChange={e => setSystemConfig({ ...systemConfig, freeShipThreshold: Number(e.target.value) })}
+                  />
+                </div>
+                <div className="form-group">
+                  <label>Phí Giao Hỏa Tốc 2H (VNĐ)</label>
+                  <input
+                    type="number"
+                    className="form-control"
+                    value={systemConfig.expressShipFee}
+                    onChange={e => setSystemConfig({ ...systemConfig, expressShipFee: Number(e.target.value) })}
+                  />
+                </div>
+              </div>
+            </div>
+
+            {/* AI Demand Forecasting Parameters */}
+            <div className="glass-panel" style={{ padding: '1.4rem', display: 'flex', flexDirection: 'column', justifyContent: 'space-between' }}>
               <div>
-                <h2 style={{ fontSize: '1.35rem', fontWeight: 800, display: 'flex', alignItems: 'center', gap: '8px' }}>
-                  <CloudSun size={24} color="#ff8e53" /> Mô Hình AI Phân Tích Mùa Vụ & Thời Tiết (2022 - 2026)
-                </h2>
-                <p style={{ fontSize: '0.85rem', color: 'var(--text-muted)' }}>
-                  Chuỗi thời gian 60 tháng lịch sử kết hợp biến số Nhiệt độ (°C), Lượng mưa (mm) & Mùa cao điểm
-                </p>
+                <h3 style={{ fontSize: '1.08rem', fontWeight: 800, color: '#0f172a', marginBottom: '1rem', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                  <Brain size={18} color="#059669" /> 2. Tham Số Thuật Toán AI Dự Báo & Nhập Hàng
+                </h3>
+                <div className="form-group">
+                  <label>Mức Độ Tin Cậy Thống Kê (Service Level / Z-Score)</label>
+                  <select
+                    className="form-control"
+                    value={systemConfig.aiConfidenceLevel}
+                    onChange={e => setSystemConfig({ ...systemConfig, aiConfidenceLevel: e.target.value })}
+                  >
+                    <option value="90">90% (Z = 1.28 — Tối ưu vốn tồn kho)</option>
+                    <option value="95">95% (Z = 1.65 — Cân bằng tiêu chuẩn • Khuyên dùng)</option>
+                    <option value="99">99% (Z = 2.33 — An toàn tối đa chống đứt hàng)</option>
+                  </select>
+                </div>
+                <div className="grid-2" style={{ gap: '0.85rem' }}>
+                  <div className="form-group">
+                    <label>Lead-Time Giao Hàng Mặc Định (ngày)</label>
+                    <input
+                      type="number"
+                      min="1"
+                      max="30"
+                      className="form-control"
+                      value={systemConfig.defaultLeadTimeDays}
+                      onChange={e => setSystemConfig({ ...systemConfig, defaultLeadTimeDays: Number(e.target.value) })}
+                    />
+                  </div>
+                  <div className="form-group">
+                    <label>Hệ Số Dự Phòng Safety Stock (%)</label>
+                    <input
+                      type="number"
+                      min="5"
+                      max="100"
+                      className="form-control"
+                      value={systemConfig.safetyStockRatio}
+                      onChange={e => setSystemConfig({ ...systemConfig, safetyStockRatio: Number(e.target.value) })}
+                    />
+                  </div>
+                </div>
+                <label style={{ display: 'flex', alignItems: 'center', gap: '10px', cursor: 'pointer', background: '#f0fdf4', border: '1px solid #bbf7d0', padding: '0.75rem 1rem', borderRadius: '12px', fontSize: '0.84rem', fontWeight: 700, color: '#166534' }}>
+                  <input
+                    type="checkbox"
+                    checked={!!systemConfig.autoLowStockAlert}
+                    onChange={e => setSystemConfig({ ...systemConfig, autoLowStockAlert: e.target.checked })}
+                    style={{ width: 17, height: 17, accentColor: '#059669' }}
+                  />
+                  Tự động cảnh báo & gợi ý tạo phiếu đề xuất khi tồn kho chạm minStock
+                </label>
               </div>
 
-              <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center' }}>
-                <span style={{ fontSize: '0.8rem', color: 'var(--text-muted)' }}>Lọc Năm:</span>
-                {['ALL', '2022', '2023', '2024', '2025', '2026'].map(y => (
+              <div style={{ display: 'flex', justifyContent: 'flex-end', marginTop: '1.25rem' }}>
+                <button type="submit" className="btn btn-primary">
+                  <Check size={16} /> Lưu Toàn Bộ Cấu Hình
+                </button>
+              </div>
+            </div>
+          </form>
+
+          {/* SYSTEM AUDIT LOGS */}
+          <div className="glass-panel" style={{ padding: '1.4rem' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem', flexWrap: 'wrap', gap: '0.75rem' }}>
+              <div>
+                <h3 style={{ fontSize: '1.12rem', fontWeight: 800, color: '#0f172a', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                  <Clock size={18} color="#7c3aed" /> 3. Nhật Ký Hoạt Động Hệ Thống (Audit Logs)
+                </h3>
+                <p style={{ fontSize: '0.82rem', color: 'var(--text-muted)' }}>
+                  Ghi nhận lịch sử thay đổi tài khoản, phân quyền, phê duyệt nhập kho và cấu hình
+                </p>
+              </div>
+              <div style={{ display: 'flex', gap: '0.45rem', flexWrap: 'wrap', alignItems: 'center' }}>
+                {[
+                  { id: 'ALL', label: 'Tất cả' },
+                  { id: 'ACCOUNT', label: 'Tài khoản' },
+                  { id: 'SECURITY', label: 'Phân quyền' },
+                  { id: 'INVENTORY', label: 'Duyệt nhập kho' },
+                  { id: 'SYSTEM', label: 'Hệ thống' },
+                ].map(tab => (
                   <button
-                    key={y}
-                    onClick={() => setSelectedYearFilter(y)}
+                    key={tab.id}
+                    type="button"
+                    onClick={() => setAuditFilter(tab.id)}
                     style={{
-                      padding: '0.35rem 0.75rem',
-                      borderRadius: '12px',
-                      fontSize: '0.78rem',
+                      padding: '0.35rem 0.8rem',
+                      borderRadius: '16px',
+                      fontSize: '0.76rem',
                       fontWeight: 700,
-                      border: selectedYearFilter === y ? '1px solid #00f2fe' : '1px solid var(--border-light)',
-                      background: selectedYearFilter === y ? 'rgba(0, 242, 254, 0.15)' : 'transparent',
-                      color: selectedYearFilter === y ? '#00f2fe' : 'var(--text-primary)',
+                      border: auditFilter === tab.id ? '1.5px solid #7c3aed' : '1px solid #cbd5e1',
+                      background: auditFilter === tab.id ? '#f3e8ff' : '#ffffff',
+                      color: auditFilter === tab.id ? '#6d28d9' : '#475569',
                       cursor: 'pointer'
                     }}
                   >
-                    {y === 'ALL' ? 'Tất cả 5 Năm' : y}
+                    {tab.label}
                   </button>
                 ))}
+                {onClearAuditLogs && auditLogs.length > 0 && (
+                  <button type="button" className="btn btn-secondary" style={{ padding: '0.35rem 0.7rem', fontSize: '0.75rem' }} onClick={onClearAuditLogs}>
+                    Xóa nhật ký
+                  </button>
+                )}
               </div>
-            </div>
-
-            {/* BAR CHART SIMULATION FOR 5-YEAR SEASONAL DATA */}
-            <div style={{ background: 'rgba(15,23,42,0.6)', padding: '1.25rem', borderRadius: '16px', border: '1px solid var(--border-light)' }}>
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem', fontSize: '0.8rem' }}>
-                <span style={{ color: 'var(--text-muted)' }}>Biểu đồ Doanh Thu & Sản Lượng Tiêu Thụ Theo Mùa Vụ</span>
-                <div style={{ display: 'flex', gap: '1rem', alignItems: 'center' }}>
-                  <span style={{ display: 'flex', alignItems: 'center', gap: '4px', color: '#ff6b35' }}>
-                    <Sun size={14} /> ☀️ Nắng Nóng (T4-T8)
-                  </span>
-                  <span style={{ display: 'flex', alignItems: 'center', gap: '4px', color: '#38bdf8' }}>
-                    <CloudRain size={14} /> 🌧️ Mùa Mưa (T9-T11)
-                  </span>
-                  <span style={{ display: 'flex', alignItems: 'center', gap: '4px', color: '#fbbf24' }}>
-                    <Gift size={14} /> 🧧 Lễ Tết (T12-T2)
-                  </span>
-                </div>
-              </div>
-
-              <div style={{ height: 210, display: 'flex', alignItems: 'flex-end', gap: '8px', paddingBottom: '0.5rem', overflowX: 'auto' }}>
-                {FIVE_YEAR_HISTORICAL_DATA.filter(d => selectedYearFilter === 'ALL' || d.year.toString() === selectedYearFilter).slice(-24).map((d, idx) => {
-                  const maxRev = 200000000;
-                  const heightPercent = Math.min(100, Math.max(15, (d.revenue / maxRev) * 100));
-                  const isSummer = d.seasonType === 'HOT_SUMMER';
-                  const isRainy = d.seasonType === 'RAINY_SEASON';
-
-                  const barBg = isSummer 
-                    ? 'linear-gradient(180deg, #ff6b35 0%, #ff8e53 100%)' 
-                    : isRainy 
-                    ? 'linear-gradient(180deg, #00f2fe 0%, #4facfe 100%)' 
-                    : 'linear-gradient(180deg, #fbbf24 0%, #f59e0b 100%)';
-
-                  return (
-                    <div key={idx} style={{ flex: 1, minWidth: 28, display: 'flex', flexDirection: 'column', alignItems: 'center', height: '100%', justifyContent: 'flex-end' }} title={`${d.label}: ${d.revenue.toLocaleString('vi-VN')}đ | ${d.avgTempC}°C | ${d.rainfallMm}mm`}>
-                      <div 
-                        style={{ 
-                          width: '85%', 
-                          height: `${heightPercent}%`, 
-                          background: barBg, 
-                          borderRadius: '6px 6px 0 0',
-                          boxShadow: '0 2px 10px rgba(0,0,0,0.3)',
-                          transition: 'all 0.3s ease'
-                        }} 
-                      />
-                      <span style={{ fontSize: '0.65rem', color: 'var(--text-muted)', marginTop: '6px', whiteSpace: 'nowrap' }}>
-                        {d.label}
-                      </span>
-                    </div>
-                  );
-                })}
-              </div>
-            </div>
-
-            {/* WEATHER IMPACT INSIGHTS GRID */}
-            <div className="grid-3" style={{ marginTop: '1.25rem' }}>
-              <div className="glass-card" style={{ borderLeft: '4px solid #ff6b35' }}>
-                <div style={{ display: 'flex', alignItems: 'center', gap: '8px', fontWeight: 800, color: '#ff6b35', marginBottom: '0.4rem' }}>
-                  <Sun size={18} /> ☀️ Nhu Cầu Tiêu Thụ Mùa Nắng Nóng (T4 - T8)
-                </div>
-                <div style={{ fontSize: '0.82rem', color: 'var(--text-secondary)', lineHeight: '1.5' }}>
-                  Nhiệt độ 35°C - 39°C kích thích nhu cầu mua sắm các sản phẩm làm mát & Dưỡng da thú cưng tăng <strong>+48.5%</strong>. Khối lượng tiêu thụ gấp 2.1 lần bình thường.
-                </div>
-              </div>
-
-              <div className="glass-card" style={{ borderLeft: '4px solid #38bdf8' }}>
-                <div style={{ display: 'flex', alignItems: 'center', gap: '8px', fontWeight: 800, color: '#38bdf8', marginBottom: '0.4rem' }}>
-                  <CloudRain size={18} /> 🌧️ Nhu Cầu Tiêu Thụ Mùa Mưa (T9 - T11)
-                </div>
-                <div style={{ fontSize: '0.82rem', color: 'var(--text-secondary)', lineHeight: '1.5' }}>
-                  Độ ẩm cao {'>'}85% làm gia tăng các ca bệnh ngoài da, ve rận & nấm da thú cưng <strong>+35%</strong>. Nhu cầu sấy sưởi & Cát đậu nành Tofu hút ẩm tăng <strong>+40%</strong>.
-                </div>
-              </div>
-
-              <div className="glass-card" style={{ borderLeft: '4px solid #fbbf24' }}>
-                <div style={{ display: 'flex', alignItems: 'center', gap: '8px', fontWeight: 800, color: '#fbbf24', marginBottom: '0.4rem' }}>
-                  <Gift size={18} /> 🧧 Nhu Cầu Tiêu Thụ Mùa Lễ Tết (T12 - T2)
-                </div>
-                <div style={{ fontSize: '0.82rem', color: 'var(--text-secondary)', lineHeight: '1.5' }}>
-                  Mùa du lịch & Tết Nguyên Đán tạo bùng nổ nhu cầu mua sắm thực phẩm và phụ kiện thú cưng. Doanh số Thức ăn Hạt Royal Canin dự báo tăng vọt <strong>+75%</strong>.
-                </div>
-              </div>
-            </div>
-          </div>
-
-          {/* SECTION B: AI MACHINE LEARNING 6-MONTH PREDICTION RESULTS (PREMIUM GRID CARDS) */}
-          <div className="glass-panel" style={{ padding: '1.5rem', background: 'linear-gradient(135deg, rgba(15, 23, 42, 0.98) 0%, rgba(30, 41, 59, 0.98) 100%)', border: '1px solid rgba(0, 242, 254, 0.4)', boxShadow: '0 8px 32px rgba(0, 242, 254, 0.15)' }}>
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.5rem', flexWrap: 'wrap', gap: '1rem' }}>
-              <div>
-                <h3 style={{ fontSize: '1.35rem', fontWeight: 800, color: '#00f2fe', display: 'flex', alignItems: 'center', gap: '10px' }}>
-                  <Brain size={26} color="#00f2fe" /> Kết Quả Dự Báo Machine Learning (Scikit-Learn RandomForest ML - 6 Tháng Tới)
-                </h3>
-                <p style={{ fontSize: '0.85rem', color: '#94a3b8', marginTop: '4px' }}>
-                  {seasonalAIResult ? seasonalAIResult.summary : 'Dự báo đầu ra từ mô hình Scikit-Learn RandomForestRegressor huấn luyện trên 60 tháng dữ liệu lịch sử.'}
-                </p>
-              </div>
-
-              <button className="btn btn-emerald" onClick={handleRunSeasonalAI} disabled={isProcessingSeasonalAI} style={{ padding: '0.65rem 1.25rem', borderRadius: '12px' }}>
-                <Sparkles size={18} /> {isProcessingSeasonalAI ? 'Đang Học Máy Scikit-Learn...' : 'Chạy Mô Hình ML Mới'}
-              </button>
-            </div>
-
-            {/* GRID 3x2 CARDS */}
-            <div className="grid-3">
-              {displayForecasts.map((f, idx) => {
-                const isSummer = f.season_type === 'HOT_SUMMER';
-                const isRainy = f.season_type === 'RAINY_SEASON';
-
-                const cardBorderColor = isSummer ? '#ff6b35' : isRainy ? '#00f2fe' : '#fbbf24';
-                const cardHeaderBg = isSummer 
-                  ? 'rgba(255, 107, 53, 0.15)' 
-                  : isRainy 
-                  ? 'rgba(0, 242, 254, 0.15)' 
-                  : 'rgba(251, 191, 36, 0.15)';
-
-                return (
-                  <div 
-                    key={idx} 
-                    className="glass-card animate-fade-in"
-                    style={{ 
-                      display: 'flex', 
-                      flexDirection: 'column', 
-                      justify: 'space-between',
-                      border: `1px solid ${cardBorderColor}`,
-                      borderRadius: '16px',
-                      padding: '1.25rem',
-                      background: 'rgba(15, 23, 42, 0.85)',
-                      boxShadow: `0 4px 20px ${cardBorderColor}22`
-                    }}
-                  >
-                    <div>
-                      {/* CARD HEADER */}
-                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem', paddingBottom: '0.75rem', borderBottom: '1px solid rgba(255,255,255,0.1)' }}>
-                        <div style={{ background: cardHeaderBg, padding: '0.4rem 0.85rem', borderRadius: '10px', fontSize: '1.1rem', fontWeight: 800, color: '#ffffff', border: `1px solid ${cardBorderColor}` }}>
-                          Tháng {f.month}/{f.year}
-                        </div>
-
-                        <div>
-                          {isSummer ? (
-                            <span className="badge badge-coral" style={{ background: '#ff6b35', color: '#ffffff', fontWeight: 700, padding: '0.4rem 0.75rem', borderRadius: '20px' }}>
-                              <Sun size={13} /> ☀️ Nắng Nóng
-                            </span>
-                          ) : isRainy ? (
-                            <span className="badge badge-info" style={{ background: '#00f2fe', color: '#0f172a', fontWeight: 800, padding: '0.4rem 0.75rem', borderRadius: '20px' }}>
-                              <CloudRain size={13} /> 🌧️ Mùa Mưa
-                            </span>
-                          ) : (
-                            <span className="badge badge-warning" style={{ background: '#fbbf24', color: '#0f172a', fontWeight: 800, padding: '0.4rem 0.75rem', borderRadius: '20px' }}>
-                              <Gift size={13} /> 🧧 Dịp Lễ Tết
-                            </span>
-                          )}
-                        </div>
-                      </div>
-
-                      {/* CARD METRICS GRID */}
-                      <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem', marginBottom: '1rem' }}>
-                        
-                        {/* DOANH THU */}
-                        <div style={{ background: 'rgba(0, 0, 0, 0.4)', padding: '0.85rem 1rem', borderRadius: '12px', border: '1px solid rgba(255,255,255,0.05)', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                          <span style={{ fontSize: '0.82rem', color: '#cbd5e1', fontWeight: 600 }}>💰 Doanh Thu Dự Báo:</span>
-                          <strong style={{ fontSize: '1.3rem', fontWeight: 800, color: '#34d399' }}>
-                            {f.predicted_revenue.toLocaleString('vi-VN')} đ
-                          </strong>
-                        </div>
-
-                        {/* CA SPA & VẬT PHẨM */}
-                        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.6rem' }}>
-                          <div style={{ background: 'rgba(0, 0, 0, 0.4)', padding: '0.75rem', borderRadius: '12px', border: '1px solid rgba(255,255,255,0.05)', textAlign: 'center' }}>
-                            <div style={{ fontSize: '0.75rem', color: '#94a3b8', marginBottom: '2px' }}>✂️ Ca Spa Grooming</div>
-                            <strong style={{ fontSize: '1.15rem', fontWeight: 800, color: '#38bdf8' }}>{f.predicted_spa_demand} ca</strong>
-                          </div>
-
-                          <div style={{ background: 'rgba(0, 0, 0, 0.4)', padding: '0.75rem', borderRadius: '12px', border: '1px solid rgba(255,255,255,0.05)', textAlign: 'center' }}>
-                            <div style={{ fontSize: '0.75rem', color: '#94a3b8', marginBottom: '2px' }}>📦 Vật Phẩm Bán Ra</div>
-                            <strong style={{ fontSize: '1.15rem', fontWeight: 800, color: '#c084fc' }}>{f.predicted_product_demand} sp</strong>
-                          </div>
-                        </div>
-
-                      </div>
-                    </div>
-
-                    {/* WEATHER INSIGHT NOTE BOX */}
-                    <div style={{ background: 'rgba(255,255,255,0.03)', padding: '0.75rem 0.9rem', borderRadius: '10px', border: '1px solid rgba(255,255,255,0.08)', fontSize: '0.8rem', color: '#e2e8f0', lineHeight: '1.4' }}>
-                      <strong style={{ color: cardBorderColor }}>Ghi Chú AI: </strong>
-                      {f.weather_factor_notes}
-                    </div>
-                  </div>
-                );
-              })}
-            </div>
-          </div>
-
-          {/* SECTION C: PRODUCT-LEVEL SEASONAL AI REORDER PLAN FOR SHOP OWNER */}
-          <div className="glass-panel" style={{ padding: '1.5rem', background: 'linear-gradient(135deg, rgba(15, 23, 42, 0.98) 0%, rgba(30, 41, 59, 0.98) 100%)', border: '1px solid #ff6b35', boxShadow: '0 8px 32px rgba(255, 107, 53, 0.15)' }}>
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.25rem', flexWrap: 'wrap', gap: '1rem' }}>
-              <div>
-                <h3 style={{ fontSize: '1.35rem', fontWeight: 800, color: '#ff6b35', display: 'flex', alignItems: 'center', gap: '10px' }}>
-                  <Package size={26} color="#ff6b35" /> AI Phân Tích & Báo Nhập Hàng Theo Từng Sản Phẩm & Mùa Vụ
-                </h3>
-                <p style={{ fontSize: '0.85rem', color: '#94a3b8', marginTop: '4px' }}>
-                  Học dữ liệu 5 năm lịch sử của từng mặt hàng ➔ Lọc nhu cầu theo mùa ➔ Báo cho Chủ cửa hàng lượng & ngày cần nhập
-                </p>
-              </div>
-
-              {/* FILTERS DROPDOWN */}
-              <div style={{ display: 'flex', gap: '0.75rem', flexWrap: 'wrap', alignItems: 'center' }}>
-                <div>
-                  <span style={{ fontSize: '0.78rem', color: '#94a3b8', marginRight: '6px' }}>Mùa Vụ:</span>
-                  <select 
-                    value={selectedSeasonFilter} 
-                    onChange={e => setSelectedSeasonFilter(e.target.value)}
-                    className="form-control" 
-                    style={{ padding: '0.4rem 0.75rem', fontSize: '0.82rem', borderRadius: '10px', width: 'auto' }}
-                  >
-                    <option value="ALL">Tất Cả Mùa Vụ</option>
-                    <option value="HOT_SUMMER">☀️ Mùa Nắng Nóng (T4-T8)</option>
-                    <option value="RAINY_SEASON">🌧️ Mùa Mưa (T9-T11)</option>
-                    <option value="HOLIDAY_TET">🧧 Dịp Lễ Tết (T12-T2)</option>
-                  </select>
-                </div>
-
-                <div>
-                  <span style={{ fontSize: '0.78rem', color: '#94a3b8', marginRight: '6px' }}>Sản Phẩm:</span>
-                  <select 
-                    value={selectedProdFilter} 
-                    onChange={e => setSelectedProdFilter(e.target.value)}
-                    className="form-control" 
-                    style={{ padding: '0.4rem 0.75rem', fontSize: '0.82rem', borderRadius: '10px', width: 'auto' }}
-                  >
-                    <option value="ALL">Tất Cả Sản Phẩm</option>
-                    {products.map(p => (
-                      <option key={p.id} value={p.id}>{p.name}</option>
-                    ))}
-                  </select>
-                </div>
-              </div>
-            </div>
-
-            {/* PRODUCT FORECAST CARDS */}
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
-              {PRODUCT_SEASONAL_FORECASTS
-                .filter(pf => selectedSeasonFilter === 'ALL' || pf.peakSeasonType === selectedSeasonFilter)
-                .filter(pf => selectedProdFilter === 'ALL' || pf.productId === selectedProdFilter)
-                .map((pf, idx) => {
-                  const isSummer = pf.peakSeasonType === 'HOT_SUMMER';
-                  const isRainy = pf.peakSeasonType === 'RAINY_SEASON';
-                  const badgeBg = isSummer ? '#ff6b35' : isRainy ? '#00f2fe' : '#fbbf24';
-                  const badgeTextColor = isSummer ? '#ffffff' : '#0f172a';
-
-                  return (
-                    <div 
-                      key={idx} 
-                      className="glass-card animate-fade-in" 
-                      style={{ 
-                        padding: '1.25rem', 
-                        background: 'rgba(15, 23, 42, 0.9)', 
-                        borderLeft: `5px solid ${badgeBg}`,
-                        borderRadius: '14px',
-                        borderTop: '1px solid rgba(255,255,255,0.08)',
-                        borderRight: '1px solid rgba(255,255,255,0.08)',
-                        borderBottom: '1px solid rgba(255,255,255,0.08)'
-                      }}
-                    >
-                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', flexWrap: 'wrap', gap: '1rem', marginBottom: '0.85rem' }}>
-                        <div>
-                          <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-                            <h4 style={{ fontSize: '1.15rem', fontWeight: 800, color: '#ffffff' }}>{pf.productName}</h4>
-                            <span className="badge" style={{ background: badgeBg, color: badgeTextColor, fontWeight: 800, fontSize: '0.78rem', padding: '0.35rem 0.75rem', borderRadius: '15px' }}>
-                              {pf.peakSeasonLabel}
-                            </span>
-                          </div>
-                          <div style={{ fontSize: '0.8rem', color: '#94a3b8', marginTop: '4px' }}>
-                            Mã SKU: <strong>{pf.sku}</strong> | Danh mục: <span style={{ color: '#38bdf8' }}>{pf.category}</span> | Nhà cung cấp: <strong>{pf.suggestedSupplier}</strong>
-                          </div>
-                        </div>
-
-                        <div style={{ display: 'flex', gap: '1.25rem', alignItems: 'center', background: 'rgba(0,0,0,0.4)', padding: '0.75rem 1.25rem', borderRadius: '14px', border: '1px solid rgba(255,255,255,0.08)' }}>
-                          <div>
-                            <div style={{ fontSize: '0.72rem', color: '#94a3b8' }}>Tiêu thụ 5 năm</div>
-                            <strong style={{ fontSize: '0.95rem', color: '#cbd5e1' }}>{pf.historicalAvgSales5Year}</strong>
-                          </div>
-                          <div style={{ borderLeft: '1px solid rgba(255,255,255,0.1)', paddingLeft: '1rem' }}>
-                            <div style={{ fontSize: '0.72rem', color: '#94a3b8' }}>Dự báo mùa cao điểm</div>
-                            <strong style={{ fontSize: '1.15rem', color: '#34d399', fontWeight: 800 }}>{pf.predictedMonthlyDemand}</strong>
-                          </div>
-                          <div style={{ borderLeft: '1px solid rgba(255,255,255,0.1)', paddingLeft: '1rem', textAlign: 'right' }}>
-                            <div style={{ fontSize: '0.72rem', color: '#ff6b35' }}>Khuyên nhập kho</div>
-                            <strong style={{ fontSize: '1.3rem', color: '#ff6b35', fontWeight: 800 }}>+{pf.suggestedReorderQty} sp</strong>
-                          </div>
-                        </div>
-                      </div>
-
-                      {/* AI EXECUTE ADVICE BOX FOR SHOP OWNER */}
-                      <div style={{ background: 'rgba(255, 107, 53, 0.1)', padding: '0.85rem 1.1rem', borderRadius: '12px', border: '1px solid rgba(255, 107, 53, 0.3)', display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '1rem' }}>
-                        <div style={{ fontSize: '0.85rem', color: '#ffedd5', flex: 1, minWidth: 280, lineHeight: '1.5' }}>
-                          {pf.aiAdviceForOwner}
-                        </div>
-                        <div style={{ fontSize: '0.78rem', color: '#fdba74', fontWeight: 700, background: 'rgba(0,0,0,0.3)', padding: '0.45rem 0.85rem', borderRadius: '8px', border: '1px solid rgba(255,107,53,0.2)' }}>
-                          📅 Ngày nhập kho tối ưu: <strong>{pf.suggestedOrderDate}</strong>
-                        </div>
-                      </div>
-                    </div>
-                  );
-                })}
-            </div>
-          </div>
-
-          {/* SECTION D: SHOP OWNER STRATEGIC AI RECOMMENDATIONS */}
-          <div className="glass-panel" style={{ padding: '1.5rem', background: 'linear-gradient(135deg, rgba(2, 132, 199, 0.1) 0%, rgba(15, 23, 42, 0.8) 100%)', border: '1px solid rgba(56, 189, 248, 0.3)' }}>
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.25rem', flexWrap: 'wrap', gap: '1rem' }}>
-              <div>
-                <h3 style={{ fontSize: '1.25rem', fontWeight: 800, display: 'flex', alignItems: 'center', gap: '8px', color: '#38bdf8' }}>
-                  <Compass size={22} /> Khuyến Nghị Chiến Lược AI Cho Chủ Cửa Hàng (Shop Owner Executive Summary)
-                </h3>
-                <p style={{ fontSize: '0.82rem', color: '#94a3b8' }}>
-                  Phân tích dự báo 6 tháng tới dựa trên quy luật mùa vụ 5 năm & xu hướng thời tiết thực tế
-                </p>
-              </div>
-
-              <button className="btn btn-cyan" onClick={handleRunSeasonalAI} disabled={isProcessingSeasonalAI}>
-                <Brain size={16} /> {isProcessingSeasonalAI ? 'Đang Phân Tích...' : 'Khởi Chạy AI Dự Báo Thời Tiết'}
-              </button>
-            </div>
-
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '0.85rem' }}>
-              <div className="glass-card" style={{ background: 'rgba(15, 23, 42, 0.7)' }}>
-                <div style={{ fontWeight: 800, color: '#38ef7d', fontSize: '0.92rem', marginBottom: '4px' }}>
-                  📌 1. Đề Xuất Điểm Đặt Hàng Mùa Nắng Nóng (T4 - T8)
-                </div>
-                <div style={{ fontSize: '0.83rem', color: '#e2e8f0', lineHeight: '1.5' }}>
-                  Dự báo sức mua các sản phẩm sữa tắm và phụ kiện làm mát sẽ tăng <strong>+52%</strong>. Hệ thống AI tự động nâng Điểm đặt hàng (Reorder Point) lên 30% để đảm bảo lượng tồn kho an toàn, tránh đứt gãy cung ứng.
-                </div>
-              </div>
-
-              <div className="glass-card" style={{ background: 'rgba(15, 23, 42, 0.7)' }}>
-                <div style={{ fontWeight: 800, color: '#00f2fe', fontSize: '0.92rem', marginBottom: '4px' }}>
-                  📌 2. Kế Hoạch Tích Trữ Kho Hàng Mùa Mưa (T9 - T11)
-                </div>
-                <div style={{ fontSize: '0.83rem', color: '#e2e8f0', lineHeight: '1.5' }}>
-                  Chuẩn bị bước vào mùa mưa với lượng mưa lớn, nhu cầu Cát đậu nành Tofu & Thuốc trị nấm tăng vọt. Đề xuất phát đơn nhập hàng trước <strong>20 ngày</strong> tới Nhà cung cấp để nhận chiết khấu thương mại <strong>12%</strong> theo khối lượng (Bulk Discount).
-                </div>
-              </div>
-
-              <div className="glass-card" style={{ background: 'rgba(15, 23, 42, 0.7)' }}>
-                <div style={{ fontWeight: 800, color: '#fbbf24', fontSize: '0.92rem', marginBottom: '4px' }}>
-                  📌 3. Quản Trị Hàng Tồn Kho Mùa Lễ Tết (T12 - T2)
-                </div>
-                <div style={{ fontSize: '0.83rem', color: '#e2e8f0', lineHeight: '1.5' }}>
-                  Nhu cầu mua sắm thức ăn hạt và khay vệ sinh dự kiến lấp đầy 100% công suất kho từ 15/12. Khuyến nghị phát đơn nhập hàng ngay từ ngày 01/12 để khóa giá nhập (Lock-in Price), tránh tình trạng nhà cung cấp tăng giá dịp cuối năm.
-                </div>
-              </div>
-            </div>
-          </div>
-
-          {/* SECTION C: REORDER PROPOSALS APPROVAL TABLE */}
-          <div className="glass-panel" style={{ padding: '1.5rem', border: '1px solid var(--border-glow)' }}>
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.25rem' }}>
-              <div>
-                <h3 style={{ fontSize: '1.2rem', fontWeight: 800, display: 'flex', alignItems: 'center', gap: '8px' }}>
-                  <Sparkles size={18} color="#00f2fe" /> Bảng Phê Duyệt Đề Xuất Nhập Kho AI (Reorder Plan Approval)
-                </h3>
-                <p style={{ fontSize: '0.82rem', color: 'var(--text-muted)' }}>
-                  Đơn đề xuất nhập hàng tự động kích hoạt khi số lượng tồn kho vi phạm ngưỡng an toàn
-                </p>
-              </div>
-
-              <button className="btn btn-emerald" onClick={onTriggerAI}>
-                <Brain size={16} /> Kiểm Tra Tồn Kho AI
-              </button>
-            </div>
-
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
-              {reorderProposals.length === 0 ? (
-                <div style={{ padding: '2rem', textAlign: 'center', color: 'var(--text-muted)' }}>
-                  Chưa có đề xuất nhập hàng nào từ AI. Bấm "Kiểm Tra Tồn Kho AI" để quét sản phẩm.
-                </div>
-              ) : (
-                reorderProposals.map((prop) => (
-                  <div key={prop.id} className="glass-card" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '1rem' }}>
-                    <div style={{ flex: 1, minWidth: 280 }}>
-                      <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                        <h4 style={{ fontSize: '1.05rem', fontWeight: 700 }}>{prop.productName}</h4>
-                        <span className={`badge ${prop.status === 'APPROVED' ? 'badge-success' : prop.status === 'REJECTED' ? 'badge-danger' : 'badge-pending'}`}>
-                          {prop.status}
-                        </span>
-                      </div>
-                      <div style={{ fontSize: '0.8rem', color: 'var(--text-muted)', marginTop: '2px' }}>
-                        SKU: {prop.sku} | Tồn hiện tại: <strong style={{ color: '#f87171' }}>{prop.currentStock}</strong> | Safety Stock: {prop.safetyStock || 10}
-                      </div>
-                      <div style={{ fontSize: '0.8rem', color: '#60a5fa', marginTop: '4px' }}>
-                        🏢 Nhà Cung Cấp: {prop.suggestedSupplier || 'Royal Canin Việt Nam'}
-                      </div>
-                      <div style={{ fontSize: '0.83rem', color: '#38ef7d', marginTop: '6px', background: 'rgba(0,0,0,0.2)', padding: '0.5rem', borderRadius: '6px' }}>
-                        🤖 {prop.reason}
-                      </div>
-                    </div>
-
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '1.25rem' }}>
-                      <div style={{ textAlign: 'right' }}>
-                        <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>Lượng cần</div>
-                        <div style={{ fontSize: '1.4rem', fontWeight: 800, color: '#38ef7d' }}>+{prop.suggestedQuantity} sp</div>
-                        <div style={{ fontSize: '0.7rem', color: '#94a3b8' }}>Ngày nhập: {prop.suggestedOrderDate || '2026-08-23'}</div>
-                      </div>
-
-                      {prop.status === 'DRAFT' && (
-                        <div style={{ display: 'flex', gap: '0.5rem' }}>
-                          <button className="btn btn-emerald" onClick={() => onApproveProposal(prop.id)}>
-                            <Check size={16} /> Phê Duyệt
-                          </button>
-                          <button className="btn btn-danger" onClick={() => onRejectProposal(prop.id)}>
-                            <X size={16} /> Từ Chối
-                          </button>
-                        </div>
-                      )}
-                    </div>
-                  </div>
-                ))
-              )}
-            </div>
-          </div>
-
-          <div className="glass-panel" style={{ padding: '1.25rem' }}>
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem' }}>
-              <div>
-                <h3 style={{ fontSize: '1.15rem', fontWeight: 800, display: 'flex', alignItems: 'center', gap: '6px' }}>
-                  <FileText size={18} color="#00f2fe" /> Bảng Dữ Liệu Lịch Sử Đơn Hàng (Mock 5 Năm)
-                </h3>
-                <p style={{ fontSize: '0.8rem', color: 'var(--text-muted)' }}>Tổng số {FIVE_YEAR_ORDER_HISTORY.length} đơn hàng mua vào và bán ra</p>
-              </div>
-            </div>
-
-            <div className="table-container" style={{ maxHeight: '500px', overflowY: 'auto' }}>
-              <table>
-                <thead style={{ position: 'sticky', top: 0, zIndex: 10 }}>
-                  <tr>
-                    <th>Mã Đơn</th>
-                    <th>Loại Đơn</th>
-                    <th>Ngày Giao Dịch</th>
-                    <th>Giá Trị</th>
-                    <th>Chi Tiết Mặt Hàng</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {FIVE_YEAR_ORDER_HISTORY.slice().reverse().slice(0, 100).map(order => (
-                    <tr key={order.id}>
-                      <td><strong style={{ color: '#00f2fe' }}>{order.id}</strong></td>
-                      <td>
-                        <span className={`badge ${order.type === 'IMPORT' ? 'badge-danger' : 'badge-success'}`}>
-                          {order.type === 'IMPORT' ? 'NHẬP HÀNG' : 'BÁN HÀNG'}
-                        </span>
-                      </td>
-                      <td>{order.date}</td>
-                      <td><strong style={{ color: order.type === 'IMPORT' ? '#f87171' : '#34d399' }}>
-                        {order.type === 'IMPORT' ? '-' : '+'}{order.totalAmount.toLocaleString('vi-VN')} đ
-                      </strong></td>
-                      <td>
-                        <div style={{ fontSize: '0.8rem', color: 'var(--text-muted)' }}>
-                          {order.items.map(i => `${i.productName} (x${i.quantity})`).join(', ')}
-                        </div>
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-              <div style={{ padding: '1rem', textAlign: 'center', fontSize: '0.8rem', color: 'var(--text-muted)' }}>
-                Đang hiển thị 100 giao dịch gần nhất (tổng số: {FIVE_YEAR_ORDER_HISTORY.length})
-              </div>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* 8. QUẢN LÝ KHUYẾN MÃI & QUẢN LÝ NHÀ CUNG CẤP */}
-      {(currentTab === 'catalog') && (
-        <div style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
-          
-          <div className="glass-panel" style={{ padding: '1.25rem' }}>
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem' }}>
-              <div>
-                <h3 style={{ fontSize: '1.15rem', fontWeight: 800, display: 'flex', alignItems: 'center', gap: '6px' }}>
-                  <Tag size={18} color="#ff9966" /> Quản Lý Chương Trình Khuyến Mãi (Promotions)
-                </h3>
-                <p style={{ fontSize: '0.8rem', color: 'var(--text-muted)' }}>Mã voucher giảm giá cho dịch vụ spa và đơn hàng vật phẩm</p>
-              </div>
-              <button className="btn btn-coral" onClick={() => setShowAddPromoModal(true)}>
-                <Plus size={16} /> Tạo Mã Giảm Giá
-              </button>
             </div>
 
             <div className="table-container">
               <table>
                 <thead>
                   <tr>
-                    <th>Mã Voucher</th>
-                    <th>Tên Chương Trình</th>
-                    <th>Mức Giảm (%)</th>
-                    <th>Phạm Vi Áp Dụng</th>
-                    <th>Trạng Thái</th>
+                    <th>Thời Gian</th>
+                    <th>Phân Loại</th>
+                    <th>Người Thực Hiện</th>
+                    <th>Hành Động</th>
+                    <th>Chi Tiết</th>
                   </tr>
                 </thead>
                 <tbody>
-                  {promotions.map(p => (
-                    <tr key={p.id}>
-                      <td><strong style={{ color: '#00f2fe', letterSpacing: '0.5px' }}>{p.code}</strong></td>
-                      <td>{p.name}</td>
-                      <td><strong style={{ color: '#38ef7d' }}>{p.discountPercent}%</strong></td>
-                      <td>{p.applicableTo}</td>
-                      <td><span className="badge badge-success">{p.status}</span></td>
+                  {filteredAuditLogs.length === 0 ? (
+                    <tr>
+                      <td colSpan={5} style={{ textAlign: 'center', color: '#64748b' }}>Chưa có bản ghi nhật ký nào.</td>
                     </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-          </div>
-
-          <div className="glass-panel" style={{ padding: '1.25rem' }}>
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem' }}>
-              <div>
-                <h3 style={{ fontSize: '1.15rem', fontWeight: 800, display: 'flex', alignItems: 'center', gap: '6px' }}>
-                  <Building2 size={18} color="#60a5fa" /> Quản Lý Nhà Cung Cấp (Suppliers)
-                </h3>
-                <p style={{ fontSize: '0.8rem', color: 'var(--text-muted)' }}>Danh sách đối tác cung ứng thức ăn hạt, phụ kiện & thuốc thú y</p>
-              </div>
-              <button className="btn btn-primary" onClick={() => setShowAddSupplierModal(true)}>
-                <Plus size={16} /> Thêm Nhà Cung Cấp
-              </button>
-            </div>
-
-            <div className="table-container">
-              <table>
-                <thead>
-                  <tr>
-                    <th>Tên Nhà Cung Cấp</th>
-                    <th>Người Đại Diện</th>
-                    <th>Số Điện Thoại</th>
-                    <th>Email</th>
-                    <th>Địa Chỉ</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {suppliers.map(s => (
-                    <tr key={s.id}>
-                      <td><strong>{s.name}</strong></td>
-                      <td>{s.contactPerson}</td>
-                      <td>{s.phone}</td>
-                      <td>{s.email}</td>
-                      <td style={{ color: 'var(--text-muted)' }}>{s.address}</td>
-                    </tr>
-                  ))}
+                  ) : (
+                    filteredAuditLogs.map(log => (
+                      <tr key={log.id}>
+                        <td style={{ whiteSpace: 'nowrap', fontSize: '0.8rem', color: '#64748b' }}>{log.time}</td>
+                        <td>
+                          <span className={`badge ${log.category === 'SECURITY' ? 'badge-danger' : log.category === 'INVENTORY' ? 'badge-pending' : log.category === 'ACCOUNT' ? 'badge-info' : 'badge-success'}`}>
+                            {log.category}
+                          </span>
+                        </td>
+                        <td><strong>{log.actor}</strong></td>
+                        <td><strong>{log.action}</strong></td>
+                        <td style={{ fontSize: '0.83rem', color: '#475569' }}>{log.detail}</td>
+                      </tr>
+                    ))
+                  )}
                 </tbody>
               </table>
             </div>
@@ -1221,257 +1382,136 @@ export default function AdminDashboard({
         </div>
       )}
 
-      {/* 9. QUẢN LÝ KHO HÀNG (ADMIN INVENTORY VIEW) */}
-      {currentTab === 'inventory-admin' && (
-        <div className="glass-panel" style={{ padding: '1.25rem' }}>
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.25rem' }}>
-            <div>
-              <h2 style={{ fontSize: '1.25rem', fontWeight: 800, display: 'flex', alignItems: 'center', gap: '8px' }}>
-                <Package size={20} color="#60a5fa" /> Danh Mục Quản Lý Hàng Hóa & Tồn Kho (Admin View)
-              </h2>
-              <p style={{ fontSize: '0.82rem', color: 'var(--text-muted)' }}>Theo dõi số lượng tồn, ngưỡng an toàn và cảnh báo thiếu hàng</p>
-            </div>
-            {onAddProduct && (
-              <button className="btn btn-emerald" onClick={() => onAddProduct({ name: 'Sản Phẩm Mới ' + Math.floor(Math.random()*100), category: 'Thức ăn', unitPrice: 150000, currentStock: 25, minStockLevel: 10, maxStockLevel: 100 })}>
-                <Plus size={16} /> Thêm Sản Phẩm Mới
-              </button>
-            )}
-          </div>
-
-          <div className="table-container">
-            <table>
-              <thead>
-                <tr>
-                  <th>Tên Sản Phẩm</th>
-                  <th>Mã SKU</th>
-                  <th>Danh Mục</th>
-                  <th>Đơn Giá Bán</th>
-                  <th>Tồn Kho Hiện Tại</th>
-                  <th>Ngưỡng An Toàn</th>
-                  <th>Trạng Thái</th>
-                </tr>
-              </thead>
-              <tbody>
-                {products.map(p => {
-                  const isLow = p.currentStock <= p.minStockLevel;
-                  return (
-                    <tr key={p.id}>
-                      <td><strong>{p.name}</strong></td>
-                      <td><span style={{ color: 'var(--text-muted)', fontSize: '0.82rem' }}>{p.sku}</span></td>
-                      <td><span className="badge badge-info">{p.category}</span></td>
-                      <td><strong style={{ color: '#34d399' }}>{p.unitPrice.toLocaleString('vi-VN')} đ</strong></td>
-                      <td>
-                        <strong style={{ color: isLow ? '#f87171' : '#38ef7d', fontSize: '1rem' }}>
-                          {p.currentStock} sp
-                        </strong>
-                      </td>
-                      <td>{p.minStockLevel} - {p.maxStockLevel} sp</td>
-                      <td>
-                        <span className={`badge ${isLow ? 'badge-danger' : 'badge-success'}`}>
-                          {isLow ? '⚠️ SẮP HẾT HÀNG' : 'ĐỦ TỒN KHO'}
-                        </span>
-                      </td>
-                    </tr>
-                  );
-                })}
-              </tbody>
-            </table>
-          </div>
-        </div>
-      )}
-
-
-      {/* MODAL THÊM DỊCH VỤ */}
-      {showAddServiceModal && (
-        <div className="modal-overlay">
-          <div className="modal-content">
-            <h3 style={{ fontSize: '1.2rem', fontWeight: 800, marginBottom: '1rem' }}>Thêm Dịch Vụ Spa / Y Tế Mới</h3>
-            <form onSubmit={handleCreateService}>
-              <div className="form-group">
-                <label>Tên Dịch Vụ *</label>
-                <input className="form-control" value={newService.name} onChange={e => setNewService({ ...newService, name: e.target.value })} required />
-              </div>
-              <div className="grid-2">
-                <div className="form-group">
-                  <label>Danh Mục</label>
-                  <select className="form-control" value={newService.category} onChange={e => setNewService({ ...newService, category: e.target.value })}>
-                    <option value="Spa & Grooming">Spa & Grooming</option>
-                    <option value="Y Tế & Tiêm Phòng">Y Tế & Tiêm Phòng</option>
-                    <option value="Khám Bệnh">Khám Bệnh</option>
-                  </select>
-                </div>
-                <div className="form-group">
-                  <label>Đơn Giá (đ) *</label>
-                  <input type="number" className="form-control" value={newService.price} onChange={e => setNewService({ ...newService, price: e.target.value })} required />
-                </div>
-              </div>
-              <div className="form-group">
-                <label>Thời Lượng (phút)</label>
-                <input type="number" className="form-control" value={newService.durationMinutes} onChange={e => setNewService({ ...newService, durationMinutes: e.target.value })} />
-              </div>
-              <div className="form-group">
-                <label>Mô Tả Dịch Vụ</label>
-                <textarea className="form-control" rows={3} value={newService.description} onChange={e => setNewService({ ...newService, description: e.target.value })} />
-              </div>
-              <div style={{ display: 'flex', gap: '0.75rem', justifyContent: 'flex-end', marginTop: '1rem' }}>
-                <button type="button" className="btn btn-secondary" onClick={() => setShowAddServiceModal(false)}>Hủy</button>
-                <button type="submit" className="btn btn-coral">Lưu Dịch Vụ</button>
-              </div>
-            </form>
-          </div>
-        </div>
-      )}
-
-      {/* MODAL THÊM KHUYẾN MÃI */}
-      {showAddPromoModal && (
-        <div className="modal-overlay">
-          <div className="modal-content">
-            <h3 style={{ fontSize: '1.2rem', fontWeight: 800, marginBottom: '1rem' }}>Tạo Mã Khuyến Mãi Mới</h3>
-            <form onSubmit={handleCreatePromo}>
-              <div className="form-group">
-                <label>Mã Voucher (Code) *</label>
-                <input className="form-control" value={newPromo.code} onChange={e => setNewPromo({ ...newPromo, code: e.target.value })} placeholder="VD: SUMMERSALE20" required style={{ textTransform: 'uppercase' }} />
-              </div>
-              <div className="form-group">
-                <label>Tên Chương Trình *</label>
-                <input className="form-control" value={newPromo.name} onChange={e => setNewPromo({ ...newPromo, name: e.target.value })} placeholder="VD: Khuyến Mãi Mùa Hè" required />
-              </div>
-              <div className="grid-2">
-                <div className="form-group">
-                  <label>Mức Giảm (%) *</label>
-                  <input type="number" min="1" max="100" className="form-control" value={newPromo.discountPercent} onChange={e => setNewPromo({ ...newPromo, discountPercent: e.target.value })} required />
-                </div>
-                <div className="form-group">
-                  <label>Áp Dụng Cho</label>
-                  <select className="form-control" value={newPromo.applicableTo} onChange={e => setNewPromo({ ...newPromo, applicableTo: e.target.value })}>
-                    <option value="Tất cả">Tất cả dịch vụ & đơn hàng</option>
-                    <option value="Spa & Grooming">Dịch vụ Spa & Grooming</option>
-                    <option value="Vật phẩm & Thức ăn">Vật phẩm & Thức ăn</option>
-                  </select>
-                </div>
-              </div>
-              <div style={{ display: 'flex', gap: '0.75rem', justifyContent: 'flex-end', marginTop: '1rem' }}>
-                <button type="button" className="btn btn-secondary" onClick={() => setShowAddPromoModal(false)}>Hủy</button>
-                <button type="submit" className="btn btn-coral">Tạo Mã Khuyến Mãi</button>
-              </div>
-            </form>
-          </div>
-        </div>
-      )}
-
-      {/* MODAL THÊM NHÀ CUNG CẤP */}
-      {showAddSupplierModal && (
-        <div className="modal-overlay">
-          <div className="modal-content">
-            <h3 style={{ fontSize: '1.2rem', fontWeight: 800, marginBottom: '1rem' }}>Thêm Nhà Cung Cấp Mới</h3>
-            <form onSubmit={handleCreateSupplier}>
-              <div className="form-group">
-                <label>Tên Công Ty / Nhà Cung Cấp *</label>
-                <input className="form-control" value={newSupplier.name} onChange={e => setNewSupplier({ ...newSupplier, name: e.target.value })} placeholder="VD: Công ty TNHH Pet Care VN" required />
-              </div>
-              <div className="grid-2">
-                <div className="form-group">
-                  <label>Người Đại Diện</label>
-                  <input className="form-control" value={newSupplier.contactPerson} onChange={e => setNewSupplier({ ...newSupplier, contactPerson: e.target.value })} placeholder="Nguyễn Văn A" />
-                </div>
-                <div className="form-group">
-                  <label>Số Điện Thoại</label>
-                  <input className="form-control" value={newSupplier.phone} onChange={e => setNewSupplier({ ...newSupplier, phone: e.target.value })} placeholder="028..." />
-                </div>
-              </div>
-              <div className="form-group">
-                <label>Email Liên Hệ</label>
-                <input type="email" className="form-control" value={newSupplier.email} onChange={e => setNewSupplier({ ...newSupplier, email: e.target.value })} placeholder="contact@..." />
-              </div>
-              <div className="form-group">
-                <label>Địa Chỉ Kho / Văn Phòng</label>
-                <input className="form-control" value={newSupplier.address} onChange={e => setNewSupplier({ ...newSupplier, address: e.target.value })} placeholder="KCN..." />
-              </div>
-              <div style={{ display: 'flex', gap: '0.75rem', justifyContent: 'flex-end', marginTop: '1rem' }}>
-                <button type="button" className="btn btn-secondary" onClick={() => setShowAddSupplierModal(false)}>Hủy</button>
-                <button type="submit" className="btn btn-primary">Lưu Nhà Cung Cấp</button>
-              </div>
-            </form>
-          </div>
-        </div>
-      )}
-
-      {/* MODAL: THÊM TÀI KHOẢN MỚI */}
-      {showAddUserModal && (
-        <div className="modal-overlay">
-          <div className="modal-content animate-fade-in" style={{ maxWidth: 520 }}>
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.25rem' }}>
-              <h3 style={{ fontSize: '1.25rem', fontWeight: 800, display: 'flex', alignItems: 'center', gap: '8px' }}>
-                <Shield size={20} color="#00f2fe" /> Thêm Tài Khoản Mới Vào Hệ Thống
+      {/* ==================== MODAL: THÊM / SỬA TÀI KHOẢN ==================== */}
+      {showUserModal && (
+        <div className="modal-overlay" onClick={(e) => { if (e.target === e.currentTarget) setShowUserModal(false); }}>
+          <div className="modal-content animate-fade-in" style={{ maxWidth: 500 }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.15rem' }}>
+              <h3 style={{ fontSize: '1.25rem', fontWeight: 800, color: '#0f172a', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                <Shield size={20} color="#7c3aed" /> {editingUser ? 'Chỉnh Sửa Tài Khoản' : 'Thêm Tài Khoản Mới'}
               </h3>
-              <button className="btn btn-secondary" style={{ padding: '0.2rem 0.5rem' }} onClick={() => setShowAddUserModal(false)}>✕</button>
+              <button type="button" onClick={() => setShowUserModal(false)} style={{ background: '#f1f5f9', border: 'none', borderRadius: '50%', width: 32, height: 32, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                <X size={16} />
+              </button>
             </div>
 
-            <form onSubmit={handleAddUserSubmit}>
-              <div className="form-group" style={{ marginBottom: '1rem' }}>
-                <label style={{ fontSize: '0.85rem', fontWeight: 700, marginBottom: '4px', display: 'block' }}>Họ và Tên Người Dùng *</label>
-                <input 
-                  className="form-control" 
-                  value={newUserData.fullName} 
-                  onChange={e => setNewUserData({ ...newUserData, fullName: e.target.value })} 
-                  placeholder="Ví dụ: Hoàng Văn Bảo" 
-                  required 
+            <form onSubmit={handleSaveUser}>
+              <div className="form-group">
+                <label>Họ và Tên *</label>
+                <input
+                  className="form-control"
+                  value={userForm.fullName}
+                  onChange={e => setUserForm({ ...userForm, fullName: e.target.value })}
+                  placeholder="Nhập họ và tên"
+                  required
                 />
               </div>
 
-              <div className="grid-2" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem', marginBottom: '1rem' }}>
+              <div className="grid-2">
                 <div className="form-group">
-                  <label style={{ fontSize: '0.85rem', fontWeight: 700, marginBottom: '4px', display: 'block' }}>Email Đăng Nhập *</label>
-                  <input 
-                    type="email" 
-                    className="form-control" 
-                    value={newUserData.email} 
-                    onChange={e => setNewUserData({ ...newUserData, email: e.target.value })} 
-                    placeholder="email@petcare.com" 
-                    required 
+                  <label>Email hoặc SĐT đăng nhập *</label>
+                  <input
+                    type="text"
+                    className="form-control"
+                    disabled={!!editingUser}
+                    value={userForm.email}
+                    onChange={e => setUserForm({ ...userForm, email: e.target.value })}
+                    placeholder="Nhập email hoặc số điện thoại"
+                    required
+                    style={editingUser ? { opacity: 0.7, cursor: 'not-allowed' } : undefined}
                   />
                 </div>
                 <div className="form-group">
-                  <label style={{ fontSize: '0.85rem', fontWeight: 700, marginBottom: '4px', display: 'block' }}>Số Điện Thoại</label>
-                  <input 
-                    className="form-control" 
-                    value={newUserData.phone} 
-                    onChange={e => setNewUserData({ ...newUserData, phone: e.target.value })} 
-                    placeholder="0912345678" 
+                  <label>Số Điện Thoại</label>
+                  <input
+                    className="form-control"
+                    value={userForm.phone}
+                    onChange={e => setUserForm({ ...userForm, phone: e.target.value })}
+                    placeholder="Nhập số điện thoại"
                   />
                 </div>
               </div>
 
-              <div className="grid-2" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem', marginBottom: '1.25rem' }}>
+              <div className="grid-2">
                 <div className="form-group">
-                  <label style={{ fontSize: '0.85rem', fontWeight: 700, marginBottom: '4px', display: 'block' }}>Vai Trò (Role) *</label>
-                  <select 
-                    className="form-control" 
-                    value={newUserData.role} 
-                    onChange={e => setNewUserData({ ...newUserData, role: e.target.value })}
+                  <label>Vai Trò (Role) *</label>
+                  <select
+                    className="form-control"
+                    value={userForm.role}
+                    onChange={e => setUserForm({ ...userForm, role: e.target.value })}
                   >
-                    <option value="CUSTOMER">Khách Hàng (CUSTOMER)</option>
-                    <option value="CARE_STAFF">Nhân Viên Spa (CARE_STAFF)</option>
-                    <option value="WAREHOUSE_STAFF">Nhân Viên Kho (WAREHOUSE_STAFF)</option>
-                    <option value="ADMIN">Quản Trị Viên (ADMIN)</option>
+                    <option value="CUSTOMER">Khách hàng (CUSTOMER)</option>
+                    <option value="CARE_STAFF">Nhân viên (CARE_STAFF)</option>
+                    <option value="WAREHOUSE_STAFF">Quản lý kho (WAREHOUSE_STAFF)</option>
+                    <option value="ADMIN">Admin (ADMIN)</option>
                   </select>
                 </div>
                 <div className="form-group">
-                  <label style={{ fontSize: '0.85rem', fontWeight: 700, marginBottom: '4px', display: 'block' }}>Mật Khẩu Khởi Tạo *</label>
-                  <input 
-                    type="password" 
-                    className="form-control" 
-                    value={newUserData.password} 
-                    onChange={e => setNewUserData({ ...newUserData, password: e.target.value })} 
-                    placeholder="Nhập mật khẩu..." 
-                    required 
+                  <label>{editingUser ? 'Mật Khẩu Mới (tùy chọn)' : 'Mật Khẩu Khởi Tạo *'}</label>
+                  <input
+                    type="password"
+                    className="form-control"
+                    value={userForm.password}
+                    onChange={e => setUserForm({ ...userForm, password: e.target.value })}
+                    placeholder={editingUser ? 'Để trống nếu không đổi' : 'Nhập mật khẩu'}
+                    required={!editingUser}
                   />
                 </div>
               </div>
 
               <div style={{ display: 'flex', gap: '0.75rem', justifyContent: 'flex-end', marginTop: '1.25rem' }}>
-                <button type="button" className="btn btn-secondary" onClick={() => setShowAddUserModal(false)}>Hủy</button>
-                <button type="submit" className="btn btn-primary">Xác Nhận Tạo Tài Khoản</button>
+                <button type="button" className="btn btn-secondary" onClick={() => setShowUserModal(false)}>Hủy</button>
+                <button type="submit" className="btn btn-primary">{editingUser ? 'Lưu Thay Đổi' : 'Tạo Tài Khoản'}</button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* ==================== MODAL: THÊM / SỬA NHÀ CUNG CẤP ==================== */}
+      {showSupplierModal && (
+        <div className="modal-overlay" onClick={(e) => { if (e.target === e.currentTarget) setShowSupplierModal(false); }}>
+          <div className="modal-content animate-fade-in" style={{ maxWidth: 520 }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.15rem' }}>
+              <h3 style={{ fontSize: '1.25rem', fontWeight: 800, color: '#0f172a', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                <Building2 size={20} color="#0284c7" /> {editingSupplier ? 'Cập Nhật Nhà Cung Cấp' : 'Thêm Nhà Cung Cấp Mới'}
+              </h3>
+              <button type="button" onClick={() => setShowSupplierModal(false)} style={{ background: '#f1f5f9', border: 'none', borderRadius: '50%', width: 32, height: 32, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                <X size={16} />
+              </button>
+            </div>
+            <form onSubmit={handleSaveSupplier}>
+              <div className="form-group">
+                <label>Tên Nhà Cung Cấp *</label>
+                <input className="form-control" value={supplierForm.name} onChange={e => setSupplierForm({ ...supplierForm, name: e.target.value })} placeholder="Nhập tên công ty / nhà cung cấp" required />
+              </div>
+              <div className="grid-2">
+                <div className="form-group">
+                  <label>Người Đại Diện</label>
+                  <input className="form-control" value={supplierForm.contactPerson} onChange={e => setSupplierForm({ ...supplierForm, contactPerson: e.target.value })} placeholder="Họ tên người phụ trách" />
+                </div>
+                <div className="form-group">
+                  <label>Số Điện Thoại</label>
+                  <input className="form-control" value={supplierForm.phone} onChange={e => setSupplierForm({ ...supplierForm, phone: e.target.value })} placeholder="Số điện thoại liên hệ" />
+                </div>
+              </div>
+              <div className="grid-2">
+                <div className="form-group">
+                  <label>Email</label>
+                  <input type="email" className="form-control" value={supplierForm.email} onChange={e => setSupplierForm({ ...supplierForm, email: e.target.value })} placeholder="Email đối tác" />
+                </div>
+                <div className="form-group">
+                  <label>Mặt Hàng Cung Ứng</label>
+                  <input className="form-control" value={supplierForm.productCategories} onChange={e => setSupplierForm({ ...supplierForm, productCategories: e.target.value })} placeholder="VD: Thức ăn hạt, Pate, Y tế" />
+                </div>
+              </div>
+              <div className="form-group">
+                <label>Địa Chỉ</label>
+                <input className="form-control" value={supplierForm.address} onChange={e => setSupplierForm({ ...supplierForm, address: e.target.value })} placeholder="Địa chỉ trụ sở / kho hàng" />
+              </div>
+              <div style={{ display: 'flex', gap: '0.75rem', justifyContent: 'flex-end', marginTop: '1.25rem' }}>
+                <button type="button" className="btn btn-secondary" onClick={() => setShowSupplierModal(false)}>Hủy</button>
+                <button type="submit" className="btn btn-coral">{editingSupplier ? 'Lưu Thay Đổi' : 'Thêm Nhà Cung Cấp'}</button>
               </div>
             </form>
           </div>

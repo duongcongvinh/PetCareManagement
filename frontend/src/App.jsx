@@ -12,6 +12,7 @@ import ToastContainer, { toast, confirmModal } from './components/ToastNotificat
 import FloatingContactWidget from './components/FloatingContactWidget';
 
 import { apiService } from './apiService';
+import { parseCustomerUrl, getPathForCustomerTab, applyPageSEO } from './seoManager';
 import { 
   INITIAL_PETS, 
   INITIAL_SERVICES, 
@@ -41,23 +42,33 @@ const getUrlPortalConfig = () => {
 };
 
 export default function App() {
+  const mergeWithDefaults = (incoming, defaultVal) => {
+    if (!Array.isArray(defaultVal) || !Array.isArray(incoming)) return incoming;
+    const defaultMap = new Map(defaultVal.map(i => [i.id, i]));
+    const enriched = incoming.map(item => {
+      const def = defaultMap.get(item.id);
+      if (def) {
+        return {
+          ...def,
+          ...item,
+          category: def.category || item.category,
+          image: def.image || item.image,
+        };
+      }
+      return item;
+    });
+    const existingIds = new Set(enriched.map(i => i.id));
+    const missingItems = defaultVal.filter(i => !existingIds.has(i.id));
+    return missingItems.length > 0 ? [...missingItems, ...enriched] : enriched;
+  };
+
   const getInitialState = (key, defaultVal) => {
     try {
       const saved = localStorage.getItem(key);
       if (saved) {
         const parsed = JSON.parse(saved);
         if (Array.isArray(defaultVal) && Array.isArray(parsed)) {
-          const defaultMap = new Map(defaultVal.map(i => [i.id, i]));
-          const enrichedParsed = parsed.map(item => {
-            const def = defaultMap.get(item.id);
-            if (def) {
-              return { ...def, ...item, category: item.category || def.category };
-            }
-            return item;
-          });
-          const existingIds = new Set(enrichedParsed.map(i => i.id));
-          const missingItems = defaultVal.filter(i => !existingIds.has(i.id));
-          const merged = missingItems.length > 0 ? [...enrichedParsed, ...missingItems] : enrichedParsed;
+          const merged = mergeWithDefaults(parsed, defaultVal);
           try {
             localStorage.setItem(key, JSON.stringify(merged));
           } catch (e) {}
@@ -102,6 +113,13 @@ export default function App() {
     return 'CUSTOMER';
   });
 
+  const ROLE_VALID_TABS = {
+    ADMIN: ['overview', 'accounts-admin', 'roles-admin', 'approve-proposals', 'suppliers-admin', 'system-settings'],
+    CARE_STAFF: ['queue', 'services', 'promotions', 'pets-logs', 'reports', 'warehouse-view'],
+    WAREHOUSE_STAFF: ['inventory', 'demand-forecast', 'reorder-proposals'],
+    CUSTOMER: ['home', 'booking', 'service-detail', 'shop', 'product-detail', 'cart', 'checkout', 'pets', 'history', 'profile', 'reproduction'],
+  };
+
   const getDefaultTabForRole = (role) => {
     if (role === 'ADMIN') return 'overview';
     if (role === 'CARE_STAFF') return 'queue';
@@ -109,13 +127,47 @@ export default function App() {
     return 'home';
   };
 
+  const getSafeTabForRole = (role, candidate) => {
+    const valid = ROLE_VALID_TABS[role] || [];
+    if (candidate && valid.includes(candidate)) return candidate;
+    return getDefaultTabForRole(role);
+  };
+
   const initialRole = currentUser?.role || (isStaffUrl ? 'ADMIN' : 'CUSTOMER');
 
+  const initialParsedUrl =
+    !isStaffUrl && typeof window !== 'undefined'
+      ? parseCustomerUrl(window.location.pathname)
+      : { tab: null, productId: null, serviceId: null };
+
+  const [selectedProductId, setSelectedProductId] = useState(() => initialParsedUrl.productId);
+  const [selectedServiceId, setSelectedServiceId] = useState(() => initialParsedUrl.serviceId);
+
   const [activeTab, setActiveTab] = useState(() => {
+    if (!isStaffUrl && typeof window !== 'undefined' && window.location.pathname && window.location.pathname !== '/') {
+      return getSafeTabForRole(initialRole, initialParsedUrl.tab);
+    }
     const saved = getInitialState('petcare_activeTab_' + initialRole, null);
-    if (saved) return saved;
-    return getDefaultTabForRole(initialRole);
+    return getSafeTabForRole(initialRole, saved);
   });
+
+  const handleOpenProductDetail = (product) => {
+    if (!product) return;
+    setSelectedProductId(product.id);
+    setActiveTab('product-detail');
+    if (typeof window !== 'undefined') {
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+    }
+  };
+
+  const handleOpenServiceDetail = (service) => {
+    if (!service) return;
+    setSelectedServiceId(service.id);
+    setActiveTab('service-detail');
+    if (typeof window !== 'undefined') {
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+    }
+  };
   
   const [showLoginModal, setShowLoginModal] = useState(false);
   const [showStaffLoginModal, setShowStaffLoginModal] = useState(false);
@@ -157,6 +209,10 @@ export default function App() {
         } catch (e) {}
       } else {
         setPortalMode('CUSTOMER');
+        const parsed = parseCustomerUrl(window.location.pathname);
+        setSelectedProductId(parsed.productId);
+        setSelectedServiceId(parsed.serviceId);
+        setActiveTab(parsed.tab);
         try {
           const savedCust = localStorage.getItem('petcare_customer_user');
           if (savedCust) {
@@ -188,12 +244,24 @@ export default function App() {
     }
   }, [currentUser]);
 
-  // Persist activeTab per role
+  // Ensure activeTab always belongs to current activeRole, persist valid tab & sync SEO URL
   useEffect(() => {
-    if (activeTab && activeRole) {
-      localStorage.setItem('petcare_activeTab_' + activeRole, JSON.stringify(activeTab));
+    if (!activeRole) return;
+    const safeTab = getSafeTabForRole(activeRole, activeTab);
+    if (safeTab !== activeTab) {
+      setActiveTab(safeTab);
+      return;
     }
-  }, [activeTab, activeRole]);
+    localStorage.setItem('petcare_activeTab_' + activeRole, JSON.stringify(safeTab));
+
+    if (portalMode === 'CUSTOMER' && typeof window !== 'undefined') {
+      const targetPath = getPathForCustomerTab(safeTab, selectedProductId, selectedServiceId);
+      const currentPath = window.location.pathname.replace(/\/+$/, '') || '/';
+      if (currentPath !== targetPath && !currentPath.startsWith('/admin') && !currentPath.startsWith('/staff')) {
+        window.history.pushState({}, '', targetPath);
+      }
+    }
+  }, [activeTab, activeRole, portalMode, selectedProductId, selectedServiceId]);
 
   // Persist authenticated user session across page refreshes (F5)
   useEffect(() => { 
@@ -234,6 +302,40 @@ export default function App() {
     { id: 'ORD-002', customerName: 'Nguyễn Văn Nam', phone: '0912345678', items: 'Cát Đậu Nành Tofu x 3', total: 270000, status: 'CONFIRMED', date: '2026-08-25 09:15' }
   ]));
 
+  // Dynamic On-Page SEO: title, meta description, canonical, robots & JSON-LD Schema
+  useEffect(() => {
+    const selectedProduct = selectedProductId ? products.find(p => p.id === selectedProductId) : null;
+    const selectedService = selectedServiceId ? services.find(s => s.id === selectedServiceId) : null;
+    applyPageSEO({ portalMode, activeRole, activeTab, selectedProduct, selectedService, services, products });
+  }, [portalMode, activeRole, activeTab, selectedProductId, selectedServiceId, services, products]);
+  const [auditLogs, setAuditLogs] = useState(() => getInitialState('petcare_audit_logs', [
+    { id: 'log-1', time: '09:00 - Hôm nay', category: 'SYSTEM', actor: 'Nguyễn Văn Admin', action: 'Khởi động cấu hình AI Dự báo', detail: 'Thiết lập mức tin cậy 95% (Z = 1.65) và Lead-time mặc định 4 ngày.' },
+    { id: 'log-2', time: '09:45 - Hôm nay', category: 'SECURITY', actor: 'Nguyễn Văn Admin', action: 'Cập nhật ma trận RBAC', detail: 'Xác thực phân quyền 4 vai trò: Khách hàng, Nhân viên, Quản lý kho, Admin.' },
+    { id: 'log-3', time: '10:20 - Hôm nay', category: 'INVENTORY', actor: 'Lê Văn Kho', action: 'Gửi đề xuất nhập hàng AI', detail: 'Lập 2 phiếu đề xuất nhập hàng chờ Admin phê duyệt (Royal Canin, Sữa tắm SOS).' }
+  ]));
+
+  const handleAddAuditLog = (category, action, detail) => {
+    const entry = {
+      id: 'log-' + Date.now() + Math.random().toString(36).slice(2, 5),
+      time: new Date().toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' }) + ' - Hôm nay',
+      category: category || 'SYSTEM',
+      actor: currentUser?.fullName || 'Nguyễn Văn Admin',
+      action,
+      detail
+    };
+    setAuditLogs(prev => {
+      const next = [entry, ...prev].slice(0, 80);
+      try { localStorage.setItem('petcare_audit_logs', JSON.stringify(next)); } catch (e) {}
+      return next;
+    });
+  };
+
+  const handleClearAuditLogs = () => {
+    setAuditLogs([]);
+    try { localStorage.setItem('petcare_audit_logs', JSON.stringify([])); } catch (e) {}
+    toast.info('Đã dọn sạch nhật ký hoạt động.', 'Nhật Ký Hệ Thống');
+  };
+
   // Real-time Multi-Tab BroadcastChannel, Storage Sync & Cross-Browser Central Engine
   useEffect(() => {
     let channel;
@@ -245,8 +347,8 @@ export default function App() {
         if (type === 'SYNC_APPOINTMENTS') setAppointments(payload);
         if (type === 'SYNC_ORDERS') setOrders(payload);
         if (type === 'SYNC_PETS') setPets(payload);
-        if (type === 'SYNC_PRODUCTS') setProducts(payload);
-        if (type === 'SYNC_SUPPLIERS') setSuppliers(payload);
+        if (type === 'SYNC_PRODUCTS') setProducts(mergeWithDefaults(payload, INITIAL_PRODUCTS));
+        if (type === 'SYNC_SUPPLIERS') setSuppliers(mergeWithDefaults(payload, INITIAL_SUPPLIERS));
       };
     } catch (e) {}
 
@@ -256,8 +358,8 @@ export default function App() {
         if (e.key === 'petcare_appointments' && e.newValue) setAppointments(JSON.parse(e.newValue));
         if (e.key === 'petcare_orders' && e.newValue) setOrders(JSON.parse(e.newValue));
         if (e.key === 'petcare_pets' && e.newValue) setPets(JSON.parse(e.newValue));
-        if (e.key === 'petcare_products' && e.newValue) setProducts(JSON.parse(e.newValue));
-        if (e.key === 'petcare_suppliers' && e.newValue) setSuppliers(JSON.parse(e.newValue));
+        if (e.key === 'petcare_products' && e.newValue) setProducts(mergeWithDefaults(JSON.parse(e.newValue), INITIAL_PRODUCTS));
+        if (e.key === 'petcare_suppliers' && e.newValue) setSuppliers(mergeWithDefaults(JSON.parse(e.newValue), INITIAL_SUPPLIERS));
       } catch (err) {}
     };
 
@@ -284,8 +386,12 @@ export default function App() {
             localStorage.setItem('petcare_orders', JSON.stringify(res.data.orders));
           }
           if (res.data.products) {
-            setProducts(res.data.products);
-            localStorage.setItem('petcare_products', JSON.stringify(res.data.products));
+            const mergedProducts = mergeWithDefaults(res.data.products, INITIAL_PRODUCTS);
+            setProducts(mergedProducts);
+            localStorage.setItem('petcare_products', JSON.stringify(mergedProducts));
+            if (JSON.stringify(mergedProducts) !== JSON.stringify(res.data.products)) {
+              apiService.postLiveSyncState({ products: mergedProducts });
+            }
           }
           if (res.data.pets) {
             setPets(res.data.pets);
@@ -390,7 +496,57 @@ export default function App() {
     const updated = [created, ...users.filter(u => u.email !== created.email)];
     setUsers(updated);
     broadcastSync('SYNC_USERS', updated, 'petcare_users');
+    handleAddAuditLog('ACCOUNT', 'Tạo tài khoản mới', `Tạo tài khoản "${created.fullName}" (${created.email}) với vai trò ${created.role}.`);
     return created;
+  };
+
+  const handleUpdateUser = (userId, updates) => {
+    const target = users.find(u => u.id === userId);
+    const updated = users.map(u => u.id === userId ? { ...u, ...updates } : u);
+    setUsers(updated);
+    broadcastSync('SYNC_USERS', updated, 'petcare_users');
+    if (target) {
+      handleAddAuditLog('ACCOUNT', 'Cập nhật tài khoản', `Cập nhật thông tin tài khoản "${updates.fullName || target.fullName}" (${target.email}).`);
+    }
+  };
+
+  const handleDeleteUser = (userId) => {
+    const target = users.find(u => u.id === userId);
+    const updated = users.filter(u => u.id !== userId);
+    setUsers(updated);
+    broadcastSync('SYNC_USERS', updated, 'petcare_users');
+    if (target) {
+      handleAddAuditLog('ACCOUNT', 'Xóa tài khoản', `Đã xóa tài khoản "${target.fullName}" (${target.email}).`);
+      toast.info(`Đã xóa tài khoản "${target.fullName}".`, 'Quản Lý Tài Khoản');
+    }
+  };
+
+  const handleUpdateUserRole = (userId, newRole) => {
+    const target = users.find(u => u.id === userId);
+    const updated = users.map(u => u.id === userId ? { ...u, role: newRole } : u);
+    setUsers(updated);
+    broadcastSync('SYNC_USERS', updated, 'petcare_users');
+    if (target) {
+      handleAddAuditLog('SECURITY', 'Thay đổi vai trò người dùng', `Đổi quyền "${target.fullName}" từ ${target.role} sang ${newRole}.`);
+      toast.success(`Đã đổi vai trò của "${target.fullName}" sang ${newRole}!`, 'Phân Quyền Người Dùng');
+    }
+  };
+
+  const handleToggleUserStatus = (userId) => {
+    const target = users.find(u => u.id === userId);
+    const nextStatus = target?.status === 'LOCKED' ? 'ACTIVE' : 'LOCKED';
+    const updated = users.map(u => u.id === userId ? { ...u, status: nextStatus } : u);
+    setUsers(updated);
+    broadcastSync('SYNC_USERS', updated, 'petcare_users');
+    if (target) {
+      handleAddAuditLog('ACCOUNT', nextStatus === 'LOCKED' ? 'Khóa tài khoản' : 'Mở khóa tài khoản', `Tài khoản "${target.fullName}" (${target.email}) → ${nextStatus}.`);
+      toast.info(
+        nextStatus === 'LOCKED'
+          ? `Đã khóa tài khoản "${target.fullName}".`
+          : `Đã mở khóa tài khoản "${target.fullName}".`,
+        'Trạng Thái Tài Khoản'
+      );
+    }
   };
 
   const togglePortalMode = (targetMode) => {
@@ -666,7 +822,126 @@ export default function App() {
     const updated = [created, ...suppliers];
     setSuppliers(updated);
     broadcastSync('SYNC_SUPPLIERS', updated, 'petcare_suppliers');
+    handleAddAuditLog('SYSTEM', 'Thêm nhà cung cấp', `Đã thêm đối tác "${created.name}".`);
     toast.success(`Đã thêm nhà cung cấp mới: ${created.name}`, 'Nhà Cung Cấp');
+  };
+
+  const handleUpdateSupplier = (supplierId, updates) => {
+    const updated = suppliers.map(s => s.id === supplierId ? { ...s, ...updates } : s);
+    setSuppliers(updated);
+    broadcastSync('SYNC_SUPPLIERS', updated, 'petcare_suppliers');
+    handleAddAuditLog('SYSTEM', 'Cập nhật nhà cung cấp', `Cập nhật thông tin đối tác "${updates.name || supplierId}".`);
+  };
+
+  const handleDeleteSupplier = (supplierId) => {
+    const target = suppliers.find(s => s.id === supplierId);
+    const updated = suppliers.filter(s => s.id !== supplierId);
+    setSuppliers(updated);
+    broadcastSync('SYNC_SUPPLIERS', updated, 'petcare_suppliers');
+    if (target) {
+      handleAddAuditLog('SYSTEM', 'Xóa nhà cung cấp', `Đã xóa đối tác "${target.name}".`);
+      toast.info(`Đã xóa nhà cung cấp "${target.name}".`, 'Nhà Cung Cấp');
+    }
+  };
+
+  // Services, Promotions & Pet Medical Handlers (Care Staff)
+  const handleAddService = async (svcData) => {
+    let created = null;
+    try {
+      const res = await apiService.createService(svcData, authToken);
+      if (res && res.id) created = res;
+    } catch (e) {}
+
+    if (!created) {
+      created = { ...svcData, id: 's-' + Date.now(), status: 'ACTIVE' };
+    }
+    const updated = [created, ...services];
+    setServices(updated);
+    try { localStorage.setItem('petcare_services', JSON.stringify(updated)); } catch (e) {}
+  };
+
+  const handleUpdateService = (serviceId, updates) => {
+    const updated = services.map(s => s.id === serviceId ? { ...s, ...updates } : s);
+    setServices(updated);
+    try { localStorage.setItem('petcare_services', JSON.stringify(updated)); } catch (e) {}
+  };
+
+  const handleDeleteService = async (serviceId) => {
+    try {
+      await apiService.deleteService(serviceId, authToken);
+    } catch (e) {}
+    const updated = services.filter(s => s.id !== serviceId);
+    setServices(updated);
+    try { localStorage.setItem('petcare_services', JSON.stringify(updated)); } catch (e) {}
+  };
+
+  const handleAddPromotion = (promoData) => {
+    const created = {
+      ...promoData,
+      id: 'promo-' + Date.now(),
+      status: 'ACTIVE'
+    };
+    const updated = [created, ...promotions];
+    setPromotions(updated);
+    try { localStorage.setItem('petcare_promotions', JSON.stringify(updated)); } catch (e) {}
+    toast.success(`Đã tạo mã khuyến mãi ${created.code} (-${created.discountPercent}%)!`, 'Khuyến Mãi');
+  };
+
+  const handleTogglePromotion = (promoId) => {
+    const updated = promotions.map(p => p.id === promoId ? { ...p, status: p.status === 'ACTIVE' ? 'PAUSED' : 'ACTIVE' } : p);
+    setPromotions(updated);
+    try { localStorage.setItem('petcare_promotions', JSON.stringify(updated)); } catch (e) {}
+    toast.info('Đã cập nhật trạng thái chương trình khuyến mãi.', 'Khuyến Mãi');
+  };
+
+  const handleDeletePromotion = (promoId) => {
+    const updated = promotions.filter(p => p.id !== promoId);
+    setPromotions(updated);
+    try { localStorage.setItem('petcare_promotions', JSON.stringify(updated)); } catch (e) {}
+    toast.info('Đã xóa chương trình khuyến mãi.', 'Khuyến Mãi');
+  };
+
+  const handleUpdatePet = (petId, updates) => {
+    const updated = pets.map(p => p.id === petId ? { ...p, ...updates } : p);
+    setPets(updated);
+    broadcastSync('SYNC_PETS', updated, 'petcare_pets');
+  };
+
+  const handleCreateProposal = (propData) => {
+    const newItem = {
+      id: 'prop-' + Date.now().toString().slice(-5),
+      productId: propData.productId,
+      productName: propData.productName,
+      sku: propData.sku || 'SKU',
+      currentStock: propData.currentStock ?? 0,
+      minStockLevel: propData.minStockLevel ?? 10,
+      safetyStock: 12,
+      suggestedQuantity: parseInt(propData.suggestedQuantity, 10) || 20,
+      suggestedOrderDate: propData.suggestedOrderDate || new Date().toISOString().split('T')[0],
+      suggestedSupplier: propData.suggestedSupplier || 'Royal Canin Việt Nam',
+      confidenceScore: propData.confidenceScore || 0.95,
+      reason: propData.reason || 'Đề xuất nhập hàng mới.',
+      status: 'DRAFT',
+      createdAt: new Date().toLocaleTimeString('vi-VN')
+    };
+    const updated = [newItem, ...reorderProposals];
+    setReorderProposals(updated);
+    try { localStorage.setItem('petcare_reorderProposals', JSON.stringify(updated)); } catch (e) {}
+    toast.success(`Đã lập phiếu đề xuất nhập +${newItem.suggestedQuantity} ${newItem.productName}!`, 'Đề Xuất Nhập Hàng');
+  };
+
+  const handleRequestRestock = (product) => {
+    const suggestedQty = Math.max(15, (product.maxStockLevel || 60) - product.currentStock);
+    handleCreateProposal({
+      productId: product.id,
+      productName: product.name,
+      sku: product.sku,
+      currentStock: product.currentStock,
+      minStockLevel: product.minStockLevel,
+      suggestedQuantity: suggestedQty,
+      suggestedSupplier: product.supplierName || 'Royal Canin Việt Nam',
+      reason: `Yêu cầu nhập bổ sung từ bộ phận Nhân viên (${currentUser?.fullName || 'Nhân viên'}). Tồn kho hiện tại: ${product.currentStock} sp.`
+    });
   };
 
   // Add New Product Action
@@ -682,7 +957,9 @@ export default function App() {
       maxStockLevel: parseInt(newProdData.maxStockLevel) || 100,
       supplierName: newProdData.supplierName || 'Royal Canin Việt Nam'
     };
-    setProducts([created, ...products]);
+    const updated = [created, ...products];
+    setProducts(updated);
+    broadcastSync('SYNC_PRODUCTS', updated, 'petcare_products');
     toast.success(`Đã thêm sản phẩm mới thành công: ${created.name}`, 'Kho Hàng');
   };
 
@@ -711,10 +988,10 @@ export default function App() {
           minStockLevel: p.minStockLevel,
           safetyStock: 12,
           suggestedQuantity: Math.max(qty, 15),
-          suggestedOrderDate: '2026-08-23',
+          suggestedOrderDate: new Date().toISOString().split('T')[0],
           suggestedSupplier: p.supplierName || 'Royal Canin Việt Nam',
           confidenceScore: parseFloat((0.90 + Math.random() * 0.08).toFixed(2)),
-          reason: `[AI Demand Model - 95% confidence]: Doanh số dự báo tăng 30%. Tồn kho (${p.currentStock}) vi phạm Ngưỡng an toàn (${p.minStockLevel}).`,
+          reason: `[AI Demand Model - 95% confidence]: Doanh số dự báo tăng 30%. Tồn kho (${p.currentStock}) vi phạm ngưỡng an toàn (${p.minStockLevel}).`,
           status: 'DRAFT',
           createdAt: new Date().toLocaleTimeString('vi-VN')
         };
@@ -725,6 +1002,7 @@ export default function App() {
     });
 
     setReorderProposals(newProposals);
+    try { localStorage.setItem('petcare_reorderProposals', JSON.stringify(newProposals)); } catch (e) {}
     setAiScanModalData({
       count,
       createdItems,
@@ -734,16 +1012,33 @@ export default function App() {
   };
 
   const handleApproveProposal = async (proposalId) => {
-    const prop = reorderProposals.find(p => p.id === proposalId);
-    if (!prop) return;
-
     try {
       await apiService.updateProposalStatus(proposalId, 'APPROVED', authToken);
     } catch (e) {}
 
-    setProducts(products.map(p => p.id === prop.productId ? { ...p, currentStock: p.currentStock + prop.suggestedQuantity } : p));
-    setReorderProposals(reorderProposals.map(p => p.id === proposalId ? { ...p, status: 'APPROVED' } : p));
-    toast.success('Đã phê duyệt kế hoạch! Đã tạo đơn nhập hàng sẵn sàng cho Nhân viên kho thực thi.', 'Phê Duyệt Đề Xuất AI');
+    const target = reorderProposals.find(p => p.id === proposalId);
+    const updated = reorderProposals.map(p => p.id === proposalId ? { ...p, status: 'APPROVED' } : p);
+    setReorderProposals(updated);
+    try { localStorage.setItem('petcare_reorderProposals', JSON.stringify(updated)); } catch (e) {}
+    if (target) {
+      handleAddAuditLog('INVENTORY', 'Phê duyệt đề xuất nhập hàng', `Duyệt nhập +${target.suggestedQuantity} "${target.productName}" (SKU: ${target.sku}).`);
+    }
+    toast.success('Đã duyệt phiếu đề xuất! Bộ phận Kho có thể bấm "Xác Nhận Nhập Kho" khi hàng về.', 'Phê Duyệt Đề Xuất Nhập Hàng');
+  };
+
+  const handleExecuteProposalInbound = (proposal) => {
+    const updatedProducts = products.map(p =>
+      p.id === proposal.productId ? { ...p, currentStock: p.currentStock + proposal.suggestedQuantity } : p
+    );
+    const updatedProposals = reorderProposals.map(p =>
+      p.id === proposal.id ? { ...p, status: 'COMPLETED' } : p
+    );
+    setProducts(updatedProducts);
+    setReorderProposals(updatedProposals);
+    broadcastSync('SYNC_PRODUCTS', updatedProducts, 'petcare_products');
+    try { localStorage.setItem('petcare_reorderProposals', JSON.stringify(updatedProposals)); } catch (e) {}
+    handleAddAuditLog('INVENTORY', 'Xác nhận nhập kho thực tế', `Đã nhập kho +${proposal.suggestedQuantity} "${proposal.productName}".`);
+    toast.success(`Đã nhập kho thực tế +${proposal.suggestedQuantity} "${proposal.productName}"!`, 'Nhập Kho Thành Công');
   };
 
   const handleRejectProposal = async (proposalId) => {
@@ -751,7 +1046,14 @@ export default function App() {
       await apiService.updateProposalStatus(proposalId, 'REJECTED', authToken);
     } catch (e) {}
 
-    setReorderProposals(reorderProposals.map(p => p.id === proposalId ? { ...p, status: 'REJECTED' } : p));
+    const target = reorderProposals.find(p => p.id === proposalId);
+    const updated = reorderProposals.map(p => p.id === proposalId ? { ...p, status: 'REJECTED' } : p);
+    setReorderProposals(updated);
+    try { localStorage.setItem('petcare_reorderProposals', JSON.stringify(updated)); } catch (e) {}
+    if (target) {
+      handleAddAuditLog('INVENTORY', 'Từ chối đề xuất nhập hàng', `Từ chối phiếu nhập "${target.productName}" (+${target.suggestedQuantity} sp).`);
+    }
+    toast.info('Đã từ chối phiếu đề xuất nhập hàng.', 'Đề Xuất Nhập Hàng');
   };
 
   return (
@@ -776,6 +1078,10 @@ export default function App() {
             currentUser={currentUser}
             activeTab={activeTab}
             onTabChange={setActiveTab}
+            selectedProductId={selectedProductId}
+            onOpenProductDetail={handleOpenProductDetail}
+            selectedServiceId={selectedServiceId}
+            onOpenServiceDetail={handleOpenServiceDetail}
             pets={pets}
             services={services}
             appointments={appointments}
@@ -797,12 +1103,13 @@ export default function App() {
           />
         </main>
       ) : (
-        /* PORTAL MODE 2: NHÂN VIÊN & QUẢN TRỊ (STAFF & ADMIN MANAGEMENT PORTAL) */
+        /* PORTAL MODE 2: NHÂN VIÊN, QUẢN LÝ KHO & ADMIN (INTERNAL WORKSPACE) */
         (!currentUser || !['CARE_STAFF', 'WAREHOUSE_STAFF', 'ADMIN'].includes(currentUser.role)) ? (
           /* Clean Full-Page Login Screen for all 3 Staff/Admin Roles */
           <StaffLoginModal 
             isOpen={true}
             isFullPage={true}
+            users={users}
             onLoginSuccess={(user, token) => {
               try {
                 localStorage.setItem('petcare_staff_user', JSON.stringify(user));
@@ -819,27 +1126,45 @@ export default function App() {
           />
         ) : (
           /* Authorized Workspace for Logged-In Role (CARE_STAFF, WAREHOUSE_STAFF, or ADMIN) */
-          <div style={{ display: 'flex', flex: 1 }}>
+          <div className="staff-workspace-shell">
             <Sidebar 
               activeRole={currentUser.role}
               activeTab={activeTab}
               onTabChange={setActiveTab}
+              pendingProposalsCount={reorderProposals.filter(p => p.status === 'DRAFT').length}
             />
 
-            <main style={{ flex: 1, padding: '1.75rem 2rem', overflowY: 'auto' }}>
+            <main className="staff-main-content">
               {currentUser.role === 'CARE_STAFF' && (
                 <CareStaffDashboard 
                   activeTab={activeTab}
                   appointments={appointments}
                   pets={pets}
                   services={services}
+                  promotions={promotions}
+                  products={products}
+                  orders={orders}
                   onUpdateStatus={handleUpdateAppointmentStatus}
+                  onAddService={handleAddService}
+                  onUpdateService={handleUpdateService}
+                  onDeleteService={handleDeleteService}
+                  onAddPromotion={handleAddPromotion}
+                  onTogglePromotion={handleTogglePromotion}
+                  onDeletePromotion={handleDeletePromotion}
+                  onUpdatePet={handleUpdatePet}
+                  onUpdateOrderStatus={(id, status) => {
+                    const updated = orders.map(o => o.id === id ? { ...o, status } : o);
+                    setOrders(updated);
+                    broadcastSync('SYNC_ORDERS', updated, 'petcare_orders');
+                  }}
+                  onRequestRestock={handleRequestRestock}
                 />
               )}
 
               {currentUser.role === 'WAREHOUSE_STAFF' && (
                 <WarehouseDashboard 
                   activeTab={activeTab}
+                  onTabChange={setActiveTab}
                   products={products}
                   reorderProposals={reorderProposals}
                   suppliers={suppliers}
@@ -847,24 +1172,39 @@ export default function App() {
                   onUpdateStock={handleUpdateStock}
                   onTriggerAI={handleTriggerAI}
                   onAddProduct={handleAddProduct}
+                  onApproveProposal={handleApproveProposal}
+                  onRejectProposal={handleRejectProposal}
+                  onCreateProposal={handleCreateProposal}
+                  onExecuteProposalInbound={handleExecuteProposalInbound}
                 />
               )}
 
               {currentUser.role === 'ADMIN' && (
                 <AdminDashboard 
                   activeTab={activeTab}
+                  onTabChange={setActiveTab}
+                  currentUser={currentUser}
+                  users={users}
                   appointments={appointments}
                   products={products}
                   services={services}
-                  users={users}
-                  onAddUser={handleAddUser}
-                  customerOrders={orders}
-                  onUpdateOrderStatus={(id, status) => setOrders(orders.map(o => o.id === id ? { ...o, status } : o))}
+                  orders={orders}
+                  promotions={promotions}
                   reorderProposals={reorderProposals}
+                  suppliers={suppliers}
+                  auditLogs={auditLogs}
+                  onAddUser={handleAddUser}
+                  onUpdateUser={handleUpdateUser}
+                  onDeleteUser={handleDeleteUser}
+                  onUpdateUserRole={handleUpdateUserRole}
+                  onToggleUserStatus={handleToggleUserStatus}
                   onApproveProposal={handleApproveProposal}
                   onRejectProposal={handleRejectProposal}
-                  onTriggerAI={handleTriggerAI}
-                  onAddProduct={handleAddProduct}
+                  onAddSupplier={handleAddSupplier}
+                  onUpdateSupplier={handleUpdateSupplier}
+                  onDeleteSupplier={handleDeleteSupplier}
+                  onAddAuditLog={handleAddAuditLog}
+                  onClearAuditLogs={handleClearAuditLogs}
                 />
               )}
             </main>
@@ -877,6 +1217,7 @@ export default function App() {
         isOpen={showLoginModal}
         onClose={() => setShowLoginModal(false)}
         onAddUser={handleAddUser}
+        users={users}
         onLoginSuccess={(user, token) => {
           try {
             localStorage.setItem('petcare_customer_user', JSON.stringify(user));
@@ -894,6 +1235,7 @@ export default function App() {
       <StaffLoginModal 
         isOpen={showStaffLoginModal}
         isFullPage={false}
+        users={users}
         onClose={() => setShowStaffLoginModal(false)}
         onLoginSuccess={(user, token) => {
           try {
@@ -913,21 +1255,21 @@ export default function App() {
 
       {/* AI SCAN RESULT MODAL */}
       {aiScanModalData && (
-        <div className="modal-overlay">
+        <div className="modal-overlay" onClick={(e) => { if (e.target === e.currentTarget) setAiScanModalData(null); }}>
           <div className="modal-content animate-fade-in" style={{ maxWidth: 580 }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.25rem', paddingBottom: '0.85rem', borderBottom: '1px solid var(--border-light)' }}>
-              <h3 style={{ fontSize: '1.3rem', fontWeight: 800, display: 'flex', alignItems: 'center', gap: '8px', color: '#00f2fe' }}>
-                <Brain size={22} color="#00f2fe" /> Kết Quả Quét Tồn Kho AI Forecasting Engine
+              <h3 style={{ fontSize: '1.25rem', fontWeight: 800, display: 'flex', alignItems: 'center', gap: '8px', color: '#0284c7' }}>
+                <Brain size={22} color="#0284c7" /> Kết Quả Quét Tồn Kho AI Forecasting Engine
               </h3>
-              <button className="btn btn-secondary" style={{ padding: '0.2rem 0.5rem' }} onClick={() => setAiScanModalData(null)}>✕</button>
+              <button className="btn btn-secondary" style={{ padding: '0.2rem 0.55rem' }} onClick={() => setAiScanModalData(null)}>✕</button>
             </div>
 
-            <div style={{ background: 'rgba(0,242,254,0.08)', padding: '1rem', borderRadius: '12px', marginBottom: '1.25rem', border: '1px solid rgba(0,242,254,0.2)' }}>
-              <div style={{ fontSize: '0.95rem', fontWeight: 700, color: '#38ef7d', marginBottom: '4px' }}>
-                ✅ AI đã hoàn tất quét toàn bộ {aiScanModalData.totalScanned} sản phẩm trong kho real-time!
+            <div style={{ background: '#ecfdf5', padding: '1rem', borderRadius: '12px', marginBottom: '1.25rem', border: '1px solid #a7f3d0' }}>
+              <div style={{ fontSize: '0.92rem', fontWeight: 800, color: '#047857', marginBottom: '4px' }}>
+                ✅ AI đã hoàn tất quét toàn bộ {aiScanModalData.totalScanned} sản phẩm trong kho!
               </div>
-              <div style={{ fontSize: '0.85rem', color: 'var(--text-secondary)' }}>
-                Phát hiện <strong>{aiScanModalData.lowStockCount}</strong> sản phẩm chạm/dưới ngưỡng an toàn. Đã tự động tạo <strong>{aiScanModalData.count}</strong> đề xuất nhập kho mới.
+              <div style={{ fontSize: '0.84rem', color: '#334155' }}>
+                Phát hiện <strong>{aiScanModalData.lowStockCount}</strong> sản phẩm chạm/dưới ngưỡng an toàn. Đã tự động lập <strong>{aiScanModalData.count}</strong> đề xuất nhập kho mới.
               </div>
             </div>
 
@@ -936,12 +1278,12 @@ export default function App() {
                 {aiScanModalData.createdItems.map((item, idx) => (
                   <div key={idx} className="glass-card" style={{ padding: '0.85rem', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                     <div>
-                      <strong style={{ fontSize: '0.95rem' }}>{item.productName}</strong>
-                      <div style={{ fontSize: '0.78rem', color: 'var(--text-muted)' }}>SKU: {item.sku} | Tồn kho hiện tại: <span style={{ color: '#f87171', fontWeight: 700 }}>{item.currentStock}</span></div>
+                      <strong style={{ fontSize: '0.92rem', color: '#0f172a' }}>{item.productName}</strong>
+                      <div style={{ fontSize: '0.78rem', color: '#64748b' }}>SKU: {item.sku} | Tồn hiện tại: <span style={{ color: '#dc2626', fontWeight: 700 }}>{item.currentStock}</span></div>
                     </div>
                     <div style={{ textAlign: 'right' }}>
-                      <span className="badge badge-success" style={{ fontSize: '0.9rem', fontWeight: 800 }}>+{item.suggestedQuantity} sp</span>
-                      <div style={{ fontSize: '0.72rem', color: '#60a5fa' }}>Tin cậy: {(item.confidenceScore * 100).toFixed(0)}%</div>
+                      <span className="badge badge-success" style={{ fontSize: '0.88rem', fontWeight: 800 }}>+{item.suggestedQuantity} sp</span>
+                      <div style={{ fontSize: '0.72rem', color: '#0284c7', fontWeight: 600 }}>Tin cậy: {(item.confidenceScore * 100).toFixed(0)}%</div>
                     </div>
                   </div>
                 ))}
@@ -953,12 +1295,12 @@ export default function App() {
             )}
 
             <div style={{ display: 'flex', gap: '0.85rem', justifyContent: 'flex-end' }}>
-              <button className="btn btn-secondary" onClick={() => setAiScanModalData(null)}>Đóng Thông Báo</button>
+              <button className="btn btn-secondary" onClick={() => setAiScanModalData(null)}>Đóng</button>
               <button className="btn btn-emerald" onClick={() => {
                 setAiScanModalData(null);
-                setActiveTab('ai-forecasting');
+                setActiveTab('reorder-proposals');
               }}>
-                Đến Trang Duyệt Đề Xuất →
+                Đến Trang Đề Xuất Nhập Hàng →
               </button>
             </div>
           </div>

@@ -1,9 +1,43 @@
 import React from 'react';
-import { 
-  LayoutDashboard, Calendar, PawPrint, Package, Brain, ShoppingBag, Users, Settings, Tag, Shield, Building2, FileText, CheckSquare, Activity
+import {
+  LayoutDashboard, Calendar, PawPrint, Package, Brain, ShoppingBag, Users, Tag, Shield, FileText, CheckSquare, Activity, TrendingUp, Building2, Settings
 } from 'lucide-react';
 
-export default function Sidebar({ activeRole, activeTab, onTabChange }) {
+export default function Sidebar({ activeRole, activeTab, onTabChange, pendingProposalsCount = 0 }) {
+  const getRoleTheme = (role) => {
+    switch (role) {
+      case 'CARE_STAFF':
+        return {
+          title: 'NHÂN VIÊN',
+          subtitle: 'Vận hành & Chăm sóc',
+          accent: '#0284c7',
+          softBg: '#e0f2fe',
+          border: '#7dd3fc',
+          badgeBg: 'linear-gradient(135deg, #0284c7 0%, #0369a1 100%)',
+        };
+      case 'WAREHOUSE_STAFF':
+        return {
+          title: 'QUẢN LÝ KHO',
+          subtitle: 'Tồn kho & Dự báo AI',
+          accent: '#d97706',
+          softBg: '#fef3c7',
+          border: '#fcd34d',
+          badgeBg: 'linear-gradient(135deg, #f59e0b 0%, #d97706 100%)',
+        };
+      case 'ADMIN':
+      default:
+        return {
+          title: 'QUẢN TRỊ ADMIN',
+          subtitle: 'Điều hành & Kiểm soát',
+          accent: '#7c3aed',
+          softBg: '#f3e8ff',
+          border: '#d8b4fe',
+          badgeBg: 'linear-gradient(135deg, #8b5cf6 0%, #6d28d9 100%)',
+        };
+    }
+  };
+
+  // Menu phân chia 1-1 theo sơ đồ Use Case tổng quát của hệ thống
   const getNavItems = () => {
     switch (activeRole) {
       case 'CUSTOMER':
@@ -15,66 +49,124 @@ export default function Sidebar({ activeRole, activeTab, onTabChange }) {
           { id: 'history', label: 'Tiến Độ & Lịch Hẹn', icon: LayoutDashboard },
         ];
       case 'CARE_STAFF':
+        // 6 Use Case của Actor Nhân viên
         return [
-          { id: 'queue', label: 'Ca Hẹn Cần Làm', icon: Calendar },
-          { id: 'pets-logs', label: 'Nhật Ký Chăm Sóc', icon: PawPrint },
+          { id: 'queue', label: 'Quản Lý Lịch Hẹn', icon: Calendar },
+          { id: 'services', label: 'Quản Lý Dịch Vụ', icon: FileText },
+          { id: 'promotions', label: 'Chương Trình Khuyến Mãi', icon: Tag },
+          { id: 'pets-logs', label: 'Quản Lý Hồ Sơ Thú Cưng', icon: PawPrint },
+          { id: 'reports', label: 'Báo Cáo & Thống Kê', icon: TrendingUp },
+          { id: 'warehouse-view', label: 'Quản Lý Kho', icon: Package },
         ];
       case 'WAREHOUSE_STAFF':
+        // 3 Use Case của Actor Quản lý kho
         return [
-          { id: 'inventory', label: 'Quản Lý Tồn Kho', icon: Package },
-          { id: 'process-orders', label: 'Xử Lý Nhập Hàng AI', icon: CheckSquare },
-          { id: 'suppliers', label: 'Nhà Cung Cấp', icon: Users },
-          { id: 'ai-reorder', label: 'Đề Xuất Kho AI', icon: Brain },
+          { id: 'inventory', label: 'Quản Lý Kho (Nhập/Xuất/Tồn)', icon: Package },
+          { id: 'demand-forecast', label: 'Dự Báo Nhu Cầu (AI)', icon: Brain },
+          { id: 'reorder-proposals', label: 'Lập Đề Xuất Nhập Hàng', icon: CheckSquare, badgeCount: pendingProposalsCount },
         ];
       case 'ADMIN':
       default:
+        // 6 Use Case của Actor Admin
         return [
-          { id: 'overview', label: 'Báo Cáo Tổng Quan', icon: LayoutDashboard },
-          { id: 'ai-forecasting', label: 'Trung Tâm Phân Tích AI', icon: Brain },
-          { id: 'accounts-admin', label: 'Quản Lý Tài Khoản', icon: Shield },
-          { id: 'customers-admin', label: 'Quản Lý Khách Hàng', icon: Users },
-          { id: 'pets-admin', label: 'Quản Lý Thú Cưng', icon: PawPrint },
-          { id: 'services-admin', label: 'Quản Lý Dịch Vụ', icon: FileText },
-          { id: 'appointments-all', label: 'Quản Lý Ca Hẹn', icon: Calendar },
-          { id: 'catalog', label: 'KM & Nhà Cung Cấp', icon: Tag },
-          { id: 'inventory-admin', label: 'Quản Lý Kho Hàng', icon: Package },
-          { id: 'orders-admin', label: 'Quản Lý Đơn Hàng', icon: ShoppingBag },
+          { id: 'overview', label: 'Tổng Quan & Thống Kê', icon: LayoutDashboard },
+          { id: 'accounts-admin', label: 'Quản Lý Tài Khoản', icon: Users },
+          { id: 'roles-admin', label: 'Phân Quyền Người Dùng', icon: Shield },
+          { id: 'approve-proposals', label: 'Phê Duyệt Nhập Hàng', icon: CheckSquare, badgeCount: pendingProposalsCount },
+          { id: 'suppliers-admin', label: 'Quản Lý Nhà Cung Cấp', icon: Building2 },
+          { id: 'system-settings', label: 'Cấu Hình & Nhật Ký', icon: Settings },
         ];
     }
   };
 
   const navItems = getNavItems();
+  const theme = getRoleTheme(activeRole);
+  const effectiveActiveTab = navItems.some((item) => item.id === activeTab)
+    ? activeTab
+    : navItems[0]?.id;
 
   return (
-    <aside className="glass-panel" style={{ width: 260, borderRadius: 0, borderTop: 0, borderBottom: 0, borderLeft: 0, padding: '1.5rem 1rem', display: 'flex', flexDirection: 'column', gap: '0.5rem', minHeight: 'calc(100vh - 65px)' }}>
-      <div style={{ padding: '0 0.5rem 1rem 0.5rem', fontSize: '0.75rem', fontWeight: 800, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.5px' }}>
-        MENU CHỨC NĂNG ({activeRole === 'CARE_STAFF' ? 'NHÂN VIÊN SPA' : activeRole === 'WAREHOUSE_STAFF' ? 'NHÂN VIÊN KHO' : activeRole === 'ADMIN' ? 'QUẢN TRỊ ADMIN' : 'KHÁCH HÀNG'})
+    <aside className="staff-sidebar">
+      <div
+        className="staff-sidebar-header"
+        style={{
+          background: theme.badgeBg,
+          color: '#ffffff',
+          borderRadius: '14px',
+          padding: '0.9rem 1rem',
+          marginBottom: '0.75rem',
+          boxShadow: '0 6px 18px rgba(15, 23, 42, 0.12)',
+        }}
+      >
+        <div style={{ fontSize: '0.68rem', fontWeight: 700, opacity: 0.85, letterSpacing: '0.6px' }}>
+          VAI TRÒ HỆ THỐNG
+        </div>
+        <div style={{ fontSize: '0.98rem', fontWeight: 900, marginTop: '2px' }}>
+          {theme.title}
+        </div>
+        <div style={{ fontSize: '0.75rem', opacity: 0.9, marginTop: '2px' }}>
+          {theme.subtitle}
+        </div>
       </div>
+
+      <div
+        className="staff-sidebar-header"
+        style={{
+          padding: '0 0.5rem 0.35rem 0.5rem',
+          fontSize: '0.7rem',
+          fontWeight: 800,
+          color: '#94a3b8',
+          textTransform: 'uppercase',
+          letterSpacing: '0.6px',
+        }}
+      >
+        CHỨC NĂNG PHÂN QUYỀN
+      </div>
+
       {navItems.map((item) => {
         const Icon = item.icon;
-        const isActive = activeTab === item.id;
+        const isActive = effectiveActiveTab === item.id;
         return (
           <button
             key={item.id}
+            type="button"
             onClick={() => onTabChange(item.id)}
             style={{
               display: 'flex',
               alignItems: 'center',
-              gap: '0.75rem',
-              padding: '0.75rem 1rem',
-              borderRadius: 'var(--radius-sm)',
-              border: isActive ? '1px solid var(--border-glow)' : '1px solid transparent',
-              background: isActive ? 'rgba(0, 242, 254, 0.12)' : 'transparent',
-              color: isActive ? '#00f2fe' : 'var(--text-main)',
-              fontWeight: isActive ? 700 : 500,
+              justifyContent: 'space-between',
+              gap: '0.5rem',
+              padding: '0.78rem 0.95rem',
+              borderRadius: '12px',
+              border: isActive ? `1.5px solid ${theme.border}` : '1.5px solid transparent',
+              background: isActive ? theme.softBg : 'transparent',
+              color: isActive ? theme.accent : '#334155',
+              fontWeight: isActive ? 800 : 600,
               fontSize: '0.85rem',
               cursor: 'pointer',
               textAlign: 'left',
               transition: 'all 0.2s ease',
             }}
           >
-            <Icon size={17} color={isActive ? '#00f2fe' : 'var(--text-muted)'} />
-            <span>{item.label}</span>
+            <span style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', minWidth: 0 }}>
+              <Icon size={17} color={isActive ? theme.accent : '#64748b'} style={{ flexShrink: 0 }} />
+              <span>{item.label}</span>
+            </span>
+            {item.badgeCount > 0 && (
+              <span
+                style={{
+                  background: '#ef4444',
+                  color: '#ffffff',
+                  fontSize: '0.7rem',
+                  fontWeight: 800,
+                  padding: '1px 7px',
+                  borderRadius: '12px',
+                  flexShrink: 0,
+                }}
+              >
+                {item.badgeCount}
+              </span>
+            )}
           </button>
         );
       })}

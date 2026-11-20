@@ -1,5 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import ReproductionClinic from './ReproductionClinic';
+import BrandLogo from './BrandLogo';
+import HomeLandingPage from './HomeLandingPage';
 import { 
   PawPrint, Calendar, ShoppingBag, Plus, Minus, Trash2, Clock, ShieldCheck, HeartHandshake, 
   Truck, Award, Sparkles, Tag, Search, Filter, Star, ShoppingCart, CheckCircle, ArrowRight, ArrowLeft, 
@@ -8,7 +10,7 @@ import {
 } from 'lucide-react';
 import { toast, confirmModal } from './ToastNotification';
 import { CONTACT_INFO, openZaloQrModal } from '../contactConfig';
-import { HERO_IMAGES, FALLBACK_IMAGES, getUserAvatar, getPetAvatar, getServiceImage, getProductImage } from '../mediaAssets';
+import { HERO_IMAGES, FALLBACK_IMAGES, getPetAvatar, getServiceImage, getProductImage, getProductFallbackImage } from '../mediaAssets';
 
 const getCategoryVisual = (category) => {
   switch (category) {
@@ -81,34 +83,230 @@ const getCategoryVisual = (category) => {
 
 const getProductBrand = (p) => {
   if (!p || !p.name) return 'Petopia Mall';
-  if (p.name.includes('Royal Canin')) return 'Royal Canin';
-  if (p.name.includes('Orijen')) return 'Orijen Premium';
-  if (p.name.includes('Reflex')) return 'Reflex Plus';
-  if (p.name.includes('Whiskas')) return 'Whiskas';
-  if (p.name.includes('Monge')) return 'Monge Italy';
-  if (p.name.includes('Orgo')) return 'Orgo Dental';
-  if (p.name.includes('Bowwow')) return 'Bowwow Korea';
-  if (p.name.includes('Ciao')) return 'Inaba Ciao';
-  if (p.name.includes('Cature')) return 'Cature Natural';
-  if (p.name.includes('Sanicat')) return 'Sanicat';
-  if (p.name.includes('Best')) return "Cat's Best";
-  if (p.name.includes('SOS')) return 'SOS Japan';
-  if (p.name.includes('Davis')) return 'Davis USA';
-  if (p.name.includes('Bioline')) return 'Bioline Vet';
-  if (p.name.includes('Megaderm') || p.name.includes('Nootie')) return 'Megaderm';
-  if (p.name.includes('Wild Alaskan')) return 'Wild Alaskan';
-  if (p.name.includes('Bio-Cal')) return 'Bio-Pharm';
-  if (p.name.includes('Bene-Bac')) return 'Bene-Bac USA';
-  if (p.name.includes('NexGard')) return 'NexGard Spectra';
-  if (p.name.includes('Vime')) return 'Vime-Vet';
-  if (p.name.includes('TropiClean')) return 'TropiClean';
+  const n = p.name;
+  if (n.includes('Royal Canin')) return 'Royal Canin';
+  if (n.includes('6 Free Natural')) return 'ANF 6 Free';
+  if (n.includes('Predogen')) return 'Dr. Kyan Predogen';
+  if (n.includes('Precaten')) return 'Dr. Kyan Precaten';
+  if (n.includes('Touchdog')) return 'Touchdog';
+  if (n.includes('Pian Pian')) return 'Pian Pian';
+  if (n.includes('New Comfort')) return 'Flexi Germany';
+  if (n.includes('Forcan')) return 'Forcans Korea';
+  if (n.includes('Orijen')) return 'Orijen Canada';
+  if (n.includes('Whiskas')) return 'Whiskas';
+  if (n.includes('Me-O')) return 'Me-O';
+  if (n.includes('Pedigree')) return 'Pedigree';
+  if (n.includes('Orgo')) return 'Orgo Dental';
+  if (n.includes('Ciao')) return 'Inaba Ciao';
+  if (n.includes('Best')) return "Cat's Best";
+  if (n.includes('SOS')) return 'SOS Japan';
+  if (n.includes('Davis')) return 'Davis USA';
+  if (n.includes('Bioline')) return 'Bioline Germany';
+  if (n.includes('Nourse')) return 'Nourse Vet';
+  if (n.includes('Wild Salmon')) return 'Wild Alaskan';
+  if (n.includes('Bio-Calci')) return 'Bio-Pharm';
+  if (n.includes('Probiotic')) return 'Probiotic Pet';
+  if (n.includes('Frontline')) return 'Frontline Plus';
+  if (n.includes('Drontal')) return 'Drontal Elanco';
   return 'Petopia Mall';
+};
+
+const getProductRichDetails = (p) => {
+  if (!p) return { summary: '', highlights: [], usage: '', origin: 'Chính hãng nhập khẩu', targetPet: 'Chó & Mèo' };
+  const n = (p.name || '').toLowerCase();
+  const cat = p.category || '';
+
+  const targetPet =
+    n.includes('chó') && n.includes('mèo') ? 'Chó & Mèo mọi lứa tuổi'
+    : n.includes('mèo con') || n.includes('kitten') ? 'Mèo con từ 2 – 12 tháng tuổi'
+    : n.includes('mèo') || cat === 'Cát vệ sinh' ? 'Mèo mọi giống loài'
+    : n.includes('chó con') || n.includes('puppy') ? 'Chó con & cún đang phát triển'
+    : n.includes('chó') || n.includes('cún') ? 'Chó trưởng thành / giống nhỏ'
+    : 'Chó & Mèo thú cưng';
+
+  const origin =
+    n.includes('royal canin') ? 'Pháp / Hàn Quốc (Royal Canin chính hãng)'
+    : n.includes('6 free') || n.includes('forcan') ? 'Hàn Quốc (Nhập khẩu chính ngạch)'
+    : n.includes('predogen') || n.includes('precaten') ? 'Việt Nam — Công thức dinh dưỡng Dr. Kyan'
+    : n.includes('orijen') ? 'Canada (Champion Petfoods)'
+    : n.includes('flexi') || n.includes('new comfort') || n.includes('best') || n.includes('bioline') ? 'Đức (Tiêu chuẩn Châu Âu)'
+    : n.includes('davis') || n.includes('salmon') ? 'Hoa Kỳ (USA)'
+    : n.includes('frontline') ? 'Pháp (Boehringer Ingelheim)'
+    : n.includes('drontal') ? 'Đức (Elanco Animal Health)'
+    : n.includes('ciao') ? 'Nhật Bản (Inaba Foods)'
+    : 'Phân phối chính hãng bởi Petopia';
+
+  if (cat === 'Thức ăn') {
+    return {
+      summary: `${p.name} cung cấp nguồn đạm chất lượng cao, vitamin và khoáng chất cân bằng giúp thú cưng tiêu hóa tốt, hạn chế mùi phân, nuôi dưỡng da khỏe và bộ lông bóng mượt mỗi ngày.`,
+      highlights: [
+        'Hàm lượng protein & chất béo cân bằng theo khuyến nghị bác sĩ thú y.',
+        'Hỗ trợ hệ tiêu hóa khỏe mạnh nhờ chất xơ hòa tan & Prebiotic tự nhiên.',
+        'Bổ sung Omega-3, Omega-6 và kẽm giúp lông mềm mượt, giảm rụng lông.',
+        n.includes('tặng') ? 'Ưu đãi đặc biệt đi kèm quà tặng Pate dinh dưỡng chính hãng.' : 'Hạt giòn thơm tự nhiên, kích thích vị giác ngay cả với bé kén ăn.'
+      ],
+      usage: 'Cho ăn trực tiếp theo khẩu phần khuyến nghị theo cân nặng trên bao bì, luôn chuẩn bị sẵn nước sạch bên cạnh. Đóng kín miệng túi sau khi mở và bảo quản nơi khô ráo thoáng mát.',
+      origin,
+      targetPet
+    };
+  }
+  if (cat === 'Dinh dưỡng') {
+    return {
+      summary: `${p.name} là giải pháp bổ sung vi chất, canxi, đạm dễ hấp thu hoặc lợi khuẩn đường ruột thiết yếu giúp thú cưng phục hồi thể lực nhanh, tăng đề kháng và phát triển khung xương vững chắc.`,
+      highlights: [
+        'Công thức dễ hấp thu, thân thiện với hệ tiêu hóa nhạy cảm của chó mèo nhỏ.',
+        'Hỗ trợ tăng sức đề kháng, phát triển chiều cao, răng chắc và lông bóng khỏe.',
+        'Phù hợp cho bé biếng ăn, thú cưng sau sinh, sau ốm hoặc giai đoạn cai sữa.',
+        n.includes('tặng') ? 'Đi kèm quà tặng khuyến mãi hấp dẫn từ chương trình VPet\'s / Petopia.' : 'An toàn sử dụng hằng ngày theo đúng liều lượng khuyến nghị.'
+      ],
+      usage: n.includes('sữa bột')
+        ? 'Pha 1–2 muỗng sữa bột với nước ấm khoảng 40°C, khuấy tan đều và cho bé uống khi còn ấm. Đậy chặt nắp lon sau khi sử dụng.'
+        : 'Cho ăn trực tiếp hoặc trộn đều vào thức ăn hằng ngày theo liều lượng tương ứng cân nặng trên bao bì sản phẩm.',
+      origin,
+      targetPet
+    };
+  }
+  if (cat === 'Bánh thưởng') {
+    return {
+      summary: `${p.name} là món snack thưởng thơm ngon làm từ nguyên liệu chọn lọc, lý tưởng dùng khi huấn luyện, gắn kết tình cảm và hỗ trợ vệ sinh răng miệng hằng ngày.`,
+      highlights: [
+        'Nguyên liệu tự nhiên giàu đạm, không chất bảo quản độc hại hay phẩm màu tổng hợp.',
+        'Kích thích vị giác, hỗ trợ huấn luyện phản xạ và giảm stress cho thú cưng.',
+        'Giúp làm sạch mảng bám răng và giảm hôi miệng hiệu quả.',
+        'Đóng gói tiện lợi, dễ dàng mang theo khi đi dạo hoặc du lịch.'
+      ],
+      usage: 'Dùng làm phần thưởng giữa các bữa ăn chính (không thay thế hoàn toàn bữa chính). Bảo quản nơi khô ráo, tránh ánh nắng trực tiếp.',
+      origin,
+      targetPet
+    };
+  }
+  if (cat === 'Cát vệ sinh') {
+    return {
+      summary: `${p.name} có khả năng thấm hút vượt trội, vón cục nhanh trong vài giây và khóa chặt mùi hôi khó chịu, giữ không gian sống của gia đình luôn sạch sẽ và không bụi mịn.`,
+      highlights: [
+        'Thấm hút tức thì, vón cục chắc tay không vỡ vụn khi xúc dọn.',
+        'Công nghệ khử mùi tự nhiên, hạn chế tối đa mùi amoniac khó chịu.',
+        '99% không bụi, an toàn cho đường hô hấp và bàn chân nhạy cảm của mèo.',
+        'Tiết kiệm lượng cát tiêu hao, dễ phân hủy thân thiện môi trường.'
+      ],
+      usage: 'Đổ lớp cát dày khoảng 5–7cm vào khay vệ sinh. Dọn bỏ phần cát vón mỗi ngày và bổ sung thêm cát mới định kỳ.',
+      origin,
+      targetPet
+    };
+  }
+  if (cat === 'Mỹ phẩm Spa') {
+    return {
+      summary: `${p.name} là dòng sản phẩm chăm sóc lông da & vệ sinh chuyên dụng được nhiều phòng khám thú y và Spa Grooming tin dùng nhờ độ an toàn cao, dịu nhẹ và hiệu quả rõ rệt.`,
+      highlights: [
+        'Công thức pH cân bằng riêng cho làn da nhạy cảm của chó mèo, không gây kích ứng.',
+        'Hỗ trợ làm sạch sâu, khử mùi hôi lâu dài và chăm sóc bộ lông mềm mượt.',
+        'Thiết kế tiện dụng, dễ thao tác ngay tại nhà như ở Spa chuyên nghiệp.',
+        'Sản phẩm chính hãng kiểm định rõ ràng, nguồn gốc minh bạch.'
+      ],
+      usage: n.includes('lược')
+        ? 'Chải nhẹ nhàng theo chiều mọc của lông để gỡ rối và lấy lông rụng; nhấn nút bấm mặt sau để đẩy sạch lớp lông bám trên răng lược.'
+        : n.includes('dung dịch') || n.includes('xịt')
+          ? 'Lắc đều trước khi sử dụng, xịt một lượng vừa đủ vào vị trí cần hướng dẫn đi vệ sinh hoặc khu vực cần khử mùi.'
+          : 'Làm ướt toàn bộ lông bằng nước ấm, thoa đều sữa tắm và massage nhẹ 3–5 phút rồi xả sạch, sấy khô hoàn toàn.',
+      origin,
+      targetPet
+    };
+  }
+  if (cat === 'Y tế') {
+    return {
+      summary: `${p.name} là sản phẩm thú y chính hãng giúp phòng ngừa và điều trị hiệu quả ký sinh trùng (ve rận, bọ chét, giun sán), bảo vệ sức khỏe toàn diện cho thú cưng và cả gia đình.`,
+      highlights: [
+        'Hiệu quả nhanh, phổ tác động rộng giúp bảo vệ bé suốt nhiều tuần liền.',
+        'Được bác sĩ thú y khuyên dùng định kỳ trong phác đồ phòng bệnh chuẩn.',
+        'An toàn khi sử dụng đúng liều theo cân nặng thực tế của thú cưng.',
+        'Cam kết hàng chính hãng nguyên hộp, hạn sử dụng dài.'
+      ],
+      usage: 'Sử dụng đúng liều lượng theo cân nặng của chó/mèo và lặp lại định kỳ theo hướng dẫn bác sĩ thú y. Không dùng cho thú cưng dưới độ tuổi khuyến nghị trên hộp.',
+      origin,
+      targetPet
+    };
+  }
+  return {
+    summary: `${p.name} được thiết kế chắc chắn, thẩm mỹ cao và an toàn tuyệt đối cho thú cưng, mang lại trải nghiệm thoải mái khi nghỉ ngơi, vui chơi hay di chuyển cùng chủ nuôi.`,
+    highlights: [
+      'Chất liệu cao cấp, bền bỉ, không góc cạnh sắc nhọn và thân thiện với thú cưng.',
+      'Kiểu dáng hiện đại, dễ dàng vệ sinh lau rửa sau khi sử dụng.',
+      'Kích thước chuẩn, tối ưu sự thoải mái cho chó mèo trong mọi hoạt động.',
+      'Bảo hành đổi trả trong 7 ngày nếu có lỗi từ nhà sản xuất.'
+    ],
+    usage: 'Kiểm tra kích thước phù hợp với cân nặng của bé trước khi dùng. Vệ sinh định kỳ bằng khăn ẩm hoặc dung dịch vệ sinh thú cưng dịu nhẹ.',
+    origin,
+    targetPet
+  };
+};
+
+const getServiceRichDetails = (s) => {
+  if (!s) return { steps: [], prepNote: '', targetPet: 'Chó & Mèo', standard: 'Chuẩn Petopia 5★' };
+  const cat = (s.category || '').toLowerCase();
+  const n = (s.name || '').toLowerCase();
+
+  if (cat.includes('sinh sản')) {
+    return {
+      targetPet: n.includes('đực') ? 'Chó đực / Mèo đực từ 6 tháng tuổi trở lên' : 'Chó cái / Mèo cái cần khám thai, hộ sinh hoặc triệt sản',
+      standard: 'Phòng phẫu thuật vô trùng áp lực dương • Gây mê bay hơi Isoflurane',
+      steps: [
+        { title: 'Thăm khám lâm sàng & xét nghiệm tiền mê', desc: 'Bác sĩ thú y kiểm tra nhịp tim, thân nhiệt, xét nghiệm máu cơ bản và đánh giá thể trạng trước khi tiến hành.' },
+        { title: 'Chuẩn bị vô trùng & thiết bị chuyên khoa', desc: 'Sát khuẩn dụng cụ 100%, chuẩn bị máy siêu âm Doppler / hệ thống gây mê bay hơi Isoflurane và lồng ấp ICU.' },
+        { title: 'Thực hiện thủ thuật / liệu trình chuyên sâu', desc: 'Bác sĩ CKI trực tiếp thực hiện theo phác đồ an toàn tối đa, theo dõi sinh hiệu liên tục suốt quá trình.' },
+        { title: 'Hồi sức hậu phẫu & dặn dò chăm sóc tại nhà', desc: 'Chăm sóc tỉnh mê trong phòng ấm, cấp đơn thuốc hậu phẫu và hướng dẫn chế độ dinh dưỡng phục hồi.' }
+      ],
+      prepNote: n.includes('phẫu thuật') || n.includes('triệt sản') || n.includes('thiến') || n.includes('mổ đẻ')
+        ? 'Nên cho bé nhịn ăn 6–8 tiếng trước giờ phẫu thuật (vẫn có thể uống ít nước). Đưa bé trong lồng vận chuyển kín gió và báo bác sĩ nếu bé có tiền sử dị ứng thuốc.'
+        : 'Đem theo sổ tiêm phòng / ngày phối giống gần nhất để bác sĩ chẩn đoán và dự sinh chuẩn xác nhất.'
+    };
+  }
+  if (cat.includes('khách sạn')) {
+    return {
+      targetPet: 'Chó & Mèo đã tiêm phòng cơ bản, khỏe mạnh',
+      standard: 'Phòng điều hòa 24/7 • Camera trực tuyến theo dõi qua điện thoại',
+      steps: [
+        { title: 'Check-in & kiểm tra sức khỏe đầu vào', desc: 'Cân đo, kiểm tra da lông, ve rận và ghi nhận thói quen ăn uống, lịch sinh hoạt riêng của bé.' },
+        { title: 'Bố trí phòng Suite & cấp quyền xem Camera', desc: 'Sắp xếp phòng riêng sạch sẽ, khử khuẩn bằng ion âm và cấp tài khoản để chủ theo dõi bé 24/7.' },
+        { title: 'Chăm sóc ăn uống & vận động mỗi ngày', desc: 'Phục vụ 2 bữa ăn dinh dưỡng chuẩn giờ, dắt đi dạo / vui chơi sân vận động và cập nhật ảnh video hằng ngày.' },
+        { title: 'Kiểm tra bàn giao & xuất phòng', desc: 'Vệ sinh thơm tho trước khi trao trả bé kèm báo cáo ăn ngủ chi tiết trong suốt thời gian lưu trú.' }
+      ],
+      prepNote: 'Vui lòng mang theo sổ tiêm phòng (hoặc ảnh chụp), thức ăn riêng nếu bé có chế độ ăn đặc biệt và món đồ chơi quen thuộc giúp bé đỡ lạ nhà.'
+    };
+  }
+  if (cat.includes('tiêm') || cat.includes('y tế') || cat.includes('khám')) {
+    return {
+      targetPet: 'Chó & Mèo ở mọi giai đoạn phát triển',
+      standard: 'Vắc xin nhập khẩu bảo quản dây chuyền lạnh 2–8°C • Sổ theo dõi thú y',
+      steps: [
+        { title: 'Khám sàng lọc thể trạng tổng quát', desc: 'Đo thân nhiệt, nghe tim phổi, kiểm tra niêm mạc và hỏi tiền sử bệnh lý để đảm bảo bé đủ điều kiện.' },
+        { title: 'Tư vấn phác đồ & xác nhận nguồn thuốc', desc: 'Bác sĩ tư vấn loại vắc xin / liệu trình phù hợp nhất, kiểm tra tem nhãn và hạn sử dụng ngay trước mặt chủ nuôi.' },
+        { title: 'Tiến hành tiêm phòng / điều trị nhẹ nhàng', desc: 'Thực hiện thao tác chuẩn y khoa, giảm tối đa cảm giác đau và căng thẳng cho thú cưng.' },
+        { title: 'Theo dõi sau tiêm & hẹn lịch nhắc mũi', desc: 'Theo dõi phản ứng sau tiêm 15–20 phút, dán tem vào sổ tiêm chủng và lưu lịch nhắc tái khám trên hệ thống.' }
+      ],
+      prepNote: 'Không nên tắm cho bé trong vòng 5–7 ngày sau khi tiêm vắc xin. Chỉ tiêm khi bé hoàn toàn khỏe mạnh, ăn uống bình thường và đã tẩy giun trước đó.'
+    };
+  }
+  return {
+    targetPet: 'Chó & Mèo mọi giống loài (Poodle, Corgi, Phốc Sóc, Mèo Anh...)',
+    standard: 'Mỹ phẩm Spa hữu cơ dịu nhẹ • Dụng cụ khử khuẩn UV sau mỗi lượt khách',
+    steps: [
+      { title: 'Tiếp nhận & kiểm tra tình trạng lông da', desc: 'Cân đo, kiểm tra độ rối lông, tình trạng da nhạy cảm và ghi nhận yêu cầu tạo kiểu riêng từ chủ nuôi.' },
+      { title: 'Vệ sinh cơ bản toàn diện', desc: 'Nhổ lông tai, vệ sinh ráy tai, cắt mài móng tròn êm ái và vắt tuyến hôi sạch sẽ.' },
+      { title: 'Tắm dưỡng thảo dược & sấy chải tạo phồng', desc: 'Tắm 2 lần bằng sữa tắm phù hợp loại lông, massage thư giãn, sấy ấm và chải tơi bung lông.' },
+      { title: 'Cắt tỉa tạo kiểu & bàn giao Nhật ký Spa', desc: 'Groomer cắt tỉa chuẩn form, xịt dưỡng thơm lâu và lưu Nhật ký chăm sóc (Care Summary) gửi chủ nuôi.' }
+    ],
+    prepNote: 'Nên đưa bé đến trước giờ hẹn 5–10 phút và cho bé đi vệ sinh nhẹ trước khi vào Spa để bé thoải mái nhất trong suốt liệu trình.'
+  };
 };
 
 export default function CustomerPortal({ 
   currentUser,
   activeTab, 
   onTabChange,
+  selectedProductId,
+  onOpenProductDetail,
+  selectedServiceId,
+  onOpenServiceDetail,
   pets, 
   services, 
   appointments, 
@@ -127,9 +325,36 @@ export default function CustomerPortal({
 }) {
   const [showAddPet, setShowAddPet] = useState(false);
   const [showBookingModal, setShowBookingModal] = useState(false);
-  const [showCartModal, setShowCartModal] = useState(false);
-  const [selectedDetailService, setSelectedDetailService] = useState(null);
+  const [detailQuantity, setDetailQuantity] = useState(1);
   const [showProfileModal, setShowProfileModal] = useState(false);
+
+  const openCartPage = () => {
+    if (onTabChange) onTabChange('cart');
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  };
+
+  const openProductDetail = (product) => {
+    if (!product) return;
+    setDetailQuantity(1);
+    if (onOpenProductDetail) {
+      onOpenProductDetail(product);
+    } else if (onTabChange) {
+      onTabChange('product-detail');
+    }
+  };
+
+  const openServiceDetail = (service) => {
+    if (!service) return;
+    if (onOpenServiceDetail) {
+      onOpenServiceDetail(service);
+    } else if (onTabChange) {
+      onTabChange('service-detail');
+    }
+  };
+
+  useEffect(() => {
+    setDetailQuantity(1);
+  }, [selectedProductId]);
   const [profileForm, setProfileForm] = useState({
     fullName: currentUser?.fullName || '',
     phone: currentUser?.phone || '',
@@ -163,14 +388,21 @@ export default function CustomerPortal({
   const [checkoutForm, setCheckoutForm] = useState({
     recipientName: currentUser?.fullName || '',
     recipientPhone: currentUser?.phone || '',
-    deliveryAddress: 'Số 123 Đường Nguyễn Huệ, Phường Bến Nghé, Quận 1, TP. Hồ Chí Minh',
+    deliveryAddress: '',
     deliveryNotes: '',
     shippingMethod: 'STANDARD', // 'STANDARD' (0 đ) or 'EXPRESS' (30.000 đ)
     paymentMethod: 'COD', // 'COD', 'VIETQR', 'MOMO'
   });
 
-  // Unique Order Code for VietQR & tracking
-  const [tempOrderCode] = useState(() => 'ORD-' + Math.floor(100000 + Math.random() * 900000));
+  // Unique Order Code for VietQR/MoMo & Order Completion Receipt (Step 3)
+  const [tempOrderCode, setTempOrderCode] = useState(() => 'ORD-' + Math.floor(100000 + Math.random() * 900000));
+  const [completedOrderReceipt, setCompletedOrderReceipt] = useState(null);
+
+  useEffect(() => {
+    if (cart.length > 0 && completedOrderReceipt) {
+      setCompletedOrderReceipt(null);
+    }
+  }, [cart.length]);
 
   useEffect(() => {
     if (currentUser) {
@@ -268,7 +500,7 @@ export default function CustomerPortal({
     }
     toast.success(`Đã thêm "${product.name}" vào giỏ hàng Petopia!`, '🛒 Đã Thêm Giỏ Hàng', {
       actionText: 'Xem Giỏ Hàng',
-      onAction: () => setShowCartModal(true)
+      onAction: () => openCartPage()
     });
     return true;
   };
@@ -297,21 +529,20 @@ export default function CustomerPortal({
     }
   };
 
-  const handleClearCart = () => {
+  const handleClearCart = async () => {
     if (cart.length === 0) return;
-    confirmModal({
-      title: 'Dọn Sạch Giỏ Hàng?',
-      message: 'Bạn có chắc chắn muốn xóa toàn bộ sản phẩm khỏi giỏ hàng?',
-      confirmText: 'Xóa Toàn Bộ',
-      confirmColor: 'danger',
-      onConfirm: () => {
-        setCart([]);
-        toast.info('Đã xóa tất cả sản phẩm trong giỏ hàng.', 'Giỏ Hàng');
-      }
-    });
+    const confirmed = await confirmModal(
+      'Bạn có chắc chắn muốn xóa toàn bộ sản phẩm khỏi giỏ hàng?',
+      'Dọn Sạch Giỏ Hàng?',
+      { type: 'danger', confirmText: 'Xóa Toàn Bộ', cancelText: 'Hủy' }
+    );
+    if (confirmed) {
+      setCart([]);
+      toast.info('Đã xóa tất cả sản phẩm trong giỏ hàng.', 'Giỏ Hàng');
+    }
   };
 
-  // Proceed from Cart Modal to Dedicated Checkout Page
+  // Proceed from Cart Page to Dedicated Checkout Page
   const handleProceedToCheckout = () => {
     if (cart.length === 0) {
       toast.warning('Giỏ hàng của bạn đang trống! Hãy chọn sản phẩm trước khi thanh toán.', 'Giỏ Hàng Rỗng');
@@ -325,7 +556,6 @@ export default function CustomerPortal({
       if (onOpenLogin) onOpenLogin();
       return;
     }
-    setShowCartModal(false);
     onTabChange('checkout');
     window.scrollTo({ top: 0, behavior: 'smooth' });
     toast.info('Đã chuyển đến trang thanh toán. Vui lòng kiểm tra thông tin và đặt hàng!', 'Trang Thanh Toán');
@@ -383,28 +613,46 @@ export default function CustomerPortal({
     }
 
     const orderId = tempOrderCode;
-
-    onCheckoutOrder(cart, grandTotal, {
+    const orderedItemsSnapshot = cart.map(item => ({ ...item }));
+    const receiptSummary = {
       orderId,
+      items: orderedItemsSnapshot,
+      subtotal: cartSubtotal,
+      discountPercent,
+      discountAmount,
+      shippingFee,
+      grandTotal,
       recipientName: checkoutForm.recipientName.trim(),
       recipientPhone: checkoutForm.recipientPhone.trim(),
       deliveryAddress: checkoutForm.deliveryAddress.trim(),
       deliveryNotes: checkoutForm.deliveryNotes.trim(),
       shippingMethod: checkoutForm.shippingMethod,
-      paymentMethod: checkoutForm.paymentMethod
+      paymentMethod: checkoutForm.paymentMethod,
+      createdAt: new Date().toLocaleString('vi-VN', { hour: '2-digit', minute: '2-digit', day: '2-digit', month: '2-digit', year: 'numeric' })
+    };
+
+    onCheckoutOrder(cart, grandTotal, {
+      orderId,
+      recipientName: receiptSummary.recipientName,
+      recipientPhone: receiptSummary.recipientPhone,
+      deliveryAddress: receiptSummary.deliveryAddress,
+      deliveryNotes: receiptSummary.deliveryNotes,
+      shippingMethod: receiptSummary.shippingMethod,
+      paymentMethod: receiptSummary.paymentMethod
     });
 
+    setCompletedOrderReceipt(receiptSummary);
     setCart([]);
-    setShowCartModal(false);
+    setDiscountPercent(0);
+    setPromoCode('');
+    setTempOrderCode('ORD-' + Math.floor(100000 + Math.random() * 900000));
 
     toast.success(
-      `Đặt hàng thành công mã đơn ${orderId}! Tổng thanh toán: ${grandTotal.toLocaleString('vi-VN')} đ. Đơn hàng đã được chuyển sang bộ phận kho chuẩn bị đóng gói.`,
+      `Đặt hàng thành công mã đơn ${orderId}! Tổng thanh toán: ${grandTotal.toLocaleString('vi-VN')} đ.`,
       '🎉 ĐẶT HÀNG THÀNH CÔNG',
       { duration: 6000 }
     );
 
-    // Redirect to history tab so user immediately sees their order
-    onTabChange('history');
     window.scrollTo({ top: 0, behavior: 'smooth' });
   };
 
@@ -437,247 +685,21 @@ export default function CustomerPortal({
       
       {/* 1. TRANG CHỦ PETOPIA LANDING PAGE (home tab) */}
       {(activeTab === 'home' || !activeTab) && (
-        <div style={{ display: 'flex', flexDirection: 'column', gap: '2.5rem' }}>
-          
-          {/* HERO BANNER CARDS */}
-          <div className="grid-2">
-            <div className="hero-card hero-card-orange">
-              <div>
-                <span className="badge badge-coral" style={{ marginBottom: '0.75rem', background: '#ff6b35', color: '#fff', fontSize: '0.8rem' }}>
-                  🔥 SIÊU ƯU ĐÃI THÁNG 8
-                </span>
-                <h2 style={{ fontSize: '1.6rem', fontWeight: 800, marginBottom: '0.6rem', lineHeight: '1.3' }}>
-                  Chăm Sóc & Spa Grooming Thú Cưng Toàn Diện
-                </h2>
-                <p style={{ fontSize: '0.88rem', color: 'var(--text-secondary)', marginBottom: '1.4rem' }}>
-                  Giảm ngay 15% cho tất cả gói tắm cắt tỉa, tạo kiểu & khám sức khỏe định kỳ cho bé cưng.
-                </p>
-                <div style={{ display: 'flex', gap: '0.85rem' }}>
-                  <button className="btn btn-coral" onClick={() => onTabChange('booking')}>
-                    <Calendar size={16} /> Đặt Lịch Ngay
-                  </button>
-                  <button className="btn btn-secondary" onClick={() => onTabChange('shop')}>
-                    Vào Cửa Hàng
-                  </button>
-                </div>
-              </div>
-              <img
-                src={HERO_IMAGES.spaBanner}
-                alt="Chăm sóc và Spa Grooming thú cưng"
-                className="hero-photo-thumb"
-                onError={(e) => { e.currentTarget.src = FALLBACK_IMAGES.service; }}
-              />
-            </div>
-
-            <div className="hero-card hero-card-cyan">
-              <div>
-                <span className="badge badge-info" style={{ marginBottom: '0.75rem', fontSize: '0.8rem' }}>
-                  ⚡ GIAO NHANH 2H TOÀN QUỐC
-                </span>
-                <h2 style={{ fontSize: '1.6rem', fontWeight: 800, marginBottom: '0.6rem', lineHeight: '1.3' }}>
-                  Thức Ăn Dinh Dưỡng & Phụ Kiện Nhập Khẩu
-                </h2>
-                <p style={{ fontSize: '0.88rem', color: 'var(--text-secondary)', marginBottom: '1.4rem' }}>
-                  Sản phẩm chính hãng Royal Canin, Cát đậu nành Tofu 6L khử mùi. Cam kết 100% chính hãng.
-                </p>
-                <button className="btn btn-cyan" onClick={() => onTabChange('shop')}>
-                  <ShoppingBag size={16} /> Khám Phá Cửa Hàng
-                </button>
-              </div>
-              <img
-                src={HERO_IMAGES.shopBanner}
-                alt="Thức ăn dinh dưỡng và phụ kiện thú cưng"
-                className="hero-photo-thumb"
-                onError={(e) => { e.currentTarget.src = FALLBACK_IMAGES.pet; }}
-              />
-            </div>
-          </div>
-
-          {/* BANNER CHUYÊN KHOA SINH SẢN VPET'S */}
-          <div style={{
-            background: 'linear-gradient(135deg, #fff1f2 0%, #fff7ed 50%, #fed7aa 100%)',
-            borderRadius: '20px',
-            padding: '1.5rem 2rem',
-            border: '1.5px solid #fed7aa',
-            display: 'flex',
-            justifyContent: 'space-between',
-            alignItems: 'center',
-            flexWrap: 'wrap',
-            gap: '1.25rem',
-            boxShadow: '0 6px 22px rgba(234, 88, 12, 0.08)'
-          }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '1.25rem' }}>
-              <img
-                src={HERO_IMAGES.reproBanner}
-                alt="Khoa Sinh Sản Thú Cưng"
-                onError={(e) => { e.currentTarget.src = FALLBACK_IMAGES.service; }}
-                style={{ 
-                  width: 68, 
-                  height: 68, 
-                  borderRadius: '16px', 
-                  objectFit: 'cover',
-                  flexShrink: 0,
-                  border: '2px solid #ffffff',
-                  boxShadow: '0 6px 18px rgba(234, 88, 12, 0.25)'
-                }}
-              />
-              <div>
-                <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '2px' }}>
-                  <span className="badge badge-danger" style={{ fontSize: '0.72rem' }}>HOT • CHUYÊN KHOA VẬT NUÔI</span>
-                  <span style={{ fontSize: '0.78rem', color: '#9a3412', fontWeight: 700 }}>THEO TIÊU CHUẨN BỆNH VIỆN THÚ Y VPET'S</span>
-                </div>
-                <h3 style={{ fontSize: '1.25rem', fontWeight: 900, color: '#0f172a' }}>
-                  Khoa Sinh Sản & Hộ Sinh Thú Cưng 24/7
-                </h3>
-                <p style={{ fontSize: '0.85rem', color: '#475569', margin: 0 }}>
-                  Siêu âm thai Doppler, đỡ đẻ & mổ đẻ cấp cứu khẩn cấp, triệt sản Minilap vi phẫu không để sẹo chỉ từ 280.000đ.
-                </p>
-              </div>
-            </div>
-            <div style={{ display: 'flex', gap: '0.75rem' }}>
-              <button className="btn btn-coral" style={{ padding: '0.65rem 1.35rem', fontSize: '0.88rem' }} onClick={() => onTabChange('reproduction')}>
-                Khám Phá Khoa Sinh Sản ➔
-              </button>
-            </div>
-          </div>
-
-          {/* DỊCH VỤ SPA NỔI BẬT SHOWCASE */}
-          <div className="glass-panel" style={{ padding: '2rem' }}>
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.5rem' }}>
-              <div>
-                <h3 style={{ fontSize: '1.4rem', fontWeight: 800, display: 'flex', alignItems: 'center', gap: '8px' }}>
-                  <Sparkles color="#ff8e53" size={22} /> Dịch Vụ Spa & Khám Thú Y Đẳng Cấp 5★
-                </h3>
-                <p style={{ fontSize: '0.85rem', color: 'var(--text-muted)' }}>Minh bạch giá niêm yết, đội ngũ bác sĩ & kĩ thuật viên giàu kinh nghiệm</p>
-              </div>
-              <button className="btn btn-secondary" onClick={() => onTabChange('booking')}>
-                Xem Tất Cả Dịch Vụ <ArrowRight size={16} />
-              </button>
-            </div>
-
-            <div className="grid-3">
-              {services.slice(0, 3).map(s => (
-                <div key={s.id} className="glass-card" style={{ display: 'flex', flexDirection: 'column', justifyContent: 'space-between', padding: 0, overflow: 'hidden' }}>
-                  <div>
-                    <div style={{ position: 'relative', height: 170, overflow: 'hidden', background: '#f1f5f9' }}>
-                      <img
-                        src={getServiceImage(s)}
-                        alt={s.name}
-                        className="media-card-img"
-                        loading="lazy"
-                        onError={(e) => { e.currentTarget.src = FALLBACK_IMAGES.service; }}
-                      />
-                      <span className="badge badge-info" style={{ position: 'absolute', top: 10, left: 10, background: 'rgba(255,255,255,0.94)', backdropFilter: 'blur(4px)' }}>
-                        {s.category}
-                      </span>
-                      <span style={{ position: 'absolute', bottom: 10, right: 10, fontSize: '0.74rem', fontWeight: 700, color: '#0f172a', background: 'rgba(255,255,255,0.92)', padding: '3px 9px', borderRadius: '12px', display: 'flex', alignItems: 'center', gap: '4px' }}>
-                        <Clock size={12} color="#ea580c" /> {s.durationMinutes} phút
-                      </span>
-                    </div>
-                    <div style={{ padding: '1.15rem 1.3rem 0 1.3rem' }}>
-                      <h4 style={{ fontSize: '1.1rem', fontWeight: 700, margin: '0.2rem 0 0.5rem 0', lineHeight: 1.4 }}>{s.name}</h4>
-                      <p style={{ fontSize: '0.84rem', color: 'var(--text-secondary)', marginBottom: '1rem', lineHeight: '1.5' }}>{s.description}</p>
-                    </div>
-                  </div>
-                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '0.95rem 1.3rem 1.25rem 1.3rem', borderTop: '1px solid var(--border-light)' }}>
-                    <strong style={{ fontSize: '1.25rem', fontWeight: 800, color: '#ea580c' }}>{s.price.toLocaleString('vi-VN')} đ</strong>
-                    <button className="btn btn-coral" style={{ padding: '0.5rem 1rem', fontSize: '0.85rem' }} onClick={() => {
-                      setBookingForm(prev => ({ ...prev, serviceId: s.id }));
-                      setShowBookingModal(true);
-                    }}>
-                      Đặt Lịch
-                    </button>
-                  </div>
-                </div>
-              ))}
-            </div>
-          </div>
-
-          {/* SẢN PHẨM BÁN CHẠY SHOWCASE */}
-          <div className="glass-panel" style={{ padding: '2rem' }}>
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.5rem' }}>
-              <div>
-                <h3 style={{ fontSize: '1.4rem', fontWeight: 800, display: 'flex', alignItems: 'center', gap: '8px' }}>
-                  <ShoppingBag color="#38bdf8" size={22} /> Sản Phẩm Pet Shop Được Yêu Thích Nhất
-                </h3>
-                <p style={{ fontSize: '0.85rem', color: 'var(--text-muted)' }}>Thức ăn hạt, cát đậu nành và mỹ phẩm dưỡng lông được chọn lọc</p>
-              </div>
-              <button className="btn btn-secondary" onClick={() => onTabChange('shop')}>
-                Vào Cửa Hàng <ArrowRight size={16} />
-              </button>
-            </div>
-
-            <div className="grid-3">
-              {products.slice(0, 3).map(p => (
-                <div key={p.id} className="glass-card" style={{ display: 'flex', flexDirection: 'column', justifyContent: 'space-between' }}>
-                  <div>
-                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.5rem' }}>
-                      <div style={{ display: 'flex', gap: '0.4rem', alignItems: 'center' }}>
-                        <span className="badge badge-coral" style={{ background: '#ff6b35', color: '#fff', fontSize: '0.72rem' }}>GIẢM 15%</span>
-                        <span className="badge" style={{ background: '#f1f5f9', color: '#475569', fontSize: '0.72rem', fontWeight: 700, border: '1px solid #e2e8f0', borderRadius: '12px', padding: '2px 8px' }}>{p.category}</span>
-                      </div>
-                      <span className="badge badge-success">Còn {p.currentStock} sp</span>
-                    </div>
-                    <div style={{ background: '#f8fafc', height: 170, borderRadius: '14px', overflow: 'hidden', margin: '0.5rem 0 0.75rem 0', border: '1px solid #e2e8f0', position: 'relative' }}>
-                      <img
-                        src={getProductImage(p)}
-                        alt={p.name}
-                        className="media-card-img"
-                        loading="lazy"
-                        onError={(e) => { e.currentTarget.src = FALLBACK_IMAGES.product; }}
-                      />
-                    </div>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '4px', fontSize: '0.75rem', color: '#fbbf24', margin: '4px 0' }}>
-                      <Star size={12} fill="#fbbf24" /> <Star size={12} fill="#fbbf24" /> <Star size={12} fill="#fbbf24" /> <Star size={12} fill="#fbbf24" /> <Star size={12} fill="#fbbf24" />
-                      <span style={{ color: 'var(--text-muted)', marginLeft: '4px' }}>(4.9/5 • 42 đánh giá)</span>
-                    </div>
-                    <h4 style={{ fontSize: '1.05rem', fontWeight: 700, margin: '0.3rem 0' }}>{p.name}</h4>
-                    <div style={{ fontSize: '0.78rem', color: 'var(--text-muted)' }}>Mã SKU: {p.sku}</div>
-                  </div>
-                  <div>
-                    <div style={{ display: 'flex', alignItems: 'baseline', gap: '0.5rem', margin: '0.75rem 0' }}>
-                      <span style={{ fontSize: '1.3rem', fontWeight: 800, color: '#34d399' }}>
-                        {p.unitPrice.toLocaleString('vi-VN')} đ
-                      </span>
-                      <span style={{ fontSize: '0.82rem', color: 'var(--text-muted)', textDecoration: 'line-through' }}>
-                        {Math.round(p.unitPrice * 1.15).toLocaleString('vi-VN')} đ
-                      </span>
-                    </div>
-                    <button className="btn btn-emerald" style={{ width: '100%', padding: '0.55rem' }} onClick={() => handleAddToCart(p)}>
-                      <ShoppingCart size={16} /> Thêm Giỏ Hàng
-                    </button>
-                  </div>
-                </div>
-              ))}
-            </div>
-          </div>
-
-          {/* PETOPIA TRUST INDICATORS */}
-          <div className="glass-panel" style={{ padding: '2rem' }}>
-            <div className="grid-4" style={{ textAlign: 'center' }}>
-              <div>
-                <Award size={30} color="#ff8e53" style={{ marginBottom: '8px' }} />
-                <h4 style={{ fontSize: '1rem', fontWeight: 700 }}>4.9 / 5 Hài Lòng</h4>
-                <p style={{ fontSize: '0.78rem', color: 'var(--text-muted)', marginTop: '4px' }}>Đánh giá tích cực từ hơn 5.000+ chủ nuôi</p>
-              </div>
-              <div>
-                <Clock size={30} color="#38bdf8" style={{ marginBottom: '8px' }} />
-                <h4 style={{ fontSize: '1rem', fontWeight: 700 }}>24/7 Đặt Lịch Online</h4>
-                <p style={{ fontSize: '0.78rem', color: 'var(--text-muted)', marginTop: '4px' }}>Khóa trùng slot giờ real-time linh hoạt</p>
-              </div>
-              <div>
-                <ShieldCheck size={30} color="#34d399" style={{ marginBottom: '8px' }} />
-                <h4 style={{ fontSize: '1rem', fontWeight: 700 }}>100% Giá Công Khai</h4>
-                <p style={{ fontSize: '0.78rem', color: 'var(--text-muted)', marginTop: '4px' }}>Minh bạch chi phí dịch vụ & vật phẩm</p>
-              </div>
-              <div>
-                <Truck size={30} color="#a855f7" style={{ marginBottom: '8px' }} />
-                <h4 style={{ fontSize: '1rem', fontWeight: 700 }}>Giao Hàng Nhanh 2H</h4>
-                <p style={{ fontSize: '0.78rem', color: 'var(--text-muted)', marginTop: '4px' }}>Miễn phí vận chuyển cho đơn từ 500.000đ</p>
-              </div>
-            </div>
-          </div>
-        </div>
+        <HomeLandingPage
+          services={services}
+          products={products}
+          onTabChange={onTabChange}
+          setSelectedServiceCategory={setSelectedServiceCategory}
+          setSelectedCategory={setSelectedCategory}
+          setSearchQuery={setSearchQuery}
+          openServiceDetail={openServiceDetail}
+          openProductDetail={openProductDetail}
+          handleAddToCart={handleAddToCart}
+          handleCopyText={handleCopyText}
+          setBookingForm={setBookingForm}
+          setShowBookingModal={setShowBookingModal}
+          getProductBrand={getProductBrand}
+        />
       )}
 
       {/* 2. THÚ CƯNG CỦA TÔI TAB (pets tab) */}
@@ -685,7 +707,7 @@ export default function CustomerPortal({
         <div>
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.5rem' }}>
             <div>
-              <h2 style={{ fontSize: '1.5rem', fontWeight: 800 }}>Quản Lý Hồ Sơ Thú Cưng</h2>
+              <h1 style={{ fontSize: '1.5rem', fontWeight: 800 }}>Quản Lý Hồ Sơ Thú Cưng</h1>
               <p style={{ fontSize: '0.85rem', color: 'var(--text-muted)' }}>Theo dõi giống, tuổi, cân nặng và tiền sử y tế của bé</p>
             </div>
             {currentUser && (
@@ -762,7 +784,7 @@ export default function CustomerPortal({
         <div>
           <div style={{ marginBottom: '1.5rem', display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end', flexWrap: 'wrap', gap: '1rem' }}>
             <div>
-              <h2 style={{ fontSize: '1.5rem', fontWeight: 800 }}>Dịch Vụ Spa, Lưu Trú & Khám Thú Y Petopia</h2>
+              <h1 style={{ fontSize: '1.5rem', fontWeight: 800 }}>Dịch Vụ Spa, Lưu Trú &amp; Khám Thú Y Petopia</h1>
               <p style={{ fontSize: '0.85rem', color: 'var(--text-muted)' }}>Xem bảng giá công khai, chọn khung giờ và đặt lịch hẹn giữ chỗ không trùng slot</p>
             </div>
             <span style={{ fontSize: '0.85rem', color: '#ff6b35', fontWeight: 700, background: '#fff7ed', padding: '4px 12px', borderRadius: '14px', border: '1px solid #ffedd5' }}>
@@ -806,7 +828,11 @@ export default function CustomerPortal({
             {filteredServices.map((s) => (
               <div key={s.id} className="glass-panel glass-card" style={{ padding: 0, display: 'flex', flexDirection: 'column', justifyContent: 'space-between', borderRadius: '18px', overflow: 'hidden', border: '1px solid var(--border-light)' }}>
                 <div>
-                  <div style={{ position: 'relative', height: 195, overflow: 'hidden', background: '#f1f5f9' }}>
+                  <div
+                    onClick={() => openServiceDetail(s)}
+                    title="Bấm để xem chi tiết dịch vụ"
+                    style={{ position: 'relative', height: 195, overflow: 'hidden', background: '#f1f5f9', cursor: 'pointer' }}
+                  >
                     <img
                       src={getServiceImage(s)}
                       alt={s.name}
@@ -825,7 +851,12 @@ export default function CustomerPortal({
                     </span>
                   </div>
                   <div style={{ padding: '1.35rem 1.5rem 0 1.5rem' }}>
-                    <h3 style={{ fontSize: '1.18rem', fontWeight: 800, marginBottom: '0.55rem', color: '#0f172a', lineHeight: 1.4 }}>{s.name}</h3>
+                    <h3
+                      onClick={() => openServiceDetail(s)}
+                      style={{ fontSize: '1.18rem', fontWeight: 800, marginBottom: '0.55rem', color: '#0f172a', lineHeight: 1.4, cursor: 'pointer' }}
+                    >
+                      {s.name}
+                    </h3>
                     <p style={{ fontSize: '0.86rem', color: 'var(--text-secondary)', marginBottom: '1.1rem', lineHeight: '1.55' }}>{s.description}</p>
                   </div>
                 </div>
@@ -834,10 +865,10 @@ export default function CustomerPortal({
                     <Clock size={14} color="#64748b" /> Thời gian: {s.durationMinutes >= 60 ? `${Math.floor(s.durationMinutes / 60)}h${s.durationMinutes % 60 ? ` ${s.durationMinutes % 60}p` : ''}` : `${s.durationMinutes} phút`}
                   </span>
                   <div style={{ display: 'flex', gap: '0.5rem' }}>
-                    <button className="btn btn-secondary" style={{ padding: '0.45rem 0.8rem', fontSize: '0.8rem' }} onClick={() => setSelectedDetailService(s)}>
+                    <button type="button" className="btn btn-secondary" style={{ padding: '0.45rem 0.8rem', fontSize: '0.8rem' }} onClick={() => openServiceDetail(s)}>
                       Xem Chi Tiết
                     </button>
-                    <button className="btn btn-coral" onClick={() => {
+                    <button type="button" className="btn btn-coral" onClick={() => {
                       if (!currentUser) {
                         toast.warning('Vui lòng đăng nhập để tiến hành đặt lịch dịch vụ!', 'Yêu Cầu Đăng Nhập', {
                           actionText: '🔐 Đăng Nhập Ngay',
@@ -858,6 +889,295 @@ export default function CustomerPortal({
           </div>
         </div>
       )}
+
+      {/* 3.5. TRANG CHI TIẾT DỊCH VỤ RIÊNG (/dich-vu/:id) */}
+      {activeTab === 'service-detail' && (() => {
+        const ds = services.find(item => item.id === selectedServiceId) || services[0];
+        if (!ds) {
+          return (
+            <div className="glass-panel" style={{ padding: '3rem', textAlign: 'center' }}>
+              <h1 style={{ fontSize: '1.4rem', fontWeight: 800, marginBottom: '0.75rem' }}>Không tìm thấy dịch vụ</h1>
+              <button type="button" className="btn btn-coral" onClick={() => onTabChange('booking')}>
+                <ArrowLeft size={16} /> Quay Lại Danh Sách Dịch Vụ
+              </button>
+            </div>
+          );
+        }
+
+        const svcInfo = getServiceRichDetails(ds);
+        const durationText = ds.durationMinutes >= 60
+          ? `${Math.floor(ds.durationMinutes / 60)} giờ${ds.durationMinutes % 60 ? ` ${ds.durationMinutes % 60} phút` : ''}`
+          : `${ds.durationMinutes} phút`;
+        const relatedServices = services
+          .filter(item => item.id !== ds.id && item.category === ds.category)
+          .concat(services.filter(item => item.id !== ds.id && item.category !== ds.category))
+          .slice(0, 3);
+
+        return (
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '1.75rem' }}>
+            {/* Top Breadcrumb & Back Bar */}
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '0.75rem', background: '#ffffff', padding: '0.9rem 1.35rem', borderRadius: '16px', border: '1px solid var(--border-light)', boxShadow: '0 2px 10px rgba(0,0,0,0.03)' }}>
+              <nav aria-label="Breadcrumb" style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap', fontSize: '0.84rem', color: '#64748b' }}>
+                <a
+                  href="/"
+                  onClick={(e) => { e.preventDefault(); onTabChange('home'); }}
+                  style={{ color: '#475569', textDecoration: 'none', fontWeight: 600 }}
+                >
+                  Trang Chủ
+                </a>
+                <span>/</span>
+                <a
+                  href="/dich-vu-spa"
+                  onClick={(e) => { e.preventDefault(); onTabChange('booking'); }}
+                  style={{ color: '#475569', textDecoration: 'none', fontWeight: 600 }}
+                >
+                  Dịch Vụ Spa &amp; Thú Y
+                </a>
+                <span>/</span>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setSelectedServiceCategory(ds.category);
+                    onTabChange('booking');
+                  }}
+                  style={{ background: 'none', border: 'none', color: '#ea580c', fontWeight: 700, cursor: 'pointer', padding: 0, fontSize: '0.84rem' }}
+                >
+                  {ds.category}
+                </button>
+                <span>/</span>
+                <span style={{ color: '#0f172a', fontWeight: 700 }}>{ds.name}</span>
+              </nav>
+
+              <button
+                type="button"
+                className="btn btn-secondary"
+                style={{ padding: '0.45rem 0.95rem', fontSize: '0.82rem', borderRadius: '10px' }}
+                onClick={() => onTabChange('booking')}
+              >
+                <ArrowLeft size={15} /> Quay Lại Danh Sách Dịch Vụ
+              </button>
+            </div>
+
+            {/* Main 2-Column Service Hero */}
+            <article className="glass-panel" style={{ padding: '2rem', borderRadius: '22px' }}>
+              <div className="grid-2" style={{ gap: '2.25rem', alignItems: 'start' }}>
+                {/* Left Column: Large Service Image + Trust Bar */}
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+                  <div style={{ position: 'relative', height: 390, background: '#f8fafc', borderRadius: '20px', border: '1px solid #e2e8f0', overflow: 'hidden', boxShadow: '0 8px 28px rgba(15, 23, 42, 0.08)' }}>
+                    <img
+                      src={getServiceImage(ds)}
+                      alt={ds.name}
+                      style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }}
+                      onError={(e) => { e.currentTarget.src = FALLBACK_IMAGES.service; }}
+                    />
+                    <span className="badge" style={{ position: 'absolute', top: 14, left: 14, background: 'rgba(255,255,255,0.95)', color: '#0f172a', fontWeight: 800, fontSize: '0.8rem', padding: '5px 13px', borderRadius: '20px', boxShadow: '0 4px 12px rgba(0,0,0,0.12)' }}>
+                      {ds.category}
+                    </span>
+                    <span style={{ position: 'absolute', bottom: 14, right: 14, background: 'rgba(15,23,42,0.84)', color: '#ffffff', fontSize: '0.84rem', fontWeight: 800, padding: '6px 13px', borderRadius: '12px', display: 'inline-flex', alignItems: 'center', gap: '5px', backdropFilter: 'blur(4px)' }}>
+                      <Clock size={14} color="#fb923c" /> {durationText}
+                    </span>
+                  </div>
+
+                  <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '0.75rem' }}>
+                    <div style={{ background: '#f0fdf4', border: '1px solid #bbf7d0', borderRadius: '14px', padding: '0.75rem 0.5rem', textAlign: 'center', fontSize: '0.76rem', fontWeight: 700, color: '#15803d' }}>
+                      <ShieldCheck size={18} style={{ display: 'block', margin: '0 auto 5px' }} /> Vô Trùng 100%
+                    </div>
+                    <div style={{ background: '#fff7ed', border: '1px solid #fed7aa', borderRadius: '14px', padding: '0.75rem 0.5rem', textAlign: 'center', fontSize: '0.76rem', fontWeight: 700, color: '#c2410c' }}>
+                      <Award size={18} style={{ display: 'block', margin: '0 auto 5px' }} /> Bác Sĩ &amp; Master
+                    </div>
+                    <div style={{ background: '#f0f9ff', border: '1px solid #bae6fd', borderRadius: '14px', padding: '0.75rem 0.5rem', textAlign: 'center', fontSize: '0.76rem', fontWeight: 700, color: '#0369a1' }}>
+                      <Clock size={18} style={{ display: 'block', margin: '0 auto 5px' }} /> Khóa Slot Đúng Giờ
+                    </div>
+                  </div>
+                </div>
+
+                {/* Right Column: Title, Price, Specs & Book CTA */}
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
+                    <span className="badge badge-info">{ds.category}</span>
+                    <span className="badge badge-success">✓ Đang tiếp nhận đặt lịch</span>
+                  </div>
+
+                  <h1 style={{ fontSize: '1.72rem', fontWeight: 900, color: '#0f172a', lineHeight: 1.32, margin: 0 }}>
+                    {ds.name}
+                  </h1>
+
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '0.85rem', flexWrap: 'wrap', fontSize: '0.86rem' }}>
+                    <span style={{ display: 'inline-flex', alignItems: 'center', gap: '3px', color: '#d97706', fontWeight: 800 }}>
+                      <Star size={15} fill="#f59e0b" color="#f59e0b" />
+                      <Star size={15} fill="#f59e0b" color="#f59e0b" />
+                      <Star size={15} fill="#f59e0b" color="#f59e0b" />
+                      <Star size={15} fill="#f59e0b" color="#f59e0b" />
+                      <Star size={15} fill="#f59e0b" color="#f59e0b" />
+                      <span style={{ marginLeft: '4px' }}>4.9 / 5</span>
+                    </span>
+                    <span style={{ color: '#cbd5e1' }}>|</span>
+                    <span style={{ color: '#475569' }}>100% giá công khai minh bạch</span>
+                  </div>
+
+                  <p style={{ fontSize: '0.94rem', color: '#334155', lineHeight: 1.65, margin: 0 }}>
+                    {ds.description}
+                  </p>
+
+                  {/* Transparent Price Box */}
+                  <div style={{ background: 'linear-gradient(135deg, #fff7ed 0%, #ffedd5 100%)', border: '1.5px solid #fed7aa', borderRadius: '18px', padding: '1.15rem 1.35rem' }}>
+                    <div style={{ fontSize: '0.78rem', fontWeight: 700, color: '#9a3412', marginBottom: '2px' }}>
+                      GIÁ NIÊM YẾT TRỌN GÓI
+                    </div>
+                    <div style={{ display: 'flex', alignItems: 'baseline', gap: '0.75rem', flexWrap: 'wrap' }}>
+                      <strong style={{ fontSize: '2.1rem', fontWeight: 900, color: '#ea580c' }}>
+                        {Number(ds.price).toLocaleString('vi-VN')} đ
+                      </strong>
+                      <span style={{ fontSize: '0.84rem', color: '#059669', fontWeight: 700 }}>
+                        • Không phát sinh chi phí ẩn
+                      </span>
+                    </div>
+                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '0.75rem', marginTop: '0.75rem', paddingTop: '0.75rem', borderTop: '1px dashed #fdba74', flexWrap: 'wrap' }}>
+                      <span style={{ fontSize: '0.82rem', color: '#9a3412', fontWeight: 700 }}>
+                        🎁 Giảm 10% khi đặt lịch online lần đầu: <strong>SPA10OFF</strong>
+                      </span>
+                      <button
+                        type="button"
+                        onClick={() => handleCopyText('SPA10OFF', 'Mã Giảm Giá')}
+                        style={{ background: '#ffffff', color: '#ea580c', border: '1px solid #fdba74', borderRadius: '8px', padding: '3px 10px', fontSize: '0.76rem', fontWeight: 800, cursor: 'pointer' }}
+                      >
+                        Sao Chép Mã
+                      </button>
+                    </div>
+                  </div>
+
+                  {/* Specs Card */}
+                  <div style={{ background: '#f8fafc', border: '1px solid #e2e8f0', borderRadius: '16px', padding: '1rem 1.15rem', fontSize: '0.86rem', display: 'flex', flexDirection: 'column', gap: '0.55rem' }}>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', gap: '1rem' }}>
+                      <span style={{ color: '#64748b' }}>Thời lượng dự kiến:</span>
+                      <strong style={{ color: '#0f172a' }}>{durationText}</strong>
+                    </div>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', gap: '1rem' }}>
+                      <span style={{ color: '#64748b' }}>Đối tượng phù hợp:</span>
+                      <strong style={{ color: '#0f172a', textAlign: 'right' }}>{svcInfo.targetPet}</strong>
+                    </div>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', gap: '1rem' }}>
+                      <span style={{ color: '#64748b' }}>Tiêu chuẩn thực hiện:</span>
+                      <strong style={{ color: '#0284c7', textAlign: 'right' }}>{svcInfo.standard}</strong>
+                    </div>
+                  </div>
+
+                  {/* Primary Booking CTA */}
+                  <div style={{ display: 'flex', gap: '0.85rem', flexWrap: 'wrap', marginTop: '0.25rem' }}>
+                    <button
+                      type="button"
+                      className="btn btn-coral"
+                      style={{ flex: 1, minWidth: 220, padding: '1rem 1.25rem', fontSize: '0.98rem', fontWeight: 800, borderRadius: '14px' }}
+                      onClick={() => {
+                        if (!currentUser) {
+                          toast.warning('Vui lòng đăng nhập để tiến hành đặt lịch dịch vụ!', 'Yêu Cầu Đăng Nhập', {
+                            actionText: '🔐 Đăng Nhập Ngay',
+                            onAction: () => onOpenLogin && onOpenLogin()
+                          });
+                          if (onOpenLogin) onOpenLogin();
+                          return;
+                        }
+                        setBookingForm(prev => ({ ...prev, serviceId: ds.id }));
+                        setShowBookingModal(true);
+                      }}
+                    >
+                      <Calendar size={18} /> Đăng Ký Đặt Lịch Dịch Vụ Này
+                    </button>
+                  </div>
+
+                  {/* Quick Consultation Bar */}
+                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '0.75rem', background: '#f0f9ff', border: '1px solid #bae6fd', borderRadius: '14px', padding: '0.8rem 1rem', fontSize: '0.83rem' }}>
+                    <span style={{ color: '#0369a1', fontWeight: 700, display: 'flex', alignItems: 'center', gap: '6px' }}>
+                      <PhoneCall size={15} /> Cần bác sĩ tư vấn tình trạng của bé trước?
+                    </span>
+                    <div style={{ display: 'flex', gap: '0.5rem' }}>
+                      <a href={`tel:${CONTACT_INFO.phoneRaw}`} style={{ background: '#0284c7', color: '#ffffff', padding: '4px 10px', borderRadius: '10px', textDecoration: 'none', fontWeight: 800, fontSize: '0.78rem' }}>
+                        Gọi {CONTACT_INFO.phoneDisplay}
+                      </a>
+                      <a href={CONTACT_INFO.zaloLink} onClick={openZaloQrModal} style={{ background: '#0068FF', color: '#ffffff', padding: '4px 10px', borderRadius: '10px', textDecoration: 'none', fontWeight: 800, fontSize: '0.78rem' }}>
+                        💬 Chat Zalo
+                      </a>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </article>
+
+            {/* Step-by-Step Protocol & Preparation Notes */}
+            <section className="glass-panel" style={{ padding: '2rem', borderRadius: '22px' }}>
+              <h2 style={{ fontSize: '1.3rem', fontWeight: 800, color: '#0f172a', marginBottom: '1.15rem', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                <CheckCircle size={20} color="#059669" /> Quy Trình Thực Hiện Chuẩn Petopia ({durationText})
+              </h2>
+
+              <div className="grid-2" style={{ gap: '1rem', marginBottom: '1.25rem' }}>
+                {svcInfo.steps.map((step, idx) => (
+                  <div key={idx} style={{ background: '#f8fafc', border: '1px solid #e2e8f0', borderRadius: '14px', padding: '1rem 1.15rem', display: 'flex', gap: '0.85rem', alignItems: 'flex-start' }}>
+                    <span style={{ width: 30, height: 30, borderRadius: '50%', background: 'linear-gradient(135deg, #ff6b35 0%, #ea580c 100%)', color: '#ffffff', fontWeight: 900, fontSize: '0.88rem', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+                      {idx + 1}
+                    </span>
+                    <div>
+                      <strong style={{ fontSize: '0.94rem', color: '#0f172a', display: 'block', marginBottom: '3px' }}>{step.title}</strong>
+                      <p style={{ fontSize: '0.84rem', color: '#475569', lineHeight: 1.55, margin: 0 }}>{step.desc}</p>
+                    </div>
+                  </div>
+                ))}
+              </div>
+
+              <div style={{ background: '#fffbeb', border: '1px solid #fde68a', borderRadius: '14px', padding: '1rem 1.25rem', fontSize: '0.88rem', color: '#78350f', lineHeight: 1.65 }}>
+                <strong>📌 Lưu ý chuẩn bị trước khi đưa bé đến:</strong> {svcInfo.prepNote}
+              </div>
+            </section>
+
+            {/* Related Services */}
+            {relatedServices.length > 0 && (
+              <section className="glass-panel" style={{ padding: '2rem', borderRadius: '22px' }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.25rem', flexWrap: 'wrap', gap: '0.75rem' }}>
+                  <h2 style={{ fontSize: '1.25rem', fontWeight: 800, color: '#0f172a' }}>
+                    Dịch Vụ Khác Tại Petopia
+                  </h2>
+                  <button type="button" className="btn btn-secondary" style={{ padding: '0.45rem 0.9rem', fontSize: '0.82rem' }} onClick={() => onTabChange('booking')}>
+                    Xem tất cả dịch vụ <ArrowRight size={15} />
+                  </button>
+                </div>
+
+                <div className="grid-3" style={{ gap: '1.25rem' }}>
+                  {relatedServices.map(rel => (
+                    <div
+                      key={rel.id}
+                      className="glass-card"
+                      onClick={() => openServiceDetail(rel)}
+                      style={{ padding: 0, overflow: 'hidden', borderRadius: '16px', cursor: 'pointer', display: 'flex', flexDirection: 'column', justifyContent: 'space-between' }}
+                    >
+                      <div>
+                        <div style={{ position: 'relative', height: 150, overflow: 'hidden', background: '#f1f5f9' }}>
+                          <img
+                            src={getServiceImage(rel)}
+                            alt={rel.name}
+                            className="media-card-img"
+                            onError={(e) => { e.currentTarget.src = FALLBACK_IMAGES.service; }}
+                          />
+                          <span className="badge badge-info" style={{ position: 'absolute', top: 10, left: 10, background: 'rgba(255,255,255,0.95)' }}>
+                            {rel.category}
+                          </span>
+                        </div>
+                        <div style={{ padding: '1rem 1.15rem 0.5rem 1.15rem' }}>
+                          <strong style={{ fontSize: '0.96rem', color: '#0f172a', display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', overflow: 'hidden', lineHeight: 1.4 }}>
+                            {rel.name}
+                          </strong>
+                        </div>
+                      </div>
+                      <div style={{ padding: '0.75rem 1.15rem 1rem 1.15rem', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                        <strong style={{ fontSize: '1.05rem', color: '#ea580c' }}>{Number(rel.price).toLocaleString('vi-VN')} đ</strong>
+                        <span style={{ fontSize: '0.78rem', color: '#0284c7', fontWeight: 700 }}>Xem chi tiết →</span>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </section>
+            )}
+          </div>
+        );
+      })()}
 
       {/* 4. CỬA HÀNG PETOPIA SHOP TAB (shop tab) */}
       {activeTab === 'shop' && (
@@ -902,7 +1222,7 @@ export default function CustomerPortal({
                     <ShieldCheck size={15} /> 100% Chính Hãng
                   </div>
                   <div style={{ display: 'flex', alignItems: 'center', gap: '6px', background: 'rgba(255,255,255,0.16)', padding: '5px 12px', borderRadius: '12px' }}>
-                    <Gift size={15} /> Quà Tặng Đơn >300K
+                    <Gift size={15} /> Quà Tặng Đơn Trên 300K
                   </div>
                   <div style={{ display: 'flex', alignItems: 'center', gap: '6px', background: 'rgba(255,255,255,0.16)', padding: '5px 12px', borderRadius: '12px' }}>
                     <RotateCcw size={15} /> Đổi Trả Trong 7 Ngày
@@ -942,20 +1262,10 @@ export default function CustomerPortal({
                   </button>
                 </div>
 
-                {/* Cart Action Button */}
+                {/* Cart Action Button -> Dedicated /gio-hang Page */}
                 <button 
                   type="button"
-                  onClick={() => {
-                    if (!currentUser) {
-                      toast.warning('Vui lòng đăng nhập tài khoản khách hàng để xem và thanh toán giỏ hàng!', 'Yêu Cầu Đăng Nhập', {
-                        actionText: '🔐 Đăng Nhập',
-                        onAction: () => onOpenLogin && onOpenLogin()
-                      });
-                      if (onOpenLogin) onOpenLogin();
-                      return;
-                    }
-                    setShowCartModal(true);
-                  }}
+                  onClick={() => openCartPage()}
                   style={{ background: '#ffffff', color: '#ea580c', border: 'none', padding: '0.75rem 1.25rem', borderRadius: '14px', fontSize: '0.92rem', fontWeight: 800, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px', cursor: 'pointer', boxShadow: '0 4px 14px rgba(0,0,0,0.15)', transition: 'all 0.2s ease' }}
                 >
                   <ShoppingCart size={18} /> Xem Giỏ Hàng ({cart.reduce((s, i) => s + i.quantity, 0)} sản phẩm)
@@ -1112,26 +1422,40 @@ export default function CustomerPortal({
                     )}
                   </div>
 
-                  {/* Product Real Photo Showcase */}
-                  <div style={{ 
-                    background: '#f8fafc', 
-                    height: 185, 
-                    borderRadius: '16px', 
-                    margin: '0.5rem 0 0.85rem 0', 
-                    border: '1px solid #e2e8f0',
-                    position: 'relative',
-                    overflow: 'hidden'
-                  }}>
+                  {/* Product Real Photo Showcase (Clickable -> Xem Chi Tiết) */}
+                  <div
+                    onClick={() => openProductDetail(p)}
+                    title="Bấm để xem chi tiết sản phẩm"
+                    style={{ 
+                      background: '#ffffff', 
+                      height: 195, 
+                      borderRadius: '16px', 
+                      margin: '0.5rem 0 0.85rem 0', 
+                      border: '1px solid #e2e8f0',
+                      position: 'relative',
+                      overflow: 'hidden',
+                      padding: '12px',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      cursor: 'pointer'
+                    }}
+                  >
                     <img
                       src={getProductImage(p)}
                       alt={p.name}
                       className="media-card-img"
+                      style={{ objectFit: 'contain', width: '100%', height: '100%' }}
+                      referrerPolicy="no-referrer"
                       loading="lazy"
-                      onError={(e) => { e.currentTarget.src = FALLBACK_IMAGES.product; }}
+                      onError={(e) => {
+                        e.currentTarget.onerror = null;
+                        e.currentTarget.src = getProductFallbackImage(p);
+                      }}
                     />
 
                     {/* Brand Badge */}
-                    <div style={{ position: 'absolute', top: 10, left: 10, background: 'rgba(15,23,42,0.78)', backdropFilter: 'blur(6px)', color: '#ffffff', fontSize: '0.7rem', fontWeight: 800, padding: '2px 9px', borderRadius: '20px', letterSpacing: '0.3px', border: '1px solid rgba(255,255,255,0.2)' }}>
+                    <div style={{ position: 'absolute', top: 10, left: 10, background: 'rgba(15,23,42,0.82)', backdropFilter: 'blur(6px)', color: '#ffffff', fontSize: '0.7rem', fontWeight: 800, padding: '2px 9px', borderRadius: '20px', letterSpacing: '0.3px', border: '1px solid rgba(255,255,255,0.2)' }}>
                       {brand}
                     </div>
 
@@ -1141,8 +1465,13 @@ export default function CustomerPortal({
                     </div>
 
                     {/* Delivery Tag */}
-                    <div style={{ position: 'absolute', bottom: 10, left: 10, background: 'rgba(255,255,255,0.94)', color: '#0f172a', fontSize: '0.68rem', fontWeight: 700, padding: '2px 8px', borderRadius: '8px', boxShadow: '0 2px 6px rgba(0,0,0,0.12)' }}>
+                    <div style={{ position: 'absolute', bottom: 10, left: 10, background: 'rgba(255,255,255,0.95)', color: '#0f172a', fontSize: '0.68rem', fontWeight: 700, padding: '2px 8px', borderRadius: '8px', boxShadow: '0 2px 6px rgba(0,0,0,0.12)', border: '1px solid #e2e8f0' }}>
                       ⚡ Giao 2h
+                    </div>
+
+                    {/* Quick Detail Hint Badge */}
+                    <div style={{ position: 'absolute', bottom: 10, right: 10, background: 'rgba(2,132,199,0.9)', color: '#ffffff', fontSize: '0.68rem', fontWeight: 700, padding: '2px 8px', borderRadius: '8px', boxShadow: '0 2px 6px rgba(2,132,199,0.25)' }}>
+                      Xem chi tiết
                     </div>
                   </div>
 
@@ -1160,25 +1489,37 @@ export default function CustomerPortal({
                       </span>
                     </div>
 
-                    {/* Product Name (2 Lines Clamp) */}
-                    <h4 style={{ 
-                      fontSize: '1.08rem', 
-                      fontWeight: 800, 
-                      color: '#0f172a', 
-                      margin: '0.3rem 0',
-                      lineHeight: '1.4',
-                      minHeight: '44px',
-                      display: '-webkit-box',
-                      WebkitLineClamp: 2,
-                      WebkitBoxOrient: 'vertical',
-                      overflow: 'hidden'
-                    }}>
+                    {/* Product Name (Clickable -> Xem Chi Tiết) */}
+                    <h4
+                      onClick={() => openProductDetail(p)}
+                      title={p.name}
+                      style={{ 
+                        fontSize: '1.06rem', 
+                        fontWeight: 800, 
+                        color: '#0f172a', 
+                        margin: '0.3rem 0',
+                        lineHeight: '1.4',
+                        minHeight: '44px',
+                        display: '-webkit-box',
+                        WebkitLineClamp: 2,
+                        WebkitBoxOrient: 'vertical',
+                        overflow: 'hidden',
+                        cursor: 'pointer'
+                      }}
+                    >
                       {p.name}
                     </h4>
 
-                    {/* SKU info */}
-                    <div style={{ fontSize: '0.75rem', color: '#64748b', marginBottom: '0.6rem' }}>
-                      Mã SKU: <span style={{ fontWeight: 600 }}>{p.sku}</span>
+                    {/* SKU info + quick link */}
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: '0.75rem', color: '#64748b', marginBottom: '0.6rem' }}>
+                      <span>Mã SKU: <span style={{ fontWeight: 600 }}>{p.sku}</span></span>
+                      <button
+                        type="button"
+                        onClick={() => openProductDetail(p)}
+                        style={{ background: 'none', border: 'none', color: '#0284c7', fontWeight: 700, fontSize: '0.74rem', cursor: 'pointer', padding: 0 }}
+                      >
+                        Chi tiết →
+                      </button>
                     </div>
 
                     {/* Price Section */}
@@ -1253,48 +1594,865 @@ export default function CustomerPortal({
         </div>
       )}
 
-      {/* 5. DEDICATED TRANG THANH TOÁN PETOPIA (checkout tab) */}
+      {/* 4.5. TRANG CHI TIẾT SẢN PHẨM RIÊNG (/san-pham/:id) */}
+      {activeTab === 'product-detail' && (() => {
+        const dp = products.find(item => item.id === selectedProductId) || products[0];
+        if (!dp) {
+          return (
+            <div className="glass-panel" style={{ padding: '3rem', textAlign: 'center' }}>
+              <h1 style={{ fontSize: '1.4rem', fontWeight: 800, marginBottom: '0.75rem' }}>Không tìm thấy sản phẩm</h1>
+              <button type="button" className="btn btn-coral" onClick={() => onTabChange('shop')}>
+                <ArrowLeft size={16} /> Quay Lại Cửa Hàng
+              </button>
+            </div>
+          );
+        }
+
+        const dVisual = getCategoryVisual(dp.category);
+        const dBrand = getProductBrand(dp);
+        const dInfo = getProductRichDetails(dp);
+        const dOriginalPrice = Math.round(dp.unitPrice * 1.15);
+        const dSaving = Math.round(dp.unitPrice * 0.15);
+        const relatedProducts = products
+          .filter(item => item.id !== dp.id && item.category === dp.category)
+          .slice(0, 4);
+
+        return (
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '1.75rem' }}>
+            {/* Top Breadcrumb & Back Navigation */}
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '0.75rem', background: '#ffffff', padding: '0.9rem 1.35rem', borderRadius: '16px', border: '1px solid var(--border-light)', boxShadow: '0 2px 10px rgba(0,0,0,0.03)' }}>
+              <nav aria-label="Breadcrumb" style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap', fontSize: '0.84rem', color: '#64748b' }}>
+                <a
+                  href="/"
+                  onClick={(e) => { e.preventDefault(); onTabChange('home'); }}
+                  style={{ color: '#475569', textDecoration: 'none', fontWeight: 600 }}
+                >
+                  Trang Chủ
+                </a>
+                <span>/</span>
+                <a
+                  href="/cua-hang"
+                  onClick={(e) => { e.preventDefault(); onTabChange('shop'); }}
+                  style={{ color: '#475569', textDecoration: 'none', fontWeight: 600 }}
+                >
+                  Cửa Hàng
+                </a>
+                <span>/</span>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setSelectedCategory(dp.category);
+                    onTabChange('shop');
+                  }}
+                  style={{ background: 'none', border: 'none', color: '#ea580c', fontWeight: 700, cursor: 'pointer', padding: 0, fontSize: '0.84rem' }}
+                >
+                  {dp.category}
+                </button>
+                <span>/</span>
+                <span style={{ color: '#0f172a', fontWeight: 700 }}>{dp.name}</span>
+              </nav>
+
+              <button
+                type="button"
+                className="btn btn-secondary"
+                style={{ padding: '0.45rem 0.95rem', fontSize: '0.82rem', borderRadius: '10px' }}
+                onClick={() => onTabChange('shop')}
+              >
+                <ArrowLeft size={15} /> Quay Lại Cửa Hàng
+              </button>
+            </div>
+
+            {/* Main 2-Column Product Hero Card */}
+            <article className="glass-panel" style={{ padding: '2rem', borderRadius: '22px' }}>
+              <div className="grid-2" style={{ gap: '2.25rem', alignItems: 'start' }}>
+                {/* Left Column: Large Crisp Studio Image + Guarantees */}
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+                  <div style={{ position: 'relative', height: 410, background: '#ffffff', borderRadius: '20px', border: '1.5px solid #e2e8f0', padding: '22px', display: 'flex', alignItems: 'center', justifyContent: 'center', boxShadow: '0 8px 28px rgba(15, 23, 42, 0.05)' }}>
+                    <img
+                      src={getProductImage(dp)}
+                      alt={dp.name}
+                      referrerPolicy="no-referrer"
+                      style={{ maxWidth: '100%', maxHeight: '100%', objectFit: 'contain', display: 'block' }}
+                      onError={(e) => {
+                        e.currentTarget.onerror = null;
+                        e.currentTarget.src = getProductFallbackImage(dp);
+                      }}
+                    />
+                    <span style={{ position: 'absolute', top: 14, left: 14, background: '#0f172a', color: '#ffffff', fontSize: '0.78rem', fontWeight: 800, padding: '4px 12px', borderRadius: '20px' }}>
+                      {dBrand}
+                    </span>
+                    <span style={{ position: 'absolute', top: 14, right: 14, background: 'linear-gradient(135deg, #ef4444 0%, #f97316 100%)', color: '#ffffff', fontSize: '0.8rem', fontWeight: 900, padding: '5px 12px', borderRadius: '14px', boxShadow: '0 4px 12px rgba(239,68,68,0.35)' }}>
+                      GIẢM 15%
+                    </span>
+                  </div>
+
+                  {/* Trust Guarantee Bar */}
+                  <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '0.75rem' }}>
+                    <div style={{ background: '#f0fdf4', border: '1px solid #bbf7d0', borderRadius: '14px', padding: '0.75rem 0.5rem', textAlign: 'center', fontSize: '0.78rem', fontWeight: 700, color: '#15803d' }}>
+                      <ShieldCheck size={18} style={{ display: 'block', margin: '0 auto 5px' }} /> Chính Hãng 100%
+                    </div>
+                    <div style={{ background: '#fff7ed', border: '1px solid #fed7aa', borderRadius: '14px', padding: '0.75rem 0.5rem', textAlign: 'center', fontSize: '0.78rem', fontWeight: 700, color: '#c2410c' }}>
+                      <Truck size={18} style={{ display: 'block', margin: '0 auto 5px' }} /> Giao Hỏa Tốc 2H
+                    </div>
+                    <div style={{ background: '#f0f9ff', border: '1px solid #bae6fd', borderRadius: '14px', padding: '0.75rem 0.5rem', textAlign: 'center', fontSize: '0.78rem', fontWeight: 700, color: '#0369a1' }}>
+                      <RotateCcw size={18} style={{ display: 'block', margin: '0 auto 5px' }} /> Đổi Trả 7 Ngày
+                    </div>
+                  </div>
+                </div>
+
+                {/* Right Column: Title, Price, Voucher, Specs, Quantity & Buy CTA */}
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
+                    <span style={{ background: dVisual.badgeBg, color: dVisual.badgeColor, fontSize: '0.78rem', fontWeight: 800, padding: '4px 12px', borderRadius: '14px' }}>
+                      {dVisual.emoji} {dp.category}
+                    </span>
+                    <span style={{ fontSize: '0.8rem', color: '#64748b', fontWeight: 600 }}>
+                      Mã SKU: <strong style={{ color: '#0f172a' }}>{dp.sku}</strong>
+                    </span>
+                  </div>
+
+                  <h1 style={{ fontSize: '1.7rem', fontWeight: 900, color: '#0f172a', lineHeight: 1.32, margin: 0 }}>
+                    {dp.name}
+                  </h1>
+
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '0.85rem', flexWrap: 'wrap', fontSize: '0.86rem' }}>
+                    <span style={{ display: 'inline-flex', alignItems: 'center', gap: '4px', color: '#d97706', fontWeight: 800 }}>
+                      <Star size={15} fill="#f59e0b" color="#f59e0b" />
+                      <Star size={15} fill="#f59e0b" color="#f59e0b" />
+                      <Star size={15} fill="#f59e0b" color="#f59e0b" />
+                      <Star size={15} fill="#f59e0b" color="#f59e0b" />
+                      <Star size={15} fill="#f59e0b" color="#f59e0b" />
+                      <span style={{ marginLeft: '4px' }}>4.9</span>
+                    </span>
+                    <span style={{ color: '#cbd5e1' }}>|</span>
+                    <span style={{ color: '#475569' }}>140+ đánh giá</span>
+                    <span style={{ color: '#cbd5e1' }}>|</span>
+                    <span style={{ color: '#059669', fontWeight: 700 }}>250+ đã bán</span>
+                  </div>
+
+                  {/* Price & Voucher Box */}
+                  <div style={{ background: 'linear-gradient(135deg, #fff7ed 0%, #ffedd5 100%)', border: '1.5px solid #fed7aa', borderRadius: '18px', padding: '1.15rem 1.35rem' }}>
+                    <div style={{ display: 'flex', alignItems: 'baseline', gap: '0.85rem', flexWrap: 'wrap' }}>
+                      <strong style={{ fontSize: '2.1rem', fontWeight: 900, color: '#ea580c' }}>
+                        {dp.unitPrice.toLocaleString('vi-VN')} đ
+                      </strong>
+                      <span style={{ fontSize: '1.08rem', color: '#94a3b8', textDecoration: 'line-through', fontWeight: 600 }}>
+                        {dOriginalPrice.toLocaleString('vi-VN')} đ
+                      </span>
+                      <span style={{ background: '#dc2626', color: '#ffffff', fontSize: '0.74rem', fontWeight: 800, padding: '2px 8px', borderRadius: '8px' }}>
+                        Tiết kiệm {dSaving.toLocaleString('vi-VN')} đ
+                      </span>
+                    </div>
+
+                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '0.75rem', marginTop: '0.75rem', paddingTop: '0.75rem', borderTop: '1px dashed #fdba74', flexWrap: 'wrap' }}>
+                      <span style={{ fontSize: '0.82rem', color: '#9a3412', fontWeight: 700 }}>
+                        🎁 Mã giảm thêm 10% đơn hàng: <strong>SPA10OFF</strong>
+                      </span>
+                      <button
+                        type="button"
+                        onClick={() => handleCopyText('SPA10OFF', 'Mã Giảm Giá')}
+                        style={{ background: '#ffffff', color: '#ea580c', border: '1px solid #fdba74', borderRadius: '8px', padding: '3px 10px', fontSize: '0.76rem', fontWeight: 800, cursor: 'pointer' }}
+                      >
+                        Sao Chép Mã
+                      </button>
+                    </div>
+                  </div>
+
+                  {/* Specs Card */}
+                  <div style={{ background: '#f8fafc', border: '1px solid #e2e8f0', borderRadius: '16px', padding: '1rem 1.15rem', fontSize: '0.86rem', display: 'flex', flexDirection: 'column', gap: '0.55rem' }}>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', gap: '1rem' }}>
+                      <span style={{ color: '#64748b' }}>Tình trạng kho:</span>
+                      <strong style={{ color: dp.currentStock > 0 ? '#059669' : '#dc2626' }}>
+                        {dp.currentStock > 0 ? `✓ Sẵn hàng (${dp.currentStock} sản phẩm)` : 'Tạm hết hàng'}
+                      </strong>
+                    </div>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', gap: '1rem' }}>
+                      <span style={{ color: '#64748b' }}>Thương hiệu:</span>
+                      <strong style={{ color: '#0f172a', textAlign: 'right' }}>{dBrand}</strong>
+                    </div>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', gap: '1rem' }}>
+                      <span style={{ color: '#64748b' }}>Phù hợp cho:</span>
+                      <strong style={{ color: '#0f172a', textAlign: 'right' }}>{dInfo.targetPet}</strong>
+                    </div>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', gap: '1rem' }}>
+                      <span style={{ color: '#64748b' }}>Xuất xứ:</span>
+                      <strong style={{ color: '#0f172a', textAlign: 'right' }}>{dInfo.origin}</strong>
+                    </div>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', gap: '1rem' }}>
+                      <span style={{ color: '#64748b' }}>Nhà phân phối:</span>
+                      <strong style={{ color: '#0284c7', textAlign: 'right' }}>{dp.supplierName || 'Petopia Official'}</strong>
+                    </div>
+                  </div>
+
+                  {/* Quantity Selector */}
+                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '1rem', padding: '0.4rem 0' }}>
+                    <span style={{ fontSize: '0.92rem', fontWeight: 700, color: '#334155' }}>Số lượng đặt mua:</span>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.7rem' }}>
+                      <button
+                        type="button"
+                        onClick={() => setDetailQuantity(q => Math.max(1, q - 1))}
+                        style={{ width: 38, height: 38, borderRadius: '10px', border: '1px solid #cbd5e1', background: '#ffffff', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
+                      >
+                        <Minus size={16} />
+                      </button>
+                      <span style={{ minWidth: 36, textAlign: 'center', fontWeight: 900, fontSize: '1.15rem', color: '#0f172a' }}>
+                        {detailQuantity}
+                      </span>
+                      <button
+                        type="button"
+                        onClick={() => setDetailQuantity(q => Math.min(Math.max(1, dp.currentStock), q + 1))}
+                        disabled={detailQuantity >= dp.currentStock}
+                        style={{ width: 38, height: 38, borderRadius: '10px', border: '1px solid #cbd5e1', background: detailQuantity >= dp.currentStock ? '#f1f5f9' : '#ffffff', cursor: detailQuantity >= dp.currentStock ? 'not-allowed' : 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
+                      >
+                        <Plus size={16} />
+                      </button>
+                    </div>
+                  </div>
+
+                  {/* Action CTA Buttons */}
+                  <div style={{ display: 'flex', gap: '0.85rem', flexWrap: 'wrap' }}>
+                    <button
+                      type="button"
+                      className="btn btn-secondary"
+                      disabled={dp.currentStock <= 0}
+                      style={{ flex: 1, minWidth: 170, padding: '0.95rem 1rem', fontSize: '0.95rem', fontWeight: 800, borderRadius: '14px' }}
+                      onClick={() => handleAddToCart(dp, detailQuantity)}
+                    >
+                      <ShoppingCart size={18} /> Thêm Vào Giỏ Hàng
+                    </button>
+                    <button
+                      type="button"
+                      className="btn btn-coral"
+                      disabled={dp.currentStock <= 0}
+                      style={{ flex: 1, minWidth: 200, padding: '0.95rem 1rem', fontSize: '0.95rem', fontWeight: 800, borderRadius: '14px' }}
+                      onClick={() => {
+                        const added = handleAddToCart(dp, detailQuantity);
+                        if (added) {
+                          onTabChange('checkout');
+                          window.scrollTo({ top: 0, behavior: 'smooth' });
+                        }
+                      }}
+                    >
+                      <Zap size={18} fill="#fff" /> Mua Ngay ({(dp.unitPrice * detailQuantity).toLocaleString('vi-VN')} đ)
+                    </button>
+                  </div>
+
+                  {/* Quick Vet/Shop Consultation Box */}
+                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '0.75rem', background: '#f0f9ff', border: '1px solid #bae6fd', borderRadius: '14px', padding: '0.8rem 1rem', fontSize: '0.83rem' }}>
+                    <span style={{ color: '#0369a1', fontWeight: 700, display: 'flex', alignItems: 'center', gap: '6px' }}>
+                      <PhoneCall size={15} /> Cần tư vấn chọn khẩu phần / size cho bé?
+                    </span>
+                    <div style={{ display: 'flex', gap: '0.5rem' }}>
+                      <a href={`tel:${CONTACT_INFO.phoneRaw}`} style={{ background: '#0284c7', color: '#ffffff', padding: '4px 10px', borderRadius: '10px', textDecoration: 'none', fontWeight: 800, fontSize: '0.78rem' }}>
+                        Gọi {CONTACT_INFO.phoneDisplay}
+                      </a>
+                      <a href={CONTACT_INFO.zaloLink} onClick={openZaloQrModal} style={{ background: '#0068FF', color: '#ffffff', padding: '4px 10px', borderRadius: '10px', textDecoration: 'none', fontWeight: 800, fontSize: '0.78rem' }}>
+                        💬 Chat Zalo
+                      </a>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </article>
+
+            {/* Detailed Product Information & Usage Section */}
+            <section className="glass-panel" style={{ padding: '2rem', borderRadius: '22px' }}>
+              <h2 style={{ fontSize: '1.3rem', fontWeight: 800, color: '#0f172a', marginBottom: '0.85rem' }}>
+                Mô Tả &amp; Công Dụng Chi Tiết Sản Phẩm
+              </h2>
+              <p style={{ fontSize: '0.94rem', color: '#334155', lineHeight: 1.75, marginBottom: '1.25rem' }}>
+                {dInfo.summary}
+              </p>
+
+              <h3 style={{ fontSize: '1.05rem', fontWeight: 800, color: '#0f172a', marginBottom: '0.75rem' }}>
+                Điểm Nổi Bật
+              </h3>
+              <div className="grid-2" style={{ gap: '0.85rem', marginBottom: '1.25rem' }}>
+                {dInfo.highlights.map((hl, idx) => (
+                  <div key={idx} style={{ display: 'flex', alignItems: 'flex-start', gap: '9px', fontSize: '0.88rem', color: '#334155', background: '#f8fafc', padding: '0.85rem 1rem', borderRadius: '12px', border: '1px solid #e2e8f0' }}>
+                    <CheckCircle size={17} color="#059669" style={{ flexShrink: 0, marginTop: '2px' }} />
+                    <span>{hl}</span>
+                  </div>
+                ))}
+              </div>
+
+              <div style={{ background: '#fffbeb', border: '1px solid #fde68a', borderRadius: '14px', padding: '1rem 1.25rem', fontSize: '0.88rem', color: '#78350f', lineHeight: 1.65 }}>
+                <strong>📌 Hướng dẫn sử dụng &amp; bảo quản:</strong> {dInfo.usage}
+              </div>
+            </section>
+
+            {/* Related Products Grid */}
+            {relatedProducts.length > 0 && (
+              <section className="glass-panel" style={{ padding: '2rem', borderRadius: '22px' }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.25rem', flexWrap: 'wrap', gap: '0.75rem' }}>
+                  <h2 style={{ fontSize: '1.25rem', fontWeight: 800, color: '#0f172a' }}>
+                    Sản Phẩm Tương Tự Trong Danh Mục "{dp.category}"
+                  </h2>
+                  <button
+                    type="button"
+                    className="btn btn-secondary"
+                    style={{ padding: '0.45rem 0.9rem', fontSize: '0.82rem' }}
+                    onClick={() => {
+                      setSelectedCategory(dp.category);
+                      onTabChange('shop');
+                    }}
+                  >
+                    Xem tất cả {dp.category} <ArrowRight size={15} />
+                  </button>
+                </div>
+
+                <div className="grid-4" style={{ gap: '1.25rem' }}>
+                  {relatedProducts.map(rel => (
+                    <div
+                      key={rel.id}
+                      className="glass-card"
+                      onClick={() => openProductDetail(rel)}
+                      style={{ padding: '1rem', borderRadius: '16px', cursor: 'pointer', display: 'flex', flexDirection: 'column', justifyContent: 'space-between' }}
+                    >
+                      <div>
+                        <div style={{ height: 145, background: '#ffffff', borderRadius: '12px', border: '1px solid #f1f5f9', padding: '10px', marginBottom: '0.75rem', display: 'flex', alignItems: 'center', justifyContent: 'center', overflow: 'hidden' }}>
+                          <img
+                            src={getProductImage(rel)}
+                            alt={rel.name}
+                            referrerPolicy="no-referrer"
+                            style={{ maxWidth: '100%', maxHeight: '100%', objectFit: 'contain' }}
+                            onError={(e) => {
+                              e.currentTarget.onerror = null;
+                              e.currentTarget.src = getProductFallbackImage(rel);
+                            }}
+                          />
+                        </div>
+                        <div style={{ fontSize: '0.88rem', fontWeight: 800, color: '#0f172a', lineHeight: 1.4, display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', overflow: 'hidden', minHeight: 40 }}>
+                          {rel.name}
+                        </div>
+                      </div>
+                      <div style={{ marginTop: '0.65rem', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                        <strong style={{ fontSize: '1rem', color: '#ea580c' }}>{rel.unitPrice.toLocaleString('vi-VN')} đ</strong>
+                        <span style={{ fontSize: '0.74rem', color: '#0284c7', fontWeight: 700 }}>Xem →</span>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </section>
+            )}
+          </div>
+        );
+      })()}
+
+      {/* 4.8. DEDICATED TRANG GIỎ HÀNG RIÊNG (/gio-hang) */}
+      {activeTab === 'cart' && (() => {
+        const totalQty = cart.reduce((s, i) => s + i.quantity, 0);
+        const freeShipGoal = 500000;
+        const missingForFreeShip = Math.max(0, freeShipGoal - cartSubtotal);
+        const freeShipPercent = Math.min(100, Math.round((cartSubtotal / freeShipGoal) * 100));
+        const suggestedItems = products.filter(p => !cart.some(c => c.id === p.id)).slice(0, 4);
+
+        return (
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '1.75rem' }}>
+            {/* Top Header & 3-Step E-Commerce Stepper */}
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '1rem', background: '#ffffff', padding: '1.25rem 1.75rem', borderRadius: '18px', border: '1px solid var(--border-light)', boxShadow: 'var(--shadow-soft)' }}>
+              <div>
+                <button
+                  type="button"
+                  onClick={() => onTabChange('shop')}
+                  style={{ background: 'none', border: 'none', color: '#ea580c', fontWeight: 700, fontSize: '0.85rem', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '6px', marginBottom: '4px', padding: 0 }}
+                >
+                  <ArrowLeft size={16} /> Tiếp Tục Mua Sắm Tại Cửa Hàng
+                </button>
+                <h1 style={{ fontSize: '1.55rem', fontWeight: 900, color: '#0f172a', display: 'flex', alignItems: 'center', gap: '10px', margin: 0 }}>
+                  <ShoppingCart size={24} color="#ff6b35" /> Giỏ Hàng Của Bạn ({totalQty} sản phẩm)
+                </h1>
+              </div>
+
+              {/* 3-Step Indicator */}
+              <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', fontSize: '0.85rem', flexWrap: 'wrap' }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '6px', color: '#ff6b35', fontWeight: 800 }}>
+                  <span style={{ width: 24, height: 24, borderRadius: '50%', background: '#ffedd5', color: '#ea580c', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '0.76rem', fontWeight: 900 }}>1</span>
+                  <span>1. Giỏ Hàng</span>
+                </div>
+                <div style={{ width: 24, height: 2, background: '#e2e8f0' }} />
+                <div style={{ display: 'flex', alignItems: 'center', gap: '6px', color: '#94a3b8', fontWeight: 600 }}>
+                  <span style={{ width: 24, height: 24, borderRadius: '50%', background: '#f1f5f9', color: '#94a3b8', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '0.76rem' }}>2</span>
+                  <span>2. Thanh Toán</span>
+                </div>
+                <div style={{ width: 24, height: 2, background: '#e2e8f0' }} />
+                <div style={{ display: 'flex', alignItems: 'center', gap: '6px', color: '#94a3b8', fontWeight: 600 }}>
+                  <span style={{ width: 24, height: 24, borderRadius: '50%', background: '#f1f5f9', color: '#94a3b8', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '0.76rem' }}>3</span>
+                  <span>3. Hoàn Tất</span>
+                </div>
+              </div>
+            </div>
+
+            {cart.length === 0 ? (
+              <div className="glass-panel" style={{ padding: '3.5rem 2rem', textAlign: 'center', borderRadius: '22px' }}>
+                <div style={{ width: 84, height: 84, borderRadius: '50%', background: '#fff7ed', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 1.25rem', border: '1.5px solid #fed7aa' }}>
+                  <ShoppingBag size={40} color="#ff6b35" />
+                </div>
+                <h2 style={{ fontSize: '1.4rem', fontWeight: 800, color: '#0f172a', marginBottom: '0.5rem' }}>
+                  Giỏ hàng của bạn đang trống!
+                </h2>
+                <p style={{ color: 'var(--text-muted)', fontSize: '0.92rem', maxWidth: 460, margin: '0 auto 1.5rem', lineHeight: 1.6 }}>
+                  Hãy dạo quanh cửa hàng Petopia Super Shop để chọn thức ăn hạt Royal Canin, sữa bột dinh dưỡng, cát vệ sinh và phụ kiện chính hãng cho bé cưng nhé.
+                </p>
+                <button
+                  type="button"
+                  className="btn btn-coral"
+                  onClick={() => onTabChange('shop')}
+                  style={{ padding: '0.85rem 1.85rem', fontSize: '0.95rem', fontWeight: 800, borderRadius: '14px' }}
+                >
+                  Khám Phá Cửa Hàng Ngay <ArrowRight size={18} />
+                </button>
+              </div>
+            ) : (
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(320px, 1fr))', gap: '1.75rem', alignItems: 'start' }}>
+                {/* LEFT COLUMN: Free-Ship Progress + Cart Items List */}
+                <div style={{ gridColumn: 'span 1', display: 'flex', flexDirection: 'column', gap: '1.25rem' }}>
+                  {/* Free Express Shipping Progress Bar */}
+                  <div className="glass-panel" style={{ padding: '1.15rem 1.35rem', borderRadius: '16px', background: missingForFreeShip === 0 ? '#ecfdf5' : '#fffbeb', borderColor: missingForFreeShip === 0 ? '#a7f3d0' : '#fde68a' }}>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: '0.85rem', fontWeight: 700, color: missingForFreeShip === 0 ? '#047857' : '#92400e', marginBottom: '0.55rem' }}>
+                      <span>
+                        {missingForFreeShip === 0
+                          ? '🎉 Chúc mừng! Đơn hàng của bạn được MIỄN PHÍ giao hỏa tốc 2H!'
+                          : `⚡ Mua thêm ${missingForFreeShip.toLocaleString('vi-VN')} đ để được Miễn phí giao hỏa tốc 2H`}
+                      </span>
+                      <span>{freeShipPercent}%</span>
+                    </div>
+                    <div style={{ height: 7, background: '#e2e8f0', borderRadius: '8px', overflow: 'hidden' }}>
+                      <div style={{ width: `${freeShipPercent}%`, height: '100%', background: missingForFreeShip === 0 ? '#059669' : 'linear-gradient(90deg, #ff6b35 0%, #f59e0b 100%)', transition: 'width 0.3s ease' }} />
+                    </div>
+                  </div>
+
+                  {/* Cart Items Panel */}
+                  <div className="glass-panel" style={{ padding: '1.5rem', borderRadius: '20px' }}>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', paddingBottom: '1rem', marginBottom: '1rem', borderBottom: '1px solid var(--border-light)' }}>
+                      <h2 style={{ fontSize: '1.15rem', fontWeight: 800, color: '#0f172a', margin: 0 }}>
+                        Danh Sách Sản Phẩm ({totalQty} món)
+                      </h2>
+                      <button
+                        type="button"
+                        onClick={handleClearCart}
+                        style={{ background: '#fef2f2', border: '1px solid #fecaca', color: '#dc2626', fontSize: '0.8rem', fontWeight: 700, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '5px', padding: '5px 11px', borderRadius: '10px' }}
+                      >
+                        <Trash2 size={14} /> Xóa Toàn Bộ Giỏ
+                      </button>
+                    </div>
+
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+                      {cart.map((item) => (
+                        <div
+                          key={item.id}
+                          style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '1rem', background: '#f8fafc', padding: '1rem 1.15rem', borderRadius: '16px', border: '1px solid #e2e8f0' }}
+                        >
+                          <div style={{ display: 'flex', alignItems: 'center', gap: '1rem', flex: 1, minWidth: 230 }}>
+                            <div
+                              onClick={() => openProductDetail(item)}
+                              title="Xem chi tiết sản phẩm"
+                              style={{ width: 78, height: 78, borderRadius: '14px', background: '#ffffff', border: '1px solid #e2e8f0', padding: '6px', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0, cursor: 'pointer' }}
+                            >
+                              <img
+                                src={getProductImage(item)}
+                                alt={item.name}
+                                referrerPolicy="no-referrer"
+                                onError={(e) => { e.currentTarget.onerror = null; e.currentTarget.src = getProductFallbackImage(item); }}
+                                style={{ maxWidth: '100%', maxHeight: '100%', objectFit: 'contain' }}
+                              />
+                            </div>
+
+                            <div style={{ flex: 1, minWidth: 0 }}>
+                              <span style={{ fontSize: '0.72rem', fontWeight: 700, color: '#0284c7', background: '#f0f9ff', padding: '2px 8px', borderRadius: '8px', display: 'inline-block', marginBottom: '4px' }}>
+                                {item.category || 'Sản phẩm'} • SKU: {item.sku}
+                              </span>
+                              <h3
+                                onClick={() => openProductDetail(item)}
+                                style={{ fontSize: '0.98rem', fontWeight: 800, color: '#0f172a', margin: '0 0 4px 0', cursor: 'pointer', lineHeight: 1.35 }}
+                              >
+                                {item.name}
+                              </h3>
+                              <div style={{ fontSize: '0.82rem', color: '#64748b' }}>
+                                Đơn giá: <strong style={{ color: '#0f172a' }}>{item.unitPrice.toLocaleString('vi-VN')} đ</strong> • Kho còn: {item.currentStock} sp
+                              </div>
+                            </div>
+                          </div>
+
+                          {/* Quantity Stepper + Line Total + Delete */}
+                          <div style={{ display: 'flex', alignItems: 'center', gap: '1.15rem' }}>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                              <button
+                                type="button"
+                                onClick={() => updateCartQuantity(item.id, -1)}
+                                style={{ width: 32, height: 32, borderRadius: '9px', border: '1px solid #cbd5e1', background: '#ffffff', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
+                                title="Giảm số lượng"
+                              >
+                                <Minus size={14} />
+                              </button>
+                              <span style={{ fontWeight: 900, fontSize: '1rem', minWidth: 26, textAlign: 'center', color: '#0f172a' }}>
+                                {item.quantity}
+                              </span>
+                              <button
+                                type="button"
+                                onClick={() => updateCartQuantity(item.id, 1)}
+                                disabled={item.quantity >= item.currentStock}
+                                style={{ width: 32, height: 32, borderRadius: '9px', border: '1px solid #cbd5e1', background: item.quantity >= item.currentStock ? '#f1f5f9' : '#ffffff', cursor: item.quantity >= item.currentStock ? 'not-allowed' : 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
+                                title="Tăng số lượng"
+                              >
+                                <Plus size={14} />
+                              </button>
+                            </div>
+
+                            <div style={{ textAlign: 'right', minWidth: 105 }}>
+                              <strong style={{ color: '#ea580c', fontSize: '1.08rem', display: 'block' }}>
+                                {(item.unitPrice * item.quantity).toLocaleString('vi-VN')} đ
+                              </strong>
+                              <button
+                                type="button"
+                                onClick={() => removeCartItem(item.id)}
+                                style={{ background: 'none', border: 'none', color: '#ef4444', cursor: 'pointer', fontSize: '0.76rem', fontWeight: 700, padding: 0, marginTop: '4px', display: 'inline-flex', alignItems: 'center', gap: '3px' }}
+                              >
+                                <Trash2 size={13} /> Xóa
+                              </button>
+                            </div>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                </div>
+
+                {/* RIGHT COLUMN: Sticky Order Summary & Voucher */}
+                <div style={{ position: 'sticky', top: '96px' }}>
+                  <div className="glass-panel" style={{ padding: '1.75rem', borderRadius: '20px', boxShadow: 'var(--shadow-soft)' }}>
+                    <h2 style={{ fontSize: '1.2rem', fontWeight: 800, color: '#0f172a', paddingBottom: '0.9rem', marginBottom: '1.15rem', borderBottom: '1px solid var(--border-light)' }}>
+                      🧾 Tóm Tắt Đơn Hàng
+                    </h2>
+
+                    {/* Voucher Input & Chips */}
+                    <div style={{ marginBottom: '1.25rem' }}>
+                      <label style={{ display: 'block', fontSize: '0.82rem', fontWeight: 700, color: '#334155', marginBottom: '6px' }}>
+                        Mã giảm giá / Voucher Petopia
+                      </label>
+                      <div style={{ display: 'flex', gap: '6px', marginBottom: '8px' }}>
+                        <input
+                          type="text"
+                          className="form-control"
+                          value={promoCode}
+                          onChange={e => setPromoCode(e.target.value)}
+                          placeholder="Nhập mã (VD: SPA10OFF)"
+                          style={{ textTransform: 'uppercase', fontSize: '0.85rem', padding: '0.6rem 0.85rem' }}
+                        />
+                        <button type="button" className="btn btn-secondary" onClick={() => applyPromoCode()} style={{ whiteSpace: 'nowrap', padding: '0.6rem 1rem' }}>
+                          Áp Dụng
+                        </button>
+                      </div>
+                      <div style={{ display: 'flex', gap: '6px', flexWrap: 'wrap' }}>
+                        <button
+                          type="button"
+                          onClick={() => applyPromoCode('SPA10OFF')}
+                          style={{ background: '#f0fdf4', border: '1px dashed #22c55e', color: '#15803d', padding: '3px 9px', borderRadius: '8px', fontSize: '0.74rem', fontWeight: 700, cursor: 'pointer' }}
+                        >
+                          🏷️ SPA10OFF (-10%)
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => applyPromoCode('PETLOVER20')}
+                          style={{ background: '#fef3c7', border: '1px dashed #f59e0b', color: '#b45309', padding: '3px 9px', borderRadius: '8px', fontSize: '0.74rem', fontWeight: 700, cursor: 'pointer' }}
+                        >
+                          🏷️ PETLOVER20 (-20%)
+                        </button>
+                      </div>
+                    </div>
+
+                    {/* Financial Breakdown */}
+                    <div style={{ background: '#f8fafc', padding: '1.1rem', borderRadius: '14px', border: '1px solid #e2e8f0', display: 'flex', flexDirection: 'column', gap: '0.65rem', fontSize: '0.9rem', marginBottom: '1.25rem' }}>
+                      <div style={{ display: 'flex', justifyContent: 'space-between', color: '#64748b' }}>
+                        <span>Tạm tính ({totalQty} sản phẩm):</span>
+                        <strong style={{ color: '#0f172a' }}>{cartSubtotal.toLocaleString('vi-VN')} đ</strong>
+                      </div>
+                      <div style={{ display: 'flex', justifyContent: 'space-between', color: '#64748b' }}>
+                        <span>Giao hàng tiêu chuẩn:</span>
+                        <strong style={{ color: '#059669' }}>MIỄN PHÍ</strong>
+                      </div>
+                      {discountPercent > 0 && (
+                        <div style={{ display: 'flex', justifyContent: 'space-between', color: '#059669' }}>
+                          <span>Giảm giá ({discountPercent}%):</span>
+                          <strong>-{discountAmount.toLocaleString('vi-VN')} đ</strong>
+                        </div>
+                      )}
+                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderTop: '1px solid #e2e8f0', paddingTop: '0.8rem', marginTop: '0.2rem' }}>
+                        <span style={{ fontWeight: 800, color: '#0f172a' }}>TỔNG TẠM TÍNH:</span>
+                        <strong style={{ fontSize: '1.45rem', fontWeight: 900, color: '#ff6b35' }}>
+                          {(cartSubtotal - discountAmount).toLocaleString('vi-VN')} đ
+                        </strong>
+                      </div>
+                    </div>
+
+                    {/* Primary CTA */}
+                    <button
+                      type="button"
+                      className="btn btn-coral"
+                      onClick={handleProceedToCheckout}
+                      style={{ width: '100%', padding: '1rem', fontSize: '1rem', fontWeight: 800, borderRadius: '14px', marginBottom: '0.75rem' }}
+                    >
+                      Tiến Hành Thanh Toán <ArrowRight size={18} />
+                    </button>
+                    <button
+                      type="button"
+                      className="btn btn-secondary"
+                      onClick={() => onTabChange('shop')}
+                      style={{ width: '100%', padding: '0.75rem', fontSize: '0.88rem', fontWeight: 700, borderRadius: '14px' }}
+                    >
+                      Tiếp Tục Mua Sắm
+                    </button>
+
+                    <div style={{ marginTop: '1.15rem', paddingTop: '1rem', borderTop: '1px solid #f1f5f9', display: 'flex', flexDirection: 'column', gap: '0.45rem', fontSize: '0.76rem', color: '#64748b' }}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                        <ShieldCheck size={14} color="#059669" /> Cam kết 100% sản phẩm chính hãng
+                      </div>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                        <RotateCcw size={14} color="#0284c7" /> Đổi trả miễn phí trong 7 ngày
+                      </div>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                        <PhoneCall size={14} color="#ea580c" /> Hotline hỗ trợ: <a href={`tel:${CONTACT_INFO.phoneRaw}`} style={{ color: '#ea580c', fontWeight: 800, textDecoration: 'none' }}>{CONTACT_INFO.phoneDisplay}</a>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {/* Suggested Best-Sellers Below Cart */}
+            {suggestedItems.length > 0 && (
+              <section className="glass-panel" style={{ padding: '1.75rem', borderRadius: '22px' }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.15rem', flexWrap: 'wrap', gap: '0.75rem' }}>
+                  <h2 style={{ fontSize: '1.2rem', fontWeight: 800, color: '#0f172a' }}>
+                    Gợi Ý Sản Phẩm Bán Chạy Cho Bé Cưng
+                  </h2>
+                  <button type="button" className="btn btn-secondary" style={{ padding: '0.45rem 0.9rem', fontSize: '0.82rem' }} onClick={() => onTabChange('shop')}>
+                    Xem tất cả <ArrowRight size={15} />
+                  </button>
+                </div>
+
+                <div className="grid-4" style={{ gap: '1.15rem' }}>
+                  {suggestedItems.map(item => (
+                    <div key={item.id} className="glass-card" style={{ padding: '1rem', borderRadius: '16px', display: 'flex', flexDirection: 'column', justifyContent: 'space-between' }}>
+                      <div>
+                        <div
+                          onClick={() => openProductDetail(item)}
+                          style={{ height: 140, background: '#ffffff', borderRadius: '12px', border: '1px solid #f1f5f9', padding: '10px', marginBottom: '0.65rem', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer' }}
+                        >
+                          <img
+                            src={getProductImage(item)}
+                            alt={item.name}
+                            referrerPolicy="no-referrer"
+                            style={{ maxWidth: '100%', maxHeight: '100%', objectFit: 'contain' }}
+                            onError={(e) => { e.currentTarget.onerror = null; e.currentTarget.src = getProductFallbackImage(item); }}
+                          />
+                        </div>
+                        <div
+                          onClick={() => openProductDetail(item)}
+                          style={{ fontSize: '0.86rem', fontWeight: 800, color: '#0f172a', lineHeight: 1.4, display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', overflow: 'hidden', minHeight: 38, cursor: 'pointer' }}
+                        >
+                          {item.name}
+                        </div>
+                      </div>
+                      <div style={{ marginTop: '0.75rem' }}>
+                        <strong style={{ fontSize: '1rem', color: '#ea580c', display: 'block', marginBottom: '0.5rem' }}>
+                          {item.unitPrice.toLocaleString('vi-VN')} đ
+                        </strong>
+                        <button
+                          type="button"
+                          className="btn btn-coral"
+                          style={{ width: '100%', padding: '0.48rem', fontSize: '0.8rem' }}
+                          onClick={() => handleAddToCart(item)}
+                        >
+                          <ShoppingCart size={14} /> Thêm Vào Giỏ
+                        </button>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </section>
+            )}
+          </div>
+        );
+      })()}
+
+      {/* 5. DEDICATED TRANG THANH TOÁN PETOPIA (/thanh-toan + Bước 3 Hoàn Tất) */}
       {activeTab === 'checkout' && (
         <div style={{ display: 'flex', flexDirection: 'column', gap: '1.75rem' }}>
           
-          {/* Top Breadcrumb & Step Navigation */}
+          {/* Top Breadcrumb & 3-Step Navigation */}
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '1rem', background: '#ffffff', padding: '1.25rem 1.75rem', borderRadius: '18px', border: '1px solid var(--border-light)', boxShadow: 'var(--shadow-soft)' }}>
             <div>
               <button 
                 type="button"
-                onClick={() => onTabChange('shop')}
+                onClick={() => {
+                  setCompletedOrderReceipt(null);
+                  openCartPage();
+                }}
                 style={{ background: 'none', border: 'none', color: '#ea580c', fontWeight: 700, fontSize: '0.85rem', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '6px', marginBottom: '4px', padding: 0 }}
               >
-                <ArrowLeft size={16} /> Quay Lại Cửa Hàng
+                <ArrowLeft size={16} /> Quay Lại Giỏ Hàng
               </button>
-              <h2 style={{ fontSize: '1.5rem', fontWeight: 800, color: '#0f172a', display: 'flex', alignItems: 'center', gap: '8px' }}>
-                <ShoppingCart size={24} color="#ff6b35" /> Thanh Toán Đơn Hàng An Toàn
-              </h2>
-              <p style={{ fontSize: '0.85rem', color: 'var(--text-muted)' }}>
-                Vui lòng điền thông tin người nhận, chọn phương thức vận chuyển và hoàn tất thanh toán
+              <h1 style={{ fontSize: '1.5rem', fontWeight: 800, color: '#0f172a', display: 'flex', alignItems: 'center', gap: '8px', margin: 0 }}>
+                <ShoppingCart size={24} color="#ff6b35" /> {completedOrderReceipt ? 'Đặt Hàng Thành Công!' : 'Thanh Toán Đơn Hàng An Toàn'}
+              </h1>
+              <p style={{ fontSize: '0.85rem', color: 'var(--text-muted)', marginTop: '2px' }}>
+                {completedOrderReceipt
+                  ? 'Cảm ơn bạn đã tin tưởng Petopia! Đơn hàng của bạn đang được bộ phận kho tiếp nhận & đóng gói.'
+                  : 'Vui lòng điền thông tin người nhận, chọn phương thức vận chuyển và hoàn tất thanh toán'}
               </p>
             </div>
 
-            {/* Stepper Indicator */}
-            <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', fontSize: '0.85rem' }}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '6px', color: '#10b981', fontWeight: 700 }}>
+            {/* Dynamic 3-Step Indicator */}
+            <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', fontSize: '0.85rem', flexWrap: 'wrap' }}>
+              <button
+                type="button"
+                onClick={() => {
+                  setCompletedOrderReceipt(null);
+                  openCartPage();
+                }}
+                style={{ display: 'flex', alignItems: 'center', gap: '6px', color: '#10b981', fontWeight: 700, background: 'none', border: 'none', cursor: 'pointer', padding: 0, fontSize: '0.85rem' }}
+              >
                 <span style={{ width: 24, height: 24, borderRadius: '50%', background: '#d1fae5', color: '#059669', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '0.75rem' }}>✓</span>
                 <span>1. Giỏ Hàng</span>
-              </div>
-              <div style={{ width: 24, height: 2, background: '#ff6b35' }}></div>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '6px', color: '#ff6b35', fontWeight: 800 }}>
-                <span style={{ width: 24, height: 24, borderRadius: '50%', background: '#ffedd5', color: '#ea580c', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '0.75rem' }}>2</span>
+              </button>
+              <div style={{ width: 24, height: 2, background: completedOrderReceipt ? '#10b981' : '#ff6b35' }} />
+              <div style={{ display: 'flex', alignItems: 'center', gap: '6px', color: completedOrderReceipt ? '#10b981' : '#ff6b35', fontWeight: 800 }}>
+                <span style={{ width: 24, height: 24, borderRadius: '50%', background: completedOrderReceipt ? '#d1fae5' : '#ffedd5', color: completedOrderReceipt ? '#059669' : '#ea580c', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '0.75rem' }}>
+                  {completedOrderReceipt ? '✓' : '2'}
+                </span>
                 <span>2. Thanh Toán</span>
               </div>
-              <div style={{ width: 24, height: 2, background: '#e2e8f0' }}></div>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '6px', color: '#94a3b8', fontWeight: 600 }}>
-                <span style={{ width: 24, height: 24, borderRadius: '50%', background: '#f1f5f9', color: '#94a3b8', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '0.75rem' }}>3</span>
+              <div style={{ width: 24, height: 2, background: completedOrderReceipt ? '#10b981' : '#e2e8f0' }} />
+              <div style={{ display: 'flex', alignItems: 'center', gap: '6px', color: completedOrderReceipt ? '#059669' : '#94a3b8', fontWeight: completedOrderReceipt ? 800 : 600 }}>
+                <span style={{ width: 24, height: 24, borderRadius: '50%', background: completedOrderReceipt ? '#d1fae5' : '#f1f5f9', color: completedOrderReceipt ? '#059669' : '#94a3b8', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '0.75rem' }}>
+                  {completedOrderReceipt ? '✓' : '3'}
+                </span>
                 <span>3. Hoàn Tất</span>
               </div>
             </div>
           </div>
 
-          {cart.length === 0 ? (
+          {completedOrderReceipt ? (
+            /* STEP 3: ORDER CONFIRMATION RECEIPT */
+            <div className="glass-panel" style={{ padding: '2.25rem', borderRadius: '22px', maxWidth: 820, width: '100%', margin: '0 auto' }}>
+              <div style={{ textAlign: 'center', paddingBottom: '1.5rem', marginBottom: '1.5rem', borderBottom: '1px solid var(--border-light)' }}>
+                <div style={{ width: 76, height: 76, borderRadius: '50%', background: '#ecfdf5', border: '2px solid #6ee7b7', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 1rem' }}>
+                  <CheckCircle size={40} color="#059669" />
+                </div>
+                <span className="badge badge-success" style={{ marginBottom: '0.6rem', fontSize: '0.8rem' }}>
+                  MÃ ĐƠN HÀNG: {completedOrderReceipt.orderId}
+                </span>
+                <h2 style={{ fontSize: '1.55rem', fontWeight: 900, color: '#0f172a', margin: '0.35rem 0' }}>
+                  Cảm Ơn Bạn Đã Đặt Hàng Tại Petopia!
+                </h2>
+                <p style={{ fontSize: '0.9rem', color: '#64748b', margin: 0 }}>
+                  Thời gian đặt: <strong>{completedOrderReceipt.createdAt}</strong> • Nhân viên sẽ sớm liên hệ xác nhận giao hàng.
+                </p>
+              </div>
+
+              {/* Order Recipient & Payment Info */}
+              <div className="grid-2" style={{ gap: '1rem', marginBottom: '1.5rem' }}>
+                <div style={{ background: '#f8fafc', border: '1px solid #e2e8f0', borderRadius: '14px', padding: '1.1rem', fontSize: '0.86rem' }}>
+                  <h3 style={{ fontSize: '0.94rem', fontWeight: 800, color: '#0f172a', marginBottom: '0.6rem', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                    <MapPin size={16} color="#ea580c" /> Thông Tin Giao Hàng
+                  </h3>
+                  <div style={{ color: '#334155', lineHeight: 1.65 }}>
+                    <div><strong>Người nhận:</strong> {completedOrderReceipt.recipientName}</div>
+                    <div><strong>Điện thoại:</strong> {completedOrderReceipt.recipientPhone}</div>
+                    <div><strong>Địa chỉ:</strong> {completedOrderReceipt.deliveryAddress}</div>
+                    {completedOrderReceipt.deliveryNotes && (
+                      <div><strong>Ghi chú:</strong> {completedOrderReceipt.deliveryNotes}</div>
+                    )}
+                  </div>
+                </div>
+
+                <div style={{ background: '#f8fafc', border: '1px solid #e2e8f0', borderRadius: '14px', padding: '1.1rem', fontSize: '0.86rem' }}>
+                  <h3 style={{ fontSize: '0.94rem', fontWeight: 800, color: '#0f172a', marginBottom: '0.6rem', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                    <CreditCard size={16} color="#0284c7" /> Thanh Toán &amp; Vận Chuyển
+                  </h3>
+                  <div style={{ color: '#334155', lineHeight: 1.65 }}>
+                    <div>
+                      <strong>Thanh toán:</strong>{' '}
+                      {completedOrderReceipt.paymentMethod === 'VIETQR'
+                        ? 'Chuyển Khoản VietQR (MB Bank)'
+                        : completedOrderReceipt.paymentMethod === 'MOMO'
+                          ? 'Ví Điện Tử MoMo / ZaloPay'
+                          : 'Tiền Mặt Khi Nhận Hàng (COD)'}
+                    </div>
+                    <div>
+                      <strong>Vận chuyển:</strong>{' '}
+                      {completedOrderReceipt.shippingMethod === 'EXPRESS' ? 'Hỏa Tốc Petopia 2H' : 'Giao Hàng Tiêu Chuẩn (1-2 ngày)'}
+                    </div>
+                    <div>
+                      <strong>Tổng thanh toán:</strong>{' '}
+                      <strong style={{ color: '#ea580c', fontSize: '1.05rem' }}>
+                        {completedOrderReceipt.grandTotal.toLocaleString('vi-VN')} đ
+                      </strong>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              {/* Ordered Items Receipt List */}
+              <div style={{ background: '#f8fafc', border: '1px solid #e2e8f0', borderRadius: '14px', padding: '1.1rem', marginBottom: '1.5rem' }}>
+                <h3 style={{ fontSize: '0.95rem', fontWeight: 800, color: '#0f172a', marginBottom: '0.75rem' }}>
+                  Sản Phẩm Đã Đặt ({completedOrderReceipt.items.reduce((s, i) => s + i.quantity, 0)} món)
+                </h3>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '0.6rem' }}>
+                  {completedOrderReceipt.items.map(item => (
+                    <div key={item.id} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '0.75rem', background: '#ffffff', padding: '0.65rem 0.9rem', borderRadius: '10px', border: '1px solid #e2e8f0', fontSize: '0.86rem' }}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '0.7rem' }}>
+                        <img
+                          src={getProductImage(item)}
+                          alt={item.name}
+                          referrerPolicy="no-referrer"
+                          onError={(e) => { e.currentTarget.onerror = null; e.currentTarget.src = getProductFallbackImage(item); }}
+                          style={{ width: 42, height: 42, objectFit: 'contain', background: '#ffffff', borderRadius: '8px', border: '1px solid #e2e8f0', padding: '2px' }}
+                        />
+                        <div>
+                          <strong style={{ color: '#0f172a' }}>{item.name}</strong>
+                          <div style={{ fontSize: '0.76rem', color: '#64748b' }}>
+                            {item.unitPrice.toLocaleString('vi-VN')} đ × {item.quantity}
+                          </div>
+                        </div>
+                      </div>
+                      <strong style={{ color: '#059669', whiteSpace: 'nowrap' }}>
+                        {(item.unitPrice * item.quantity).toLocaleString('vi-VN')} đ
+                      </strong>
+                    </div>
+                  ))}
+                </div>
+              </div>
+
+              <div style={{ display: 'flex', justifyContent: 'center', gap: '0.9rem', flexWrap: 'wrap' }}>
+                <button
+                  type="button"
+                  className="btn btn-coral"
+                  style={{ padding: '0.85rem 1.75rem', fontSize: '0.95rem', fontWeight: 800, borderRadius: '14px' }}
+                  onClick={() => {
+                    setCompletedOrderReceipt(null);
+                    onTabChange('history');
+                    window.scrollTo({ top: 0, behavior: 'smooth' });
+                  }}
+                >
+                  <Clock size={17} /> Theo Dõi Đơn Hàng Của Tôi
+                </button>
+                <button
+                  type="button"
+                  className="btn btn-secondary"
+                  style={{ padding: '0.85rem 1.5rem', fontSize: '0.92rem', fontWeight: 700, borderRadius: '14px' }}
+                  onClick={() => {
+                    setCompletedOrderReceipt(null);
+                    onTabChange('shop');
+                    window.scrollTo({ top: 0, behavior: 'smooth' });
+                  }}
+                >
+                  Tiếp Tục Mua Sắm <ArrowRight size={16} />
+                </button>
+              </div>
+            </div>
+          ) : cart.length === 0 ? (
             <div className="glass-panel" style={{ padding: '3.5rem 2rem', textAlign: 'center', borderRadius: '20px' }}>
               <div style={{ width: 80, height: 80, borderRadius: '50%', background: '#fff7ed', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 1.25rem', border: '1px solid #ffedd5' }}>
                 <ShoppingBag size={40} color="#ff6b35" />
@@ -1308,7 +2466,7 @@ export default function CustomerPortal({
               </button>
             </div>
           ) : (
-            <form onSubmit={handleFinalPlaceOrder} style={{ display: 'grid', gridTemplateColumns: 'minmax(0, 1.45fr) minmax(0, 1fr)', gap: '1.75rem', alignItems: 'start' }}>
+            <form onSubmit={handleFinalPlaceOrder} className="checkout-layout-grid">
               
               {/* LEFT COLUMN: Recipient Information, Shipping, Payment */}
               <div style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
@@ -1328,7 +2486,7 @@ export default function CustomerPortal({
                         type="text" 
                         required 
                         className="form-control" 
-                        placeholder="VD: Nguyễn Văn An"
+                        placeholder="Nhập họ và tên người nhận"
                         value={checkoutForm.recipientName}
                         onChange={e => setCheckoutForm({ ...checkoutForm, recipientName: e.target.value })}
                       />
@@ -1341,7 +2499,7 @@ export default function CustomerPortal({
                         type="tel" 
                         required 
                         className="form-control" 
-                        placeholder="VD: 0901234567"
+                        placeholder="Nhập số điện thoại liên hệ"
                         value={checkoutForm.recipientPhone}
                         onChange={e => setCheckoutForm({ ...checkoutForm, recipientPhone: e.target.value })}
                       />
@@ -1356,7 +2514,7 @@ export default function CustomerPortal({
                       type="text" 
                       required 
                       className="form-control" 
-                      placeholder="Số nhà, tên đường, phường/xã, quận/huyện, tỉnh thành..."
+                      placeholder="Số nhà, tên đường, phường/xã, quận/huyện, tỉnh/thành phố"
                       value={checkoutForm.deliveryAddress}
                       onChange={e => setCheckoutForm({ ...checkoutForm, deliveryAddress: e.target.value })}
                     />
@@ -1369,7 +2527,7 @@ export default function CustomerPortal({
                     <textarea 
                       className="form-control" 
                       rows={2}
-                      placeholder="VD: Giao giờ hành chính, gọi trước 15 phút, gửi bảo vệ..."
+                      placeholder="Nhập ghi chú giao hàng nếu cần..."
                       value={checkoutForm.deliveryNotes}
                       onChange={e => setCheckoutForm({ ...checkoutForm, deliveryNotes: e.target.value })}
                       style={{ resize: 'vertical' }}
@@ -1702,6 +2860,34 @@ export default function CustomerPortal({
                       </div>
                     </label>
 
+                    {checkoutForm.paymentMethod === 'MOMO' && (
+                      <div style={{ background: '#fdf2f8', border: '1.5px dashed #db2777', borderRadius: '16px', padding: '1.25rem', display: 'flex', flexDirection: 'column', gap: '0.65rem', fontSize: '0.85rem' }}>
+                        <div style={{ fontWeight: 800, color: '#be185d', fontSize: '0.88rem' }}>
+                          👛 Thông Tin Chuyển Khoản Ví MoMo / ZaloPay
+                        </div>
+                        <div style={{ background: '#ffffff', borderRadius: '12px', padding: '0.9rem 1rem', border: '1px solid #fbcfe8', display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
+                          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                            <span style={{ color: '#64748b' }}>Số điện thoại ví:</span>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                              <strong style={{ color: '#be185d', fontSize: '0.98rem' }}>{CONTACT_INFO.phoneRaw}</strong>
+                              <button type="button" onClick={() => handleCopyText(CONTACT_INFO.phoneRaw, 'Số ví MoMo/ZaloPay')} style={{ background: '#f1f5f9', border: '1px solid #cbd5e1', borderRadius: '6px', padding: '2px 6px', fontSize: '0.72rem', cursor: 'pointer' }}>Copy</button>
+                            </div>
+                          </div>
+                          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                            <span style={{ color: '#64748b' }}>Số tiền:</span>
+                            <strong style={{ color: '#ea580c', fontSize: '1rem' }}>{grandTotal.toLocaleString('vi-VN')} đ</strong>
+                          </div>
+                          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderTop: '1px dashed #fbcfe8', paddingTop: '4px' }}>
+                            <span style={{ color: '#64748b' }}>Lời nhắn:</span>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                              <strong style={{ color: '#be185d', background: '#fce7f3', padding: '2px 6px', borderRadius: '4px' }}>PETOPIA {tempOrderCode}</strong>
+                              <button type="button" onClick={() => handleCopyText(`PETOPIA ${tempOrderCode}`, 'Lời nhắn chuyển tiền')} style={{ background: '#f1f5f9', border: '1px solid #cbd5e1', borderRadius: '6px', padding: '2px 6px', fontSize: '0.72rem', cursor: 'pointer' }}>Copy</button>
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                    )}
+
                   </div>
                 </div>
 
@@ -1727,8 +2913,9 @@ export default function CustomerPortal({
                         <img
                           src={getProductImage(item)}
                           alt={item.name}
-                          onError={(e) => { e.currentTarget.src = FALLBACK_IMAGES.product; }}
-                          style={{ width: 46, height: 46, borderRadius: '10px', objectFit: 'cover', border: '1px solid #e2e8f0', flexShrink: 0 }}
+                          referrerPolicy="no-referrer"
+                          onError={(e) => { e.currentTarget.onerror = null; e.currentTarget.src = getProductFallbackImage(item); }}
+                          style={{ width: 46, height: 46, borderRadius: '10px', objectFit: 'contain', background: '#ffffff', padding: '2px', border: '1px solid #e2e8f0', flexShrink: 0 }}
                         />
                         <div style={{ flex: 1, paddingRight: '6px' }}>
                           <strong style={{ fontSize: '0.92rem', color: '#0f172a', display: 'block' }}>{item.name}</strong>
@@ -1891,7 +3078,7 @@ export default function CustomerPortal({
         <div className="glass-panel" style={{ padding: '2rem' }}>
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.25rem', flexWrap: 'wrap', gap: '1rem' }}>
             <div>
-              <h2 style={{ fontSize: '1.4rem', fontWeight: 800 }}>Lịch Sử Lịch Hẹn & Tiến Độ Chăm Sóc Real-time</h2>
+              <h1 style={{ fontSize: '1.4rem', fontWeight: 800 }}>Lịch Sử Lịch Hẹn &amp; Tiến Độ Chăm Sóc Real-time</h1>
               <p style={{ fontSize: '0.82rem', color: 'var(--text-muted)' }}>Theo dõi trạng thái tiếp nhận, tiến độ thực hiện và hủy hẹn giữ chỗ khi cần</p>
             </div>
             {currentUser && (
@@ -1911,18 +3098,18 @@ export default function CustomerPortal({
             <>
               {/* User Profile Mini Banner */}
               <div style={{ background: 'rgba(2, 132, 199, 0.08)', border: '1px solid rgba(2, 132, 199, 0.25)', borderRadius: '14px', padding: '1rem 1.25rem', marginBottom: '1.5rem', display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '1rem' }}>
-                <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
-                  <img
-                    src={getUserAvatar(currentUser)}
-                    alt={currentUser.fullName || 'Khách hàng'}
-                    onError={(e) => { e.currentTarget.src = FALLBACK_IMAGES.user; }}
-                    style={{ width: 50, height: 50, borderRadius: '50%', objectFit: 'cover', border: '2px solid #ff6b35', boxShadow: '0 4px 12px rgba(255,107,53,0.2)', flexShrink: 0 }}
-                  />
-                  <div>
-                    <h4 style={{ fontSize: '1rem', fontWeight: 800 }}>{currentUser.fullName}</h4>
-                    <div style={{ fontSize: '0.8rem', color: 'var(--text-muted)' }}>
-                      Email: <strong>{currentUser.email}</strong> • SĐT: <strong>{currentUser.phone || 'Chưa cập nhật'}</strong>
-                    </div>
+                <div>
+                  <h4 style={{ fontSize: '1rem', fontWeight: 800 }}>{currentUser.fullName}</h4>
+                  <div style={{ fontSize: '0.8rem', color: 'var(--text-muted)' }}>
+                    {currentUser.email && currentUser.email !== currentUser.phone ? (
+                      <>
+                        Tài khoản: <strong>{currentUser.email}</strong> • SĐT: <strong>{currentUser.phone || 'Chưa cập nhật'}</strong>
+                      </>
+                    ) : (
+                      <>
+                        SĐT tài khoản: <strong>{currentUser.phone || currentUser.email || 'Chưa cập nhật'}</strong>
+                      </>
+                    )}
                   </div>
                 </div>
                 <button className="btn btn-secondary" style={{ fontSize: '0.8rem', padding: '0.4rem 0.85rem' }} onClick={() => setShowProfileModal(true)}>
@@ -2032,19 +3219,34 @@ export default function CustomerPortal({
       <footer className="petopia-footer">
         <div className="grid-4">
           <div>
-            <h3 style={{ fontSize: '1.3rem', fontWeight: 800, color: '#ff8e53', marginBottom: '0.85rem' }}>PETOPIA PLATFORM</h3>
-            <p style={{ fontSize: '0.85rem', color: 'var(--text-muted)', lineHeight: '1.6' }}>
-              Chăm sóc thú cưng toàn diện — cửa hàng, dịch vụ spa, lưu trú và thú y trong một nền tảng thông minh.
+            <a
+              href="/"
+              className="petopia-brand-link"
+              aria-label="Trang chủ Petopia"
+              style={{ display: 'inline-flex', textDecoration: 'none', marginBottom: '0.9rem' }}
+              onClick={(e) => {
+                e.preventDefault();
+                onTabChange('home');
+                window.scrollTo({ top: 0, behavior: 'smooth' });
+              }}
+            >
+              <BrandLogo size="md" subtitle="SPA • THÚ Y 24/7 • PET SHOP" />
+            </a>
+            <p style={{ fontSize: '0.84rem', color: 'var(--text-muted)', lineHeight: '1.65', marginBottom: '0.85rem' }}>
+              Chăm sóc thú cưng toàn diện — dịch vụ Spa Grooming, Khoa Sinh Sản 24/7, lưu trú VIP và cửa hàng chính hãng trong một nền tảng thông minh.
             </p>
+            <div style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', background: '#ecfdf5', border: '1px solid #a7f3d0', color: '#047857', fontSize: '0.73rem', fontWeight: 800, padding: '4px 10px', borderRadius: '999px' }}>
+              <ShieldCheck size={13} /> Chứng nhận 100% Chính Hãng
+            </div>
           </div>
           <div>
             <h4 style={{ fontSize: '1rem', fontWeight: 700, marginBottom: '0.85rem' }}>Khám Phá</h4>
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem', fontSize: '0.85rem', color: 'var(--text-muted)' }}>
-              <span style={{ cursor: 'pointer', color: '#ea580c', fontWeight: 700 }} onClick={() => onTabChange('reproduction')}>🏥 Khoa Sinh Sản (VPet's)</span>
-              <span style={{ cursor: 'pointer' }} onClick={() => onTabChange('booking')}>Dịch Vụ Spa</span>
-              <span style={{ cursor: 'pointer' }} onClick={() => onTabChange('shop')}>Cửa Hàng Vật Phẩm</span>
-              <span style={{ cursor: 'pointer' }} onClick={() => onTabChange('pets')}>Quản Lý Thú Cưng</span>
-            </div>
+            <nav aria-label="Liên kết nhanh cuối trang" style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem', fontSize: '0.85rem', color: 'var(--text-muted)' }}>
+              <a href="/khoa-sinh-san" style={{ cursor: 'pointer', color: '#ea580c', fontWeight: 700, textDecoration: 'none' }} onClick={(e) => { e.preventDefault(); onTabChange('reproduction'); }}>🏥 Khoa Sinh Sản (VPet's)</a>
+              <a href="/dich-vu-spa" style={{ cursor: 'pointer', color: 'inherit', textDecoration: 'none' }} onClick={(e) => { e.preventDefault(); onTabChange('booking'); }}>Dịch Vụ Spa</a>
+              <a href="/cua-hang" style={{ cursor: 'pointer', color: 'inherit', textDecoration: 'none' }} onClick={(e) => { e.preventDefault(); onTabChange('shop'); }}>Cửa Hàng Vật Phẩm</a>
+              <a href="/thu-cung" style={{ cursor: 'pointer', color: 'inherit', textDecoration: 'none' }} onClick={(e) => { e.preventDefault(); onTabChange('pets'); }}>Quản Lý Thú Cưng</a>
+            </nav>
           </div>
           <div>
             <h4 style={{ fontSize: '1rem', fontWeight: 700, marginBottom: '0.85rem' }}>Liên Hệ Trực Tuyến</h4>
@@ -2104,183 +3306,9 @@ export default function CustomerPortal({
         <div style={{ textAlign: 'center', fontSize: '0.8rem', color: 'var(--text-muted)', paddingTop: '1.25rem', borderTop: '1px solid var(--border-light)' }}>
           Petopia © 2026 — Hệ Thống Quản Lý Dịch Vụ Thú Cưng & Dự Báo Kho Thông Minh.
           <span style={{ margin: '0 8px' }}>•</span>
-          <a href="/admin" style={{ color: '#64748b', textDecoration: 'none', fontWeight: 600 }}>🔒 Dành Cho Nhân Viên & Quản Trị</a>
+          <a href="/admin" rel="nofollow" style={{ color: '#64748b', textDecoration: 'none', fontWeight: 600 }}>🔒 Dành Cho Nhân Viên &amp; Quản Trị</a>
         </div>
       </footer>
-
-      {/* SHOPPING CART MODAL */}
-      {showCartModal && (
-        <div className="modal-overlay">
-          <div className="modal-content animate-fade-in" style={{ maxWidth: 620, padding: '1.75rem', borderRadius: '20px' }}>
-            
-            {/* Modal Header */}
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.25rem', paddingBottom: '0.85rem', borderBottom: '1px solid var(--border-light)' }}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                <div style={{ width: 36, height: 36, borderRadius: '10px', background: '#fff7ed', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                  <ShoppingCart size={20} color="#ff6b35" />
-                </div>
-                <div>
-                  <h3 style={{ fontSize: '1.25rem', fontWeight: 800, color: '#0f172a', margin: 0 }}>
-                    Giỏ Hàng Petopia Super Shop
-                  </h3>
-                  <span style={{ fontSize: '0.78rem', color: 'var(--text-muted)' }}>
-                    {cart.reduce((s, i) => s + i.quantity, 0)} món đồ trong giỏ
-                  </span>
-                </div>
-              </div>
-              <button 
-                type="button"
-                onClick={() => setShowCartModal(false)}
-                style={{ background: '#f1f5f9', border: 'none', borderRadius: '50%', width: 32, height: 32, display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', color: '#64748b' }}
-              >
-                <X size={16} />
-              </button>
-            </div>
-
-            {cart.length === 0 ? (
-              <div style={{ padding: '2.5rem 1rem', textAlign: 'center' }}>
-                <div style={{ width: 64, height: 64, borderRadius: '50%', background: '#fff7ed', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 1rem', border: '1px solid #ffedd5' }}>
-                  <ShoppingBag size={32} color="#ff6b35" />
-                </div>
-                <h4 style={{ fontSize: '1.1rem', fontWeight: 700, color: '#0f172a', marginBottom: '0.4rem' }}>
-                  Giỏ hàng của bạn đang trống!
-                </h4>
-                <p style={{ color: 'var(--text-muted)', fontSize: '0.85rem', maxWidth: 360, margin: '0 auto 1.25rem' }}>
-                  Hãy dạo quanh cửa hàng Petopia và chọn những món quà dinh dưỡng tuyệt vời nhất cho thú cưng của bạn.
-                </p>
-                <button 
-                  type="button"
-                  className="btn btn-coral" 
-                  onClick={() => {
-                    setShowCartModal(false);
-                    onTabChange('shop');
-                  }}
-                  style={{ padding: '0.6rem 1.4rem', fontSize: '0.9rem' }}
-                >
-                  Khám Phá Cửa Hàng Ngay <ArrowRight size={16} />
-                </button>
-              </div>
-            ) : (
-              <div>
-                {/* Scrollable Items Container */}
-                <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem', maxHeight: '280px', overflowY: 'auto', paddingRight: '4px' }}>
-                  {cart.map((item) => (
-                    <div key={item.id} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '10px', background: '#f8fafc', padding: '0.8rem 1rem', borderRadius: '14px', border: '1px solid var(--border-light)' }}>
-                      <img
-                        src={getProductImage(item)}
-                        alt={item.name}
-                        onError={(e) => { e.currentTarget.src = FALLBACK_IMAGES.product; }}
-                        style={{ width: 48, height: 48, borderRadius: '10px', objectFit: 'cover', border: '1px solid #e2e8f0', flexShrink: 0 }}
-                      />
-                      <div style={{ flex: 1, paddingRight: '8px' }}>
-                        <strong style={{ fontSize: '0.95rem', color: '#0f172a' }}>{item.name}</strong>
-                        <div style={{ fontSize: '0.78rem', color: 'var(--text-muted)', marginTop: '2px' }}>
-                          Đơn giá: {item.unitPrice.toLocaleString('vi-VN')} đ • Tồn: {item.currentStock} sp
-                        </div>
-                      </div>
-
-                      {/* Quantity Stepper */}
-                      <div style={{ display: 'flex', alignItems: 'center', gap: '6px', marginRight: '1rem' }}>
-                        <button 
-                          type="button"
-                          onClick={() => updateCartQuantity(item.id, -1)}
-                          style={{ width: 28, height: 28, borderRadius: '8px', border: '1px solid #cbd5e1', background: '#ffffff', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
-                          title="Giảm số lượng"
-                        >
-                          <Minus size={13} />
-                        </button>
-                        <span style={{ fontWeight: 800, fontSize: '0.92rem', minWidth: '22px', textAlign: 'center' }}>
-                          {item.quantity}
-                        </span>
-                        <button 
-                          type="button"
-                          onClick={() => updateCartQuantity(item.id, 1)}
-                          disabled={item.quantity >= item.currentStock}
-                          style={{ width: 28, height: 28, borderRadius: '8px', border: '1px solid #cbd5e1', background: item.quantity >= item.currentStock ? '#f1f5f9' : '#ffffff', cursor: item.quantity >= item.currentStock ? 'not-allowed' : 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
-                          title="Tăng số lượng"
-                        >
-                          <Plus size={13} />
-                        </button>
-                      </div>
-
-                      {/* Subtotal & Delete */}
-                      <div style={{ textAlign: 'right', minWidth: '95px' }}>
-                        <strong style={{ color: '#059669', fontSize: '1rem', display: 'block' }}>
-                          {(item.unitPrice * item.quantity).toLocaleString('vi-VN')} đ
-                        </strong>
-                        <button 
-                          type="button"
-                          onClick={() => removeCartItem(item.id)}
-                          style={{ background: 'none', border: 'none', color: '#ef4444', cursor: 'pointer', padding: 0, marginTop: '2px' }}
-                          title="Xóa món này"
-                        >
-                          <Trash2 size={14} />
-                        </button>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-
-                {/* Voucher input */}
-                <div style={{ display: 'flex', gap: '0.5rem', marginTop: '1.25rem' }}>
-                  <input 
-                    type="text" 
-                    className="form-control" 
-                    value={promoCode} 
-                    onChange={e => setPromoCode(e.target.value)} 
-                    placeholder="Mã giảm giá (SPA10OFF, PETLOVER20)" 
-                    style={{ textTransform: 'uppercase', fontSize: '0.85rem' }}
-                  />
-                  <button type="button" className="btn btn-secondary" onClick={() => applyPromoCode()}>Áp Dụng</button>
-                </div>
-
-                {/* Subtotal summary */}
-                <div style={{ background: '#f8fafc', padding: '1rem 1.25rem', borderRadius: '14px', border: '1px solid var(--border-light)', marginTop: '1rem', display: 'flex', flexDirection: 'column', gap: '0.45rem', fontSize: '0.88rem' }}>
-                  <div style={{ display: 'flex', justifyContent: 'space-between', color: '#64748b' }}>
-                    <span>Tạm tính ({cart.reduce((s, i) => s + i.quantity, 0)} sp):</span>
-                    <strong style={{ color: '#0f172a' }}>{cartSubtotal.toLocaleString('vi-VN')} đ</strong>
-                  </div>
-                  {discountPercent > 0 && (
-                    <div style={{ display: 'flex', justifyContent: 'space-between', color: '#059669' }}>
-                      <span>Khuyến mãi ({discountPercent}%):</span>
-                      <strong>-{discountAmount.toLocaleString('vi-VN')} đ</strong>
-                    </div>
-                  )}
-                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontWeight: 800, fontSize: '1.15rem', color: '#ff6b35', paddingTop: '0.6rem', borderTop: '1px solid #e2e8f0' }}>
-                    <span>Tổng Tạm Tính:</span>
-                    <span>{(cartSubtotal - discountAmount).toLocaleString('vi-VN')} đ</span>
-                  </div>
-                </div>
-              </div>
-            )}
-
-            {/* Modal Footer Actions */}
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: '1.5rem', paddingTop: '1rem', borderTop: '1px solid var(--border-light)' }}>
-              {cart.length > 0 ? (
-                <button 
-                  type="button"
-                  onClick={handleClearCart}
-                  style={{ background: 'none', border: 'none', color: '#ef4444', fontSize: '0.82rem', fontWeight: 600, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '4px' }}
-                >
-                  <Trash2 size={14} /> Xóa Giỏ
-                </button>
-              ) : <div />}
-
-              <div style={{ display: 'flex', gap: '0.75rem' }}>
-                <button type="button" className="btn btn-secondary" onClick={() => setShowCartModal(false)}>
-                  Tiếp Tục Mua Sắm
-                </button>
-                {cart.length > 0 && (
-                  <button type="button" className="btn btn-coral" onClick={handleProceedToCheckout}>
-                    Tiến Hành Thanh Toán <ArrowRight size={16} />
-                  </button>
-                )}
-              </div>
-            </div>
-
-          </div>
-        </div>
-      )}
 
       {/* MODAL THÊM THÚ CƯNG */}
       {showAddPet && (
@@ -2431,74 +3459,6 @@ export default function CustomerPortal({
         </div>
       )}
 
-      {/* MODAL CHI TIẾT DỊCH VỤ (USE CASE: TRA CỨU & XEM CHI TIẾT DỊCH VỤ) */}
-      {selectedDetailService && (
-        <div className="modal-overlay">
-          <div className="modal-content animate-fade-in" style={{ maxWidth: 560, overflow: 'hidden' }}>
-            <div style={{ height: 185, borderRadius: '14px', overflow: 'hidden', marginBottom: '1.15rem', background: '#f1f5f9' }}>
-              <img
-                src={getServiceImage(selectedDetailService)}
-                alt={selectedDetailService.name}
-                onError={(e) => { e.currentTarget.src = FALLBACK_IMAGES.service; }}
-                style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }}
-              />
-            </div>
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '1rem' }}>
-              <div>
-                <span className="badge badge-info" style={{ marginBottom: '6px' }}>{selectedDetailService.category}</span>
-                <h3 style={{ fontSize: '1.35rem', fontWeight: 800 }}>{selectedDetailService.name}</h3>
-              </div>
-              <span style={{ fontSize: '1.4rem', fontWeight: 800, color: '#38bdf8' }}>
-                {selectedDetailService.price.toLocaleString('vi-VN')} đ
-              </span>
-            </div>
-
-            <p style={{ fontSize: '0.9rem', color: 'var(--text-secondary)', lineHeight: 1.6, marginBottom: '1.25rem' }}>
-              {selectedDetailService.description}
-            </p>
-
-            <div style={{ background: '#f8fafc', borderRadius: '12px', padding: '1rem', border: '1px solid var(--border-light)', marginBottom: '1.25rem' }}>
-              <h4 style={{ fontSize: '0.95rem', fontWeight: 700, marginBottom: '0.6rem', display: 'flex', alignItems: 'center', gap: '6px', color: '#ea580c' }}>
-                <Clock size={16} /> Quy Trình Chăm Sóc Chuẩn Spa ({selectedDetailService.durationMinutes} Phút)
-              </h4>
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '0.6rem', fontSize: '0.85rem', color: 'var(--text-secondary)' }}>
-                <div style={{ display: 'flex', gap: '8px' }}>
-                  <span style={{ color: '#059669', fontWeight: 800 }}>1.</span>
-                  <span><strong>Tiếp nhận & Kiểm tra:</strong> Cân đo thể trạng, kiểm tra da lông, ghi nhận lưu ý tiền sử bệnh/dị ứng.</span>
-                </div>
-                <div style={{ display: 'flex', gap: '8px' }}>
-                  <span style={{ color: '#059669', fontWeight: 800 }}>2.</span>
-                  <span><strong>Thực hiện liệu trình:</strong> Thực hiện dịch vụ chuyên sâu theo đúng tiêu chuẩn vệ sinh và kỹ thuật Petopia.</span>
-                </div>
-                <div style={{ display: 'flex', gap: '8px' }}>
-                  <span style={{ color: '#059669', fontWeight: 800 }}>3.</span>
-                  <span><strong>Bàn giao & Care Summary:</strong> Nhân viên cập nhật kết quả và ghi chú dặn dò chăm sóc tại nhà.</span>
-                </div>
-              </div>
-            </div>
-
-            <div style={{ display: 'flex', gap: '0.85rem', justifyContent: 'flex-end' }}>
-              <button className="btn btn-secondary" onClick={() => setSelectedDetailService(null)}>Đóng</button>
-              <button 
-                className="btn btn-coral" 
-                onClick={() => {
-                  const sId = selectedDetailService.id;
-                  setSelectedDetailService(null);
-                  if (!currentUser) {
-                    onOpenLogin();
-                    return;
-                  }
-                  setBookingForm(prev => ({ ...prev, serviceId: sId }));
-                  setShowBookingModal(true);
-                }}
-              >
-                <Calendar size={16} /> Đặt Lịch Dịch Vụ Này
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
-
       {/* MODAL CẬP NHẬT HỒ SƠ CÁ NHÂN (USE CASE: QUẢN LÝ THÔNG TIN CÁ NHÂN) */}
       {showProfileModal && (
         <div className="modal-overlay">
@@ -2524,14 +3484,14 @@ export default function CustomerPortal({
               </div>
 
               <div className="form-group">
-                <label>Email Đăng Ký (Định danh duy nhất)</label>
+                <label>Tài Khoản Đăng Ký (Email / SĐT định danh)</label>
                 <input 
                   className="form-control" 
-                  value={currentUser?.email || ''} 
+                  value={currentUser?.email || currentUser?.phone || ''} 
                   disabled 
                   style={{ opacity: 0.7, cursor: 'not-allowed' }}
                 />
-                <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>Email tài khoản không thể thay đổi theo quy tắc BR01</span>
+                <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>Tài khoản định danh không thể thay đổi theo quy tắc BR01</span>
               </div>
 
               <div className="form-group">

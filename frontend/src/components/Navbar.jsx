@@ -1,8 +1,7 @@
 import React from 'react';
-import { PawPrint, User, LogOut, Shield, Search, ShoppingBag, PhoneCall, Home, Calendar, Heart, Clock, ArrowRight, UserCheck, Activity } from 'lucide-react';
-import { toast } from './ToastNotification';
+import { User, LogOut, Shield, ShoppingBag, PhoneCall, Home, Calendar, Heart, Clock, UserCheck, Activity } from 'lucide-react';
 import { CONTACT_INFO } from '../contactConfig';
-import { getUserAvatar, FALLBACK_IMAGES } from '../mediaAssets';
+import BrandLogo from './BrandLogo';
 
 export default function Navbar({ 
   currentUser, 
@@ -18,9 +17,9 @@ export default function Navbar({
 }) {
   const getRoleDisplayName = (r) => {
     switch (r) {
-      case 'CARE_STAFF': return 'Nhân Viên Spa';
-      case 'WAREHOUSE_STAFF': return 'Nhân Viên Kho';
-      case 'ADMIN': return 'Quản Trị Admin';
+      case 'CARE_STAFF': return 'Nhân Viên';
+      case 'WAREHOUSE_STAFF': return 'Quản Lý Kho';
+      case 'ADMIN': return 'Admin';
       case 'CUSTOMER':
       default:
         return 'Khách Hàng';
@@ -29,8 +28,8 @@ export default function Navbar({
 
   const getWorkspaceTitle = (r) => {
     switch (r) {
-      case 'CARE_STAFF': return '💈 KHU VỰC LÀM VIỆC: NHÂN VIÊN SPA';
-      case 'WAREHOUSE_STAFF': return '📦 KHU VỰC LÀM VIỆC: NHÂN VIÊN KHO';
+      case 'CARE_STAFF': return '💈 KHU VỰC LÀM VIỆC: NHÂN VIÊN';
+      case 'WAREHOUSE_STAFF': return '📦 KHU VỰC LÀM VIỆC: QUẢN LÝ KHO';
       case 'ADMIN': return '🛡️ KHU VỰC QUẢN TRỊ: ADMIN HỆ THỐNG';
       default: return 'KHU VỰC QUẢN TRỊ';
     }
@@ -64,48 +63,48 @@ export default function Navbar({
       {/* 2. Main Light Theme Header */}
       <header className="petopia-main-header">
         
-        {/* Brand Logo */}
-        <div style={{ display: 'flex', alignItems: 'center', gap: '0.9rem', cursor: 'pointer', flexShrink: 0 }} onClick={() => onTabChange('home')}>
-          <div style={{ 
-            background: 'linear-gradient(135deg, #ff6b35 0%, #ff8e53 100%)', 
-            padding: '0.65rem 0.8rem', 
-            borderRadius: '16px', 
-            display: 'flex', 
-            color: '#ffffff', 
-            boxShadow: '0 6px 18px rgba(255,107,53,0.35)' 
-          }}>
-            <PawPrint size={25} strokeWidth={2.5} />
-          </div>
-          <div>
-            <h1 style={{ 
-              fontSize: '1.35rem', 
-              fontWeight: 800, 
-              color: '#0f172a',
-              letterSpacing: '-0.5px' 
-            }}>
-              PETOPIA
-            </h1>
-            <p style={{ fontSize: '0.68rem', color: '#ea580c', fontWeight: 700 }}>CHĂM SÓC THÚ CƯNG & DỰ BÁO KHO AI</p>
-          </div>
-        </div>
+        {/* Brand Logo (Semantic anchor, never steals page H1) */}
+        <a
+          href={portalMode === 'CUSTOMER' ? '/' : '/admin'}
+          aria-label="Trang chủ Petopia"
+          className="petopia-brand-link"
+          style={{ display: 'inline-flex', alignItems: 'center', cursor: 'pointer', flexShrink: 0, textDecoration: 'none' }}
+          onClick={(e) => {
+            e.preventDefault();
+            onTabChange('home');
+          }}
+        >
+          <BrandLogo
+            size="md"
+            subtitle={portalMode === 'CUSTOMER' ? 'SPA • THÚ Y 24/7 • PET SHOP' : 'QUẢN TRỊ & DỰ BÁO KHO AI'}
+          />
+        </a>
 
         {/* Customer Main Navigation Tabs vs Staff Role Badge */}
         {portalMode === 'CUSTOMER' ? (
-          <nav className="customer-nav-tabs">
+          <nav className="customer-nav-tabs" aria-label="Điều hướng chính">
             {[
-              { id: 'home', label: 'Trang Chủ', icon: Home },
-              { id: 'reproduction', label: 'Khoa Sinh Sản', icon: Activity, isSpecial: true },
-              { id: 'booking', label: 'Dịch Vụ Spa', icon: Calendar },
-              { id: 'shop', label: 'Cửa Hàng', icon: ShoppingBag },
-              { id: 'pets', label: 'Thú Cưng', icon: Heart },
-              { id: 'history', label: 'Tiến Độ & Lịch Hẹn', icon: Clock }
+              { id: 'home', path: '/', label: 'Trang Chủ', icon: Home },
+              { id: 'reproduction', path: '/khoa-sinh-san', label: 'Khoa Sinh Sản', icon: Activity, isSpecial: true },
+              { id: 'booking', path: '/dich-vu-spa', label: 'Dịch Vụ Spa', icon: Calendar },
+              { id: 'shop', path: '/cua-hang', label: 'Cửa Hàng', icon: ShoppingBag },
+              { id: 'pets', path: '/thu-cung', label: 'Thú Cưng', icon: Heart },
+              { id: 'history', path: '/lich-hen', label: 'Tiến Độ & Lịch Hẹn', icon: Clock }
             ].map(tab => {
               const IconComp = tab.icon;
-              const isActive = activeTab === tab.id;
+              const isActive =
+                activeTab === tab.id ||
+                (tab.id === 'shop' && activeTab === 'product-detail') ||
+                (tab.id === 'booking' && activeTab === 'service-detail');
               return (
-                <button
+                <a
                   key={tab.id}
-                  onClick={() => onTabChange(tab.id)}
+                  href={tab.path}
+                  aria-current={isActive ? 'page' : undefined}
+                  onClick={(e) => {
+                    e.preventDefault();
+                    onTabChange(tab.id);
+                  }}
                   style={{
                     display: 'flex',
                     alignItems: 'center',
@@ -115,15 +114,17 @@ export default function Navbar({
                     fontSize: '0.82rem',
                     fontWeight: 700,
                     border: 'none',
+                    textDecoration: 'none',
                     background: isActive ? 'linear-gradient(135deg, #ff6b35 0%, #ff8e53 100%)' : 'transparent',
                     color: isActive ? '#ffffff' : tab.isSpecial ? '#ea580c' : '#475569',
                     boxShadow: isActive ? '0 4px 15px rgba(255, 107, 53, 0.3)' : 'none',
                     cursor: 'pointer',
                     transition: 'all 0.25s ease',
-                    position: 'relative'
+                    position: 'relative',
+                    flexShrink: 0
                   }}
                 >
-                  <IconComp size={14} color={isActive ? '#ffffff' : tab.isSpecial ? '#ea580c' : undefined} />
+                  <IconComp size={14} color={isActive ? '#ffffff' : tab.isSpecial ? '#ea580c' : undefined} aria-hidden="true" />
                   {tab.label}
                   {tab.isSpecial && !isActive && (
                     <span style={{
@@ -141,7 +142,7 @@ export default function Navbar({
                       HOT
                     </span>
                   )}
-                </button>
+                </a>
               );
             })}
           </nav>
@@ -181,31 +182,28 @@ export default function Navbar({
         {/* Quick Search & User Actions */}
         <div style={{ display: 'flex', alignItems: 'center', gap: '0.85rem' }}>
           
-          {/* Cart Badge Button (Customer View) */}
+          {/* Cart Badge Button (Customer View -> Dedicated /gio-hang Page) */}
           {portalMode === 'CUSTOMER' && (
             <button 
+              type="button"
               className="btn btn-secondary" 
-              style={{ padding: '0.55rem', borderRadius: '50%', position: 'relative', background: '#fff7ed', border: '1px solid #ffedd5' }} 
+              style={{
+                padding: '0.55rem',
+                borderRadius: '50%',
+                position: 'relative',
+                background: activeTab === 'cart' ? '#ff6b35' : '#fff7ed',
+                border: activeTab === 'cart' ? '1px solid #ff6b35' : '1px solid #ffedd5'
+              }} 
               onClick={() => {
-                if (!currentUser) {
-                  toast.warning('Vui lòng đăng nhập tài khoản khách hàng để xem giỏ hàng!', 'Yêu Cầu Đăng Nhập', {
-                    actionText: '🔐 Đăng Nhập',
-                    onAction: () => onOpenLogin && onOpenLogin()
-                  });
-                  if (onOpenLogin) onOpenLogin();
-                  return;
-                }
-                if (cartCount > 0) {
-                  onTabChange('checkout');
-                } else {
-                  onTabChange('shop');
-                }
+                onTabChange('cart');
+                window.scrollTo({ top: 0, behavior: 'smooth' });
               }}
-              title="Giỏ hàng & Thanh toán"
+              title="Xem trang Giỏ hàng"
+              aria-label="Mở trang giỏ hàng"
             >
-              <ShoppingBag size={18} color="#ea580c" />
+              <ShoppingBag size={18} color={activeTab === 'cart' ? '#ffffff' : '#ea580c'} />
               {cartCount > 0 && (
-                <span style={{ position: 'absolute', top: -3, right: -3, background: '#ff6b35', color: '#fff', fontSize: '0.68rem', fontWeight: 800, borderRadius: '50%', width: 18, height: 18, display: 'flex', alignItems: 'center', justifyContent: 'center', boxShadow: '0 2px 8px rgba(255,107,53,0.4)' }}>
+                <span style={{ position: 'absolute', top: -3, right: -3, background: activeTab === 'cart' ? '#0f172a' : '#ff6b35', color: '#fff', fontSize: '0.68rem', fontWeight: 800, borderRadius: '50%', width: 18, height: 18, display: 'flex', alignItems: 'center', justifyContent: 'center', boxShadow: '0 2px 8px rgba(255,107,53,0.4)' }}>
                   {cartCount}
                 </span>
               )}
@@ -214,15 +212,9 @@ export default function Navbar({
 
           {/* User Account / Auth */}
           {isStaffUser ? (
-            <div style={{ display: 'flex', alignItems: 'center', gap: '0.65rem', background: '#f8fafc', padding: '0.3rem 0.75rem', borderRadius: '30px', border: '1px solid #e2e8f0' }}>
-              <img
-                src={getUserAvatar(currentUser)}
-                alt={currentUser.fullName || 'Nhân viên'}
-                onError={(e) => { e.currentTarget.src = FALLBACK_IMAGES.user; }}
-                style={{ width: 34, height: 34, borderRadius: '50%', objectFit: 'cover', border: '2px solid #0284c7', boxShadow: '0 2px 10px rgba(2,132,199,0.25)', flexShrink: 0 }}
-              />
+            <div style={{ display: 'flex', alignItems: 'center', gap: '0.65rem', background: '#f8fafc', padding: '0.35rem 0.9rem', borderRadius: '30px', border: '1px solid #e2e8f0' }}>
               <div>
-                <div style={{ fontSize: '0.8rem', fontWeight: 700, color: '#0f172a' }}>{currentUser.fullName}</div>
+                <div style={{ fontSize: '0.82rem', fontWeight: 700, color: '#0f172a' }}>{currentUser.fullName}</div>
                 <div style={{ fontSize: '0.68rem', color: '#0284c7', fontWeight: 800 }}>
                   {getRoleDisplayName(currentUser.role)}
                 </div>
@@ -234,7 +226,7 @@ export default function Navbar({
                   border: '1px solid #fca5a5', 
                   color: '#dc2626', 
                   cursor: 'pointer', 
-                  marginLeft: '0.4rem', 
+                  marginLeft: '0.3rem', 
                   padding: '0.25rem 0.65rem',
                   borderRadius: '16px',
                   fontSize: '0.75rem',
@@ -254,15 +246,9 @@ export default function Navbar({
               ← Quay lại Trang Khách
             </button>
           ) : currentUser ? (
-            <div style={{ display: 'flex', alignItems: 'center', gap: '0.65rem', background: '#f8fafc', padding: '0.3rem 0.75rem', borderRadius: '30px', border: '1px solid #e2e8f0' }}>
-              <img
-                src={getUserAvatar(currentUser)}
-                alt={currentUser.fullName || 'Khách hàng'}
-                onError={(e) => { e.currentTarget.src = FALLBACK_IMAGES.user; }}
-                style={{ width: 34, height: 34, borderRadius: '50%', objectFit: 'cover', border: '2px solid #ff6b35', boxShadow: '0 2px 10px rgba(255,107,53,0.25)', flexShrink: 0 }}
-              />
+            <div style={{ display: 'flex', alignItems: 'center', gap: '0.65rem', background: '#f8fafc', padding: '0.35rem 0.9rem', borderRadius: '30px', border: '1px solid #e2e8f0' }}>
               <div>
-                <div style={{ fontSize: '0.8rem', fontWeight: 700, color: '#0f172a' }}>{currentUser.fullName}</div>
+                <div style={{ fontSize: '0.82rem', fontWeight: 700, color: '#0f172a' }}>{currentUser.fullName}</div>
                 <div style={{ fontSize: '0.68rem', color: '#16a34a', fontWeight: 800 }}>
                   Khách Hàng
                 </div>

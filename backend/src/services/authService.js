@@ -2,10 +2,47 @@ const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
 const prisma = require('../config/prisma');
 
-const registerUser = async ({ email, password, fullName, phone, role }) => {
-  const existingUser = await prisma.user.findUnique({ where: { email } });
+const EMAIL_REGEX = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+const PHONE_REGEX = /^(0|\+?84)[0-9]{8,10}$/;
+
+const parseAccountIdentifier = (rawInput) => {
+  const raw = (rawInput || '').trim();
+  const cleanedPhone = raw.replace(/[\s.-]/g, '');
+
+  if (EMAIL_REGEX.test(raw)) {
+    return { type: 'email', value: raw.toLowerCase() };
+  }
+  if (PHONE_REGEX.test(cleanedPhone)) {
+    const normalizedPhone = cleanedPhone.startsWith('+84')
+      ? '0' + cleanedPhone.slice(3)
+      : cleanedPhone.startsWith('84') && cleanedPhone.length >= 10
+        ? '0' + cleanedPhone.slice(2)
+        : cleanedPhone;
+    return { type: 'phone', value: normalizedPhone };
+  }
+  return { type: 'invalid', value: raw };
+};
+
+const registerUser = async ({ identifier, email, password, fullName, phone, role }) => {
+  const parsed = parseAccountIdentifier(identifier || email || phone);
+  if (parsed.type === 'invalid') {
+    throw new Error('Vui lòng nhập đúng định dạng Email hoặc Số điện thoại (VD: 0901234567).');
+  }
+
+  const storedEmail = parsed.value;
+  const storedPhone = parsed.type === 'phone' ? parsed.value : (phone ? phone.trim() : null);
+
+  const existingUser = await prisma.user.findFirst({
+    where: parsed.type === 'phone'
+      ? { OR: [{ email: storedEmail }, { phone: storedPhone }] }
+      : { email: storedEmail },
+  });
   if (existingUser) {
-    throw new Error('Email này đã tồn tại trên hệ thống.');
+    throw new Error(
+      parsed.type === 'phone'
+        ? 'Số điện thoại này đã tồn tại trên hệ thống.'
+        : 'Email này đã tồn tại trên hệ thống.'
+    );
   }
 
   const hashedPassword = await bcrypt.hash(password, 10);
@@ -15,10 +52,10 @@ const registerUser = async ({ email, password, fullName, phone, role }) => {
 
   const newUser = await prisma.user.create({
     data: {
-      email,
+      email: storedEmail,
       password: hashedPassword,
-      fullName,
-      phone: phone || null,
+      fullName: fullName.trim(),
+      phone: storedPhone,
       role: userRole,
     },
     select: {
@@ -40,15 +77,34 @@ const registerUser = async ({ email, password, fullName, phone, role }) => {
   return { token, user: newUser };
 };
 
-const loginUser = async ({ email, password }) => {
-  const user = await prisma.user.findUnique({ where: { email } });
+const loginUser = async ({ identifier, email, password }) => {
+  const raw = (identifier || email || '').trim();
+  const cleanedPhone = raw.replace(/[\s.-]/g, '');
+  const normalizedPhone = cleanedPhone.startsWith('+84')
+    ? '0' + cleanedPhone.slice(3)
+    : cleanedPhone.startsWith('84') && cleanedPhone.length >= 10
+      ? '0' + cleanedPhone.slice(2)
+      : cleanedPhone;
+
+  const user = await prisma.user.findFirst({
+    where: {
+      OR: [
+        { email: raw.toLowerCase() },
+        { email: raw },
+        { email: normalizedPhone },
+        { phone: raw },
+        { phone: normalizedPhone },
+      ],
+    },
+  });
+
   if (!user) {
-    throw new Error('Email hoặc mật khẩu không chính xác.');
+    throw new Error('Email/Số điện thoại hoặc mật khẩu không chính xác.');
   }
 
   const isMatch = await bcrypt.compare(password, user.password);
   if (!isMatch) {
-    throw new Error('Email hoặc mật khẩu không chính xác.');
+    throw new Error('Email/Số điện thoại hoặc mật khẩu không chính xác.');
   }
 
   const token = jwt.sign(

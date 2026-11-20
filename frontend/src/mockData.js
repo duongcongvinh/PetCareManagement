@@ -15,7 +15,6 @@ export const INITIAL_SERVICES = [
     name: 'Spa Grooming Trọn Gói (Cắt tỉa & Tắm mượt 7 bước)',
     description: 'Vệ sinh tai, cắt mài móng, vắt tuyến hôi, tắm thảo dược sấy chải phồng lông và cắt tỉa tạo kiểu chuyên nghiệp theo form chuẩn.',
     durationMinutes: 60,
-    durationMinutes: 60,
     price: 250000,
     category: 'Spa & Grooming',
     status: 'ACTIVE'
@@ -293,6 +292,164 @@ export const INITIAL_SUPPLIERS = [
 ];
 
 export const INITIAL_PRODUCTS = [
+  // 0. SẢN PHẨM ĐỒNG BỘ TỪ VPET'S (https://vpets.vn/san-pham/)
+  {
+    id: 'vp-1',
+    name: 'Thức ăn cho chó trưởng thành Mini Adult | Royal Canin (2kg) + TẶNG 1 Pate',
+    category: 'Thức ăn',
+    sku: 'VP-RC-MINI-2KG',
+    unitPrice: 322000,
+    costPrice: 245000,
+    currentStock: 32,
+    minStockLevel: 12,
+    maxStockLevel: 80,
+    supplierId: 'sup-1',
+    supplierName: 'Royal Canin Việt Nam'
+  },
+  {
+    id: 'vp-2',
+    name: 'Thức ăn cho mèo con Kitten | Royal Canin (2kg) + TẶNG 2 Pate',
+    category: 'Thức ăn',
+    sku: 'VP-RC-KITTEN-2KG',
+    unitPrice: 408000,
+    costPrice: 315000,
+    currentStock: 26,
+    minStockLevel: 10,
+    maxStockLevel: 70,
+    supplierId: 'sup-1',
+    supplierName: 'Royal Canin Việt Nam'
+  },
+  {
+    id: 'vp-3',
+    name: 'Thức ăn cho mèo trưởng thành 6 Free Natural (2kg) + TẶNG 1 Pate',
+    category: 'Thức ăn',
+    sku: 'VP-6FREE-CAT-2KG',
+    unitPrice: 540000,
+    costPrice: 410000,
+    currentStock: 18,
+    minStockLevel: 10,
+    maxStockLevel: 50,
+    supplierId: 'sup-1',
+    supplierName: 'Royal Canin Việt Nam'
+  },
+  {
+    id: 'vp-4',
+    name: 'Sữa bột cho chó Predogen (lon 400g) + TẶNG 1 Xúc xích',
+    category: 'Dinh dưỡng',
+    sku: 'VP-PREDOGEN-400G',
+    unitPrice: 195000,
+    costPrice: 140000,
+    currentStock: 28,
+    minStockLevel: 10,
+    maxStockLevel: 60,
+    supplierId: 'sup-2',
+    supplierName: 'Nhà Phân Phối VetCare'
+  },
+  {
+    id: 'vp-5',
+    name: 'Sữa bột cho mèo Precaten (lon 400g) + TẶNG 1 Pate mèo con',
+    category: 'Dinh dưỡng',
+    sku: 'VP-PRECATEN-400G',
+    unitPrice: 195000,
+    costPrice: 140000,
+    currentStock: 24,
+    minStockLevel: 10,
+    maxStockLevel: 60,
+    supplierId: 'sup-2',
+    supplierName: 'Nhà Phân Phối VetCare'
+  },
+  {
+    id: 'vp-6',
+    name: 'Giường ngủ cho thú cưng | Touchdog',
+    category: 'Phụ kiện',
+    sku: 'VP-TOUCHDOG-BED',
+    unitPrice: 661000,
+    costPrice: 480000,
+    currentStock: 12,
+    minStockLevel: 6,
+    maxStockLevel: 35,
+    supplierId: 'sup-2',
+    supplierName: 'Nhà Phân Phối VetCare'
+  },
+  {
+    id: 'vp-7',
+    name: 'Lồng vận chuyển hàng không cho chó mèo A1103 Pian Pian (Size L)',
+    category: 'Phụ kiện',
+    sku: 'VP-PIANPIAN-A1103-L',
+    unitPrice: 411000,
+    costPrice: 295000,
+    currentStock: 15,
+    minStockLevel: 8,
+    maxStockLevel: 40,
+    supplierId: 'sup-2',
+    supplierName: 'Nhà Phân Phối VetCare'
+  },
+  {
+    id: 'vp-8',
+    name: 'Lược chải lông cho thú cưng có nút bấm',
+    category: 'Mỹ phẩm Spa',
+    sku: 'VP-BRUSH-BTN',
+    unitPrice: 380000,
+    costPrice: 265000,
+    currentStock: 20,
+    minStockLevel: 10,
+    maxStockLevel: 50,
+    supplierId: 'sup-2',
+    supplierName: 'Nhà Phân Phối VetCare'
+  },
+  {
+    id: 'vp-9',
+    name: 'Dây dắt tự động dây tròn XS New Comfort',
+    category: 'Phụ kiện',
+    sku: 'VP-FLEXI-XS-COMFORT',
+    unitPrice: 380000,
+    costPrice: 270000,
+    currentStock: 22,
+    minStockLevel: 10,
+    maxStockLevel: 50,
+    supplierId: 'sup-2',
+    supplierName: 'Nhà Phân Phối VetCare'
+  },
+  {
+    id: 'vp-10',
+    name: 'Yếm ren đeo cổ cao cấp cho thú cưng (Màu hồng)',
+    category: 'Phụ kiện',
+    sku: 'VP-LACE-COLLAR-PINK',
+    unitPrice: 90000,
+    costPrice: 55000,
+    currentStock: 35,
+    minStockLevel: 12,
+    maxStockLevel: 80,
+    supplierId: 'sup-2',
+    supplierName: 'Nhà Phân Phối VetCare'
+  },
+  {
+    id: 'vp-11',
+    name: 'Đồ chơi chuột chút chít cho thú cưng',
+    category: 'Phụ kiện',
+    sku: 'VP-SQUEAKY-MOUSE',
+    unitPrice: 25000,
+    costPrice: 12000,
+    currentStock: 80,
+    minStockLevel: 25,
+    maxStockLevel: 200,
+    supplierId: 'sup-2',
+    supplierName: 'Nhà Phân Phối VetCare'
+  },
+  {
+    id: 'vp-12',
+    name: 'Dung dịch hướng dẫn đi vệ sinh Good Puppy Forcan (80ml)',
+    category: 'Mỹ phẩm Spa',
+    sku: 'VP-FORCAN-PUPPY-80ML',
+    unitPrice: 143000,
+    costPrice: 95000,
+    currentStock: 29,
+    minStockLevel: 12,
+    maxStockLevel: 70,
+    supplierId: 'sup-2',
+    supplierName: 'Nhà Phân Phối VetCare'
+  },
+
   // 1. THỨC ĂN HẠT & PATE (Food)
   {
     id: 'prod-1',

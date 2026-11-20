@@ -2,13 +2,14 @@ const authService = require('../services/authService');
 
 const register = async (req, res) => {
   try {
-    const { email, password, fullName, phone, role } = req.body;
+    const { identifier, email, password, fullName, phone, role } = req.body;
+    const accountId = (identifier || email || phone || '').trim();
 
-    if (!email || !password || !fullName) {
-      return res.status(400).json({ message: 'Vui lòng điền đầy đủ Email, Mật khẩu và Họ tên!' });
+    if (!accountId || !password || !fullName) {
+      return res.status(400).json({ message: 'Vui lòng điền đầy đủ Họ tên, Email hoặc Số điện thoại và Mật khẩu!' });
     }
 
-    const result = await authService.registerUser({ email, password, fullName, phone, role });
+    const result = await authService.registerUser({ identifier: accountId, email, password, fullName, phone, role });
     return res.status(201).json({
       message: 'Đăng ký tài khoản thành công!',
       token: result.token,
@@ -22,13 +23,14 @@ const register = async (req, res) => {
 
 const login = async (req, res) => {
   try {
-    const { email, password } = req.body;
+    const { identifier, email, phone, password } = req.body;
+    const accountId = (identifier || email || phone || '').trim();
 
-    if (!email || !password) {
-      return res.status(400).json({ message: 'Vui lòng nhập Email và Mật khẩu!' });
+    if (!accountId || !password) {
+      return res.status(400).json({ message: 'Vui lòng nhập Email hoặc Số điện thoại và Mật khẩu!' });
     }
 
-    const result = await authService.loginUser({ email, password });
+    const result = await authService.loginUser({ identifier: accountId, password });
     return res.json({
       message: 'Đăng nhập thành công!',
       token: result.token,
@@ -64,11 +66,12 @@ const getUsers = async (req, res) => {
 
 const createUser = async (req, res) => {
   try {
-    const { email, password, fullName, phone, role } = req.body;
-    if (!email || !password || !fullName) {
-      return res.status(400).json({ message: 'Vui lòng điền đầy đủ Email, Mật khẩu và Họ tên!' });
+    const { identifier, email, password, fullName, phone, role } = req.body;
+    const accountId = (identifier || email || phone || '').trim();
+    if (!accountId || !password || !fullName) {
+      return res.status(400).json({ message: 'Vui lòng điền đầy đủ Họ tên, Email hoặc Số điện thoại và Mật khẩu!' });
     }
-    const result = await authService.registerUser({ email, password, fullName, phone, role });
+    const result = await authService.registerUser({ identifier: accountId, email, password, fullName, phone, role });
     return res.status(201).json({
       message: 'Tạo tài khoản người dùng thành công!',
       user: result.user,

@@ -255,6 +255,23 @@ async function main() {
     },
   });
 
+  // 12 Sản phẩm đồng bộ từ VPet's (https://vpets.vn/san-pham/)
+  const vpetsProducts = [
+    { name: 'Thức ăn cho chó trưởng thành Mini Adult | Royal Canin (2kg) + TẶNG 1 Pate', category: 'Thức ăn', sku: 'VP-RC-MINI-2KG', unitPrice: 322000, costPrice: 245000, currentStock: 32, minStockLevel: 12, maxStockLevel: 80, supplierId: supplier1.id },
+    { name: 'Thức ăn cho mèo con Kitten | Royal Canin (2kg) + TẶNG 2 Pate', category: 'Thức ăn', sku: 'VP-RC-KITTEN-2KG', unitPrice: 408000, costPrice: 315000, currentStock: 26, minStockLevel: 10, maxStockLevel: 70, supplierId: supplier1.id },
+    { name: 'Thức ăn cho mèo trưởng thành 6 Free Natural (2kg) + TẶNG 1 Pate', category: 'Thức ăn', sku: 'VP-6FREE-CAT-2KG', unitPrice: 540000, costPrice: 410000, currentStock: 18, minStockLevel: 10, maxStockLevel: 50, supplierId: supplier1.id },
+    { name: 'Sữa bột cho chó Predogen (lon 400g) + TẶNG 1 Xúc xích', category: 'Dinh dưỡng', sku: 'VP-PREDOGEN-400G', unitPrice: 195000, costPrice: 140000, currentStock: 28, minStockLevel: 10, maxStockLevel: 60, supplierId: supplier2.id },
+    { name: 'Sữa bột cho mèo Precaten (lon 400g) + TẶNG 1 Pate mèo con', category: 'Dinh dưỡng', sku: 'VP-PRECATEN-400G', unitPrice: 195000, costPrice: 140000, currentStock: 24, minStockLevel: 10, maxStockLevel: 60, supplierId: supplier2.id },
+    { name: 'Giường ngủ cho thú cưng | Touchdog', category: 'Phụ kiện', sku: 'VP-TOUCHDOG-BED', unitPrice: 661000, costPrice: 480000, currentStock: 12, minStockLevel: 6, maxStockLevel: 35, supplierId: supplier2.id },
+    { name: 'Lồng vận chuyển hàng không cho chó mèo A1103 Pian Pian (Size L)', category: 'Phụ kiện', sku: 'VP-PIANPIAN-A1103-L', unitPrice: 411000, costPrice: 295000, currentStock: 15, minStockLevel: 8, maxStockLevel: 40, supplierId: supplier2.id },
+    { name: 'Lược chải lông cho thú cưng có nút bấm', category: 'Mỹ phẩm Spa', sku: 'VP-BRUSH-BTN', unitPrice: 380000, costPrice: 265000, currentStock: 20, minStockLevel: 10, maxStockLevel: 50, supplierId: supplier2.id },
+    { name: 'Dây dắt tự động dây tròn XS New Comfort', category: 'Phụ kiện', sku: 'VP-FLEXI-XS-COMFORT', unitPrice: 380000, costPrice: 270000, currentStock: 22, minStockLevel: 10, maxStockLevel: 50, supplierId: supplier2.id },
+    { name: 'Yếm ren đeo cổ cao cấp cho thú cưng (Màu hồng)', category: 'Phụ kiện', sku: 'VP-LACE-COLLAR-PINK', unitPrice: 90000, costPrice: 55000, currentStock: 35, minStockLevel: 12, maxStockLevel: 80, supplierId: supplier2.id },
+    { name: 'Đồ chơi chuột chút chít cho thú cưng', category: 'Phụ kiện', sku: 'VP-SQUEAKY-MOUSE', unitPrice: 25000, costPrice: 12000, currentStock: 80, minStockLevel: 25, maxStockLevel: 200, supplierId: supplier2.id },
+    { name: 'Dung dịch hướng dẫn đi vệ sinh Good Puppy Forcan (80ml)', category: 'Mỹ phẩm Spa', sku: 'VP-FORCAN-PUPPY-80ML', unitPrice: 143000, costPrice: 95000, currentStock: 29, minStockLevel: 12, maxStockLevel: 70, supplierId: supplier2.id },
+  ];
+  await prisma.product.createMany({ data: vpetsProducts });
+
   console.log('✅ Products & Suppliers seeded');
 
   // 7. Appointments

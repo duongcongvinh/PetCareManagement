@@ -1,0 +1,16 @@
+User-agent: *
+Allow: /
+Allow: /dich-vu-spa
+Allow: /cua-hang
+Allow: /khoa-sinh-san
+
+# Chặn bot tìm kiếm lập chỉ mục cổng nội bộ, giỏ hàng cá nhân và API
+Disallow: /admin
+Disallow: /staff
+Disallow: /gio-hang
+Disallow: /thanh-toan
+Disallow: /thu-cung
+Disallow: /lich-hen
+Disallow: /api/
+
+Sitemap: https://petopia.vn/sitemap.xml
