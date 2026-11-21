@@ -1,7 +1,7 @@
 import React, { useId } from 'react';
 
 /**
- * BrandLogo — Bespoke vector brand identity for PETOPIA
+ * BrandLogo — Bespoke vector brand identity for PETZERA
  * Combines a warm coral-to-amber squircle medallion, sculpted paw-heart crest,
  * golden sparkle accent, and refined two-tone wordmark.
  * Note: Always renders semantic <span> elements (never <h1>) to preserve page SEO hierarchy.
@@ -15,9 +15,9 @@ export default function BrandLogo({
   style = {}
 }) {
   const uid = useId().replace(/:/g, '');
-  const bgGradId = `petopia-bg-${uid}`;
-  const glossGradId = `petopia-gloss-${uid}`;
-  const sparkGradId = `petopia-spark-${uid}`;
+  const bgGradId = `petzera-bg-${uid}`;
+  const glossGradId = `petzera-gloss-${uid}`;
+  const sparkGradId = `petzera-spark-${uid}`;
 
   const dimensions = {
     sm: { icon: 36, titleSize: '1.15rem', subSize: '0.58rem', gap: '0.6rem' },
@@ -30,7 +30,7 @@ export default function BrandLogo({
   const emblemSvg = (
     <span
       aria-hidden="true"
-      className="petopia-brand-emblem"
+      className="petzera-brand-emblem"
       style={{
         display: 'inline-flex',
         alignItems: 'center',
@@ -122,7 +122,7 @@ export default function BrandLogo({
           fill="#FFFFFF"
         />
 
-        {/* Subtle Inner Coral Heart Dot (Signature Petopia Care Mark) */}
+        {/* Subtle Inner Coral Heart Dot (Signature Petzera Care Mark) */}
         <circle cx="32" cy="39.2" r="2.7" fill="#FF6B35" opacity="0.22" />
 
         {/* 4-Point Sparkle Star (5-Star Standard & Smart Platform) */}
@@ -144,7 +144,7 @@ export default function BrandLogo({
 
   return (
     <span
-      className={`petopia-brand-lockup ${className}`}
+      className={`petzera-brand-lockup ${className}`}
       style={{
         display: 'inline-flex',
         flexDirection: isStacked ? 'column' : 'row',
@@ -178,7 +178,7 @@ export default function BrandLogo({
               backgroundClip: 'text'
             }}
           >
-            OPIA
+            ZERA
           </span>
           <span
             style={{

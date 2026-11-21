@@ -84,7 +84,7 @@ export default function FloatingContactWidget({ onOpenBooking }) {
 
     setIsSubmitted(true);
     toast.success(
-      `Đã nhận yêu cầu gọi lại từ ${callbackForm.fullName}! Bác sĩ/Nhân viên Petopia sẽ liên hệ tới số ${callbackForm.phone} trong vòng 5 phút.`,
+      `Đã nhận yêu cầu gọi lại từ ${callbackForm.fullName}! Bác sĩ/Nhân viên Petzera sẽ liên hệ tới số ${callbackForm.phone} trong vòng 5 phút.`,
       '📞 Yêu Cầu Thành Công',
       { duration: 5000 }
     );
@@ -224,7 +224,7 @@ export default function FloatingContactWidget({ onOpenBooking }) {
                     <Phone size={26} />
                   </div>
                   <h3 style={{ fontSize: '1.4rem', fontWeight: 900, color: '#0f172a', marginBottom: '4px' }}>
-                    Trung Tâm Tổng Đài Petopia
+                    Trung Tâm Tổng Đài Petzera
                   </h3>
                   <p style={{ fontSize: '0.85rem', color: '#64748b' }}>
                     Chọn đường dây nóng phù hợp để được hỗ trợ tức thì
@@ -361,7 +361,7 @@ export default function FloatingContactWidget({ onOpenBooking }) {
                       textDecoration: 'underline'
                     }}
                   >
-                    Hoặc để lại số điện thoại, Petopia sẽ gọi lại cho bạn ➔
+                    Hoặc để lại số điện thoại, Petzera sẽ gọi lại cho bạn ➔
                   </button>
                 </div>
               </div>
@@ -664,7 +664,7 @@ export default function FloatingContactWidget({ onOpenBooking }) {
                       Yêu Cầu Đã Được Tiếp Nhận!
                     </h3>
                     <p style={{ fontSize: '0.88rem', color: '#334155', lineHeight: '1.6', marginBottom: '1.5rem' }}>
-                      Cảm ơn <strong>{callbackForm.fullName}</strong>. Hệ thống Petopia đã chuyển thông tin tới đội ngũ Bác sĩ Thú y. Chúng tôi sẽ gọi lại ngay theo số <strong>{callbackForm.phone}</strong>.
+                      Cảm ơn <strong>{callbackForm.fullName}</strong>. Hệ thống Petzera đã chuyển thông tin tới đội ngũ Bác sĩ Thú y. Chúng tôi sẽ gọi lại ngay theo số <strong>{callbackForm.phone}</strong>.
                     </p>
                     <button
                       className="btn btn-coral"

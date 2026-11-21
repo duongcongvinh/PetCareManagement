@@ -13,4 +13,4 @@ Disallow: /thu-cung
 Disallow: /lich-hen
 Disallow: /api/
 
-Sitemap: https://petopia.vn/sitemap.xml
+Sitemap: https://petzera.vn/sitemap.xml

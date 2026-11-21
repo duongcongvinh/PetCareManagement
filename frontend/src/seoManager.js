@@ -57,25 +57,25 @@ export function getPathForCustomerTab(tab, productId = null, serviceId = null) {
 
 const CUSTOMER_SEO_META = {
   home: {
-    title: 'Petopia — Spa Thú Cưng, Khoa Sinh Sản Thú Y 24/7 & Pet Shop Chính Hãng',
+    title: 'Petzera — Spa Thú Cưng, Khoa Sinh Sản Thú Y 24/7 & Pet Shop Chính Hãng',
     description:
-      'Petopia cung cấp dịch vụ Spa Grooming cắt tỉa lông chó mèo, Khoa Sinh Sản & hộ sinh thú cưng 24/7, tiêm phòng vắc xin, khách sạn thú cưng và Pet Shop chính hãng giao nhanh 2H.',
+      'Petzera cung cấp dịch vụ Spa Grooming cắt tỉa lông chó mèo, Khoa Sinh Sản & hộ sinh thú cưng 24/7, tiêm phòng vắc xin, khách sạn thú cưng và Pet Shop chính hãng giao nhanh 2H.',
     keywords:
-      'Petopia, spa thú cưng, cắt tỉa lông chó mèo, khoa sinh sản thú cưng, khách sạn thú cưng, pet shop chính hãng, thức ăn Royal Canin',
+      'Petzera, spa thú cưng, cắt tỉa lông chó mèo, khoa sinh sản thú cưng, khách sạn thú cưng, pet shop chính hãng, thức ăn Royal Canin',
     robots: 'index, follow',
     breadcrumbName: 'Trang Chủ',
   },
   reproduction: {
-    title: 'Khoa Sinh Sản Thú Cưng 24/7 — Siêu Âm Thai, Đỡ Đẻ & Triệt Sản Minilap | Petopia',
+    title: 'Khoa Sinh Sản Thú Cưng 24/7 — Siêu Âm Thai, Đỡ Đẻ & Triệt Sản Minilap | Petzera',
     description:
-      'Chuyên khoa sinh sản & hộ sinh thú y 24/7 tại Petopia: siêu âm Doppler chuẩn xác, máy tính ngày dự sinh chó mèo, đỡ đẻ mổ đẻ Isoflurane và triệt sản Minilap không sẹo.',
+      'Chuyên khoa sinh sản & hộ sinh thú y 24/7 tại Petzera: siêu âm Doppler chuẩn xác, máy tính ngày dự sinh chó mèo, đỡ đẻ mổ đẻ Isoflurane và triệt sản Minilap không sẹo.',
     keywords:
       'khoa sinh sản thú cưng, siêu âm thai chó mèo, đỡ đẻ chó mèo 24/7, mổ đẻ thú cưng, triệt sản Minilap, tính ngày dự sinh chó mèo',
     robots: 'index, follow',
     breadcrumbName: 'Khoa Sinh Sản',
   },
   booking: {
-    title: 'Dịch Vụ Spa Grooming, Khách Sạn & Tiêm Phòng Thú Cưng Bảng Giá Công Khai | Petopia',
+    title: 'Dịch Vụ Spa Grooming, Khách Sạn & Tiêm Phòng Thú Cưng Bảng Giá Công Khai | Petzera',
     description:
       'Đặt lịch Spa Grooming 7 bước, cắt tỉa tạo kiểu Teddy, cạo vôi răng siêu âm, tiêm vắc xin 5 trong 1 và khách sạn thú cưng có camera 24/7 — khóa khung giờ online không trùng slot.',
     keywords:
@@ -84,7 +84,7 @@ const CUSTOMER_SEO_META = {
     breadcrumbName: 'Dịch Vụ Spa & Thú Y',
   },
   shop: {
-    title: 'Pet Shop Petopia — Thức Ăn Hạt Royal Canin, Cát Đậu Nành Tofu & Phụ Kiện Chính Hãng',
+    title: 'Pet Shop Petzera — Thức Ăn Hạt Royal Canin, Cát Đậu Nành Tofu & Phụ Kiện Chính Hãng',
     description:
       'Mua sắm hơn 40+ sản phẩm thú cưng chính hãng: thức ăn hạt Royal Canin, sữa bột Predogen, cát đậu nành Tofu khử mùi, sữa tắm SOS và phụ kiện giao hỏa tốc 2 giờ.',
     keywords:
@@ -93,33 +93,33 @@ const CUSTOMER_SEO_META = {
     breadcrumbName: 'Cửa Hàng Pet Shop',
   },
   pets: {
-    title: 'Quản Lý Hồ Sơ Thú Cưng & Sổ Y Bạ Điện Tử | Petopia',
+    title: 'Quản Lý Hồ Sơ Thú Cưng & Sổ Y Bạ Điện Tử | Petzera',
     description:
-      'Lưu trữ hồ sơ thú cưng, theo dõi cân nặng, giống loài, tiền sử y tế và đặt lịch chăm sóc nhanh tại Petopia.',
-    keywords: 'hồ sơ thú cưng, sổ sức khỏe chó mèo, quản lý thú cưng Petopia',
+      'Lưu trữ hồ sơ thú cưng, theo dõi cân nặng, giống loài, tiền sử y tế và đặt lịch chăm sóc nhanh tại Petzera.',
+    keywords: 'hồ sơ thú cưng, sổ sức khỏe chó mèo, quản lý thú cưng Petzera',
     robots: 'noindex, follow',
     breadcrumbName: 'Hồ Sơ Thú Cưng',
   },
   history: {
-    title: 'Theo Dõi Tiến Độ Lịch Hẹn & Lịch Sử Đơn Hàng | Petopia',
+    title: 'Theo Dõi Tiến Độ Lịch Hẹn & Lịch Sử Đơn Hàng | Petzera',
     description:
-      'Cập nhật tiến độ chăm sóc thú cưng theo thời gian thực, xem nhật ký Spa và quản lý đơn hàng đã đặt tại Petopia.',
-    keywords: 'lịch sử đặt lịch thú cưng, theo dõi đơn hàng Petopia',
+      'Cập nhật tiến độ chăm sóc thú cưng theo thời gian thực, xem nhật ký Spa và quản lý đơn hàng đã đặt tại Petzera.',
+    keywords: 'lịch sử đặt lịch thú cưng, theo dõi đơn hàng Petzera',
     robots: 'noindex, follow',
     breadcrumbName: 'Tiến Độ & Lịch Hẹn',
   },
   cart: {
-    title: 'Giỏ Hàng Của Bạn | Petopia Super Shop',
+    title: 'Giỏ Hàng Của Bạn | Petzera Super Shop',
     description:
-      'Kiểm tra danh sách sản phẩm trong giỏ hàng, cập nhật số lượng, áp dụng mã giảm giá và tiến hành thanh toán tại Petopia.',
-    keywords: 'giỏ hàng petopia, mua sắm thú cưng',
+      'Kiểm tra danh sách sản phẩm trong giỏ hàng, cập nhật số lượng, áp dụng mã giảm giá và tiến hành thanh toán tại Petzera.',
+    keywords: 'giỏ hàng petzera, mua sắm thú cưng',
     robots: 'noindex, nofollow',
     breadcrumbName: 'Giỏ Hàng',
   },
   checkout: {
-    title: 'Thanh Toán Đơn Hàng An Toàn | Petopia Super Shop',
+    title: 'Thanh Toán Đơn Hàng An Toàn | Petzera Super Shop',
     description:
-      'Hoàn tất thanh toán đơn hàng vật phẩm thú cưng Petopia qua COD, chuyển khoản VietQR hoặc ví điện tử.',
+      'Hoàn tất thanh toán đơn hàng vật phẩm thú cưng Petzera qua COD, chuyển khoản VietQR hoặc ví điện tử.',
     keywords: 'thanh toán pet shop, đặt hàng thú cưng',
     robots: 'noindex, nofollow',
     breadcrumbName: 'Thanh Toán',
@@ -128,16 +128,16 @@ const CUSTOMER_SEO_META = {
 
 const STAFF_SEO_META = {
   CARE_STAFF: {
-    title: 'Cổng Nhân Viên — Quản Lý Lịch Hẹn, Dịch Vụ & Hồ Sơ Thú Cưng | Petopia',
-    description: 'Không gian làm việc nội bộ dành cho Nhân viên chăm sóc Petopia.',
+    title: 'Cổng Nhân Viên — Quản Lý Lịch Hẹn, Dịch Vụ & Hồ Sơ Thú Cưng | Petzera',
+    description: 'Không gian làm việc nội bộ dành cho Nhân viên chăm sóc Petzera.',
   },
   WAREHOUSE_STAFF: {
-    title: 'Cổng Quản Lý Kho — Tồn Kho & Dự Báo Nhu Cầu AI | Petopia',
-    description: 'Không gian quản lý nhập xuất tồn kho và dự báo nhu cầu AI Petopia.',
+    title: 'Cổng Quản Lý Kho — Tồn Kho & Dự Báo Nhu Cầu AI | Petzera',
+    description: 'Không gian quản lý nhập xuất tồn kho và dự báo nhu cầu AI Petzera.',
   },
   ADMIN: {
-    title: 'Cổng Quản Trị Admin — Điều Hành & Phân Quyền Hệ Thống | Petopia',
-    description: 'Trang quản trị nội bộ hệ thống Petopia.',
+    title: 'Cổng Quản Trị Admin — Điều Hành & Phân Quyền Hệ Thống | Petzera',
+    description: 'Trang quản trị nội bộ hệ thống Petzera.',
   },
 };
 
@@ -185,7 +185,7 @@ export function applyPageSEO({ portalMode, activeRole, activeTab, selectedProduc
   const origin =
     typeof window !== 'undefined' && window.location.origin && !window.location.origin.includes('localhost')
       ? window.location.origin
-      : 'https://petopia.vn';
+      : 'https://petzera.vn';
 
   if (portalMode === 'STAFF') {
     const staffMeta = STAFF_SEO_META[activeRole] || STAFF_SEO_META.ADMIN;
@@ -200,13 +200,13 @@ export function applyPageSEO({ portalMode, activeRole, activeTab, selectedProduc
   // Dedicated SEO for Service Detail Page (/dich-vu/:id)
   if (activeTab === 'service-detail' && selectedService) {
     const priceText = `${Number(selectedService.price || 0).toLocaleString('vi-VN')}đ`;
-    const svcTitle = `${selectedService.name} — Giá ${priceText} | Petopia`;
-    const svcDesc = `${selectedService.name} (${selectedService.category}, ${selectedService.durationMinutes || 45} phút) giá niêm yết ${priceText} tại Petopia. ${selectedService.description || 'Đặt lịch online không trùng khung giờ.'}`;
+    const svcTitle = `${selectedService.name} — Giá ${priceText} | Petzera`;
+    const svcDesc = `${selectedService.name} (${selectedService.category}, ${selectedService.durationMinutes || 45} phút) giá niêm yết ${priceText} tại Petzera. ${selectedService.description || 'Đặt lịch online không trùng khung giờ.'}`;
     const canonicalUrl = `${origin}/dich-vu/${encodeURIComponent(selectedService.id)}`;
 
     document.title = svcTitle;
     upsertMeta('meta[name="description"]', 'name', 'description', svcDesc);
-    upsertMeta('meta[name="keywords"]', 'name', 'keywords', `${selectedService.name}, ${selectedService.category}, đặt lịch thú cưng Petopia`);
+    upsertMeta('meta[name="keywords"]', 'name', 'keywords', `${selectedService.name}, ${selectedService.category}, đặt lịch thú cưng Petzera`);
     upsertMeta('meta[name="robots"]', 'name', 'robots', 'index, follow');
     upsertCanonical(canonicalUrl);
 
@@ -234,7 +234,7 @@ export function applyPageSEO({ portalMode, activeRole, activeTab, selectedProduc
           description: selectedService.description || svcDesc,
           provider: {
             '@type': 'VeterinaryCare',
-            name: 'Petopia Pet Care',
+            name: 'Petzera Pet Care',
             telephone: '+84348639603',
           },
           offers: {
@@ -253,13 +253,13 @@ export function applyPageSEO({ portalMode, activeRole, activeTab, selectedProduc
   // Dedicated SEO for Product Detail Page (/san-pham/:id)
   if (activeTab === 'product-detail' && selectedProduct) {
     const priceText = `${Number(selectedProduct.unitPrice || 0).toLocaleString('vi-VN')}đ`;
-    const prodTitle = `${selectedProduct.name} — Giá ${priceText} | Petopia Pet Shop`;
-    const prodDesc = `Mua ${selectedProduct.name} (${selectedProduct.category}, mã ${selectedProduct.sku}) chính hãng tại Petopia chỉ ${priceText}. Giao hỏa tốc 2H, đổi trả 7 ngày.`;
+    const prodTitle = `${selectedProduct.name} — Giá ${priceText} | Petzera Pet Shop`;
+    const prodDesc = `Mua ${selectedProduct.name} (${selectedProduct.category}, mã ${selectedProduct.sku}) chính hãng tại Petzera chỉ ${priceText}. Giao hỏa tốc 2H, đổi trả 7 ngày.`;
     const canonicalUrl = `${origin}/san-pham/${encodeURIComponent(selectedProduct.id)}`;
 
     document.title = prodTitle;
     upsertMeta('meta[name="description"]', 'name', 'description', prodDesc);
-    upsertMeta('meta[name="keywords"]', 'name', 'keywords', `${selectedProduct.name}, ${selectedProduct.category}, ${selectedProduct.sku}, Petopia Pet Shop`);
+    upsertMeta('meta[name="keywords"]', 'name', 'keywords', `${selectedProduct.name}, ${selectedProduct.category}, ${selectedProduct.sku}, Petzera Pet Shop`);
     upsertMeta('meta[name="robots"]', 'name', 'robots', 'index, follow');
     upsertCanonical(canonicalUrl);
 
@@ -293,7 +293,7 @@ export function applyPageSEO({ portalMode, activeRole, activeTab, selectedProduc
           description: prodDesc,
           brand: {
             '@type': 'Brand',
-            name: selectedProduct.supplierName || 'Petopia Official',
+            name: selectedProduct.supplierName || 'Petzera Official',
           },
           offers: {
             '@type': 'Offer',
@@ -347,7 +347,7 @@ export function applyPageSEO({ portalMode, activeRole, activeTab, selectedProduc
   if (activeTab === 'booking' && services.length > 0) {
     graph.push({
       '@type': 'ItemList',
-      name: 'Bảng Giá Dịch Vụ Spa & Thú Y Petopia',
+      name: 'Bảng Giá Dịch Vụ Spa & Thú Y Petzera',
       itemListElement: services.slice(0, 12).map((s, idx) => ({
         '@type': 'ListItem',
         position: idx + 1,
@@ -368,7 +368,7 @@ export function applyPageSEO({ portalMode, activeRole, activeTab, selectedProduc
   } else if (activeTab === 'shop' && products.length > 0) {
     graph.push({
       '@type': 'ItemList',
-      name: 'Sản Phẩm Pet Shop Chính Hãng Petopia',
+      name: 'Sản Phẩm Pet Shop Chính Hãng Petzera',
       itemListElement: products.slice(0, 12).map((p, idx) => ({
         '@type': 'ListItem',
         position: idx + 1,
@@ -407,7 +407,7 @@ export function applyPageSEO({ portalMode, activeRole, activeTab, selectedProduc
           name: 'Triệt sản Minilap cho chó mèo có cần cắt chỉ không?',
           acceptedAnswer: {
             '@type': 'Answer',
-            text: 'Công nghệ triệt sản vi phẫu Minilap tại Petopia tạo đường mổ siêu nhỏ 1 - 1.5cm, khâu chỉ tự tiêu thẩm mỹ nội bì nên không cần tái khám cắt chỉ và bé hồi phục sau 24 giờ.',
+            text: 'Công nghệ triệt sản vi phẫu Minilap tại Petzera tạo đường mổ siêu nhỏ 1 - 1.5cm, khâu chỉ tự tiêu thẩm mỹ nội bì nên không cần tái khám cắt chỉ và bé hồi phục sau 24 giờ.',
           },
         },
       ],

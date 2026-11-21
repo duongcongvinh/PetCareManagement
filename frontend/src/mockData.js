@@ -559,7 +559,7 @@ export const INITIAL_PRODUCTS = [
   },
   {
     id: 'prod-9',
-    name: 'Bánh Thưởng Ức Gà Sấy Khô Freeze-Dried Nguyên Chất Petopia (100g)',
+    name: 'Bánh Thưởng Ức Gà Sấy Khô Freeze-Dried Nguyên Chất Petzera (100g)',
     category: 'Bánh thưởng',
     sku: 'FREEZE-CHICKEN-100G',
     unitPrice: 85000,

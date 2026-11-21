@@ -1,8 +1,8 @@
-/* Petopia Ultra-Clean Warm Light Theme Design System */
+/* Petzera Ultra-Clean Warm Light Theme Design System */
 /* Fonts loaded directly via <link rel="stylesheet"> in index.html for optimal LCP/SEO */
 
 :root {
-  /* Color Palette inspired by Petopia.vn Light Mode */
+  /* Color Palette inspired by Petzera.vn Light Mode */
   --primary-orange: #ff6b35;
   --primary-hover: #e85620;
   --accent-coral: #ff8e53;
@@ -280,8 +280,8 @@ tr:hover td { background: #f8fafc; }
   margin: auto;
 }
 
-/* Petopia Footer in Light Mode */
-.petopia-footer {
+/* Petzera Footer in Light Mode */
+.petzera-footer {
   background: #ffffff;
   border-top: 1px solid #e2e8f0;
   padding: 3.5rem 2.5rem 1.5rem 2.5rem;
@@ -422,7 +422,7 @@ tr:hover td { background: #f8fafc; }
 }
 
 /* Header & Nav */
-.petopia-main-header {
+.petzera-main-header {
   background: var(--bg-nav);
   border-bottom: 1px solid var(--border-light);
   padding: 0.85rem 2.2rem;
@@ -545,7 +545,7 @@ tr:hover td { background: #f8fafc; }
     padding: 1.5rem 1.25rem;
   }
 
-  .petopia-main-header {
+  .petzera-main-header {
     padding: 0.75rem 1.25rem;
     flex-wrap: wrap;
     gap: 0.75rem;
@@ -667,7 +667,7 @@ tr:hover td { background: #f8fafc; }
     max-width: 95vw;
   }
 
-  .petopia-footer {
+  .petzera-footer {
     padding: 2.5rem 1.25rem 1.25rem 1.25rem;
     margin-top: 2.5rem;
   }
@@ -712,14 +712,14 @@ tr:hover td { background: #f8fafc; }
 }
 
 /* =========================================================
-   PETOPIA BRAND LOGO & FLAGSHIP HOMEPAGE DESIGN SYSTEM
+   PETZERA BRAND LOGO & FLAGSHIP HOMEPAGE DESIGN SYSTEM
    ========================================================= */
 
-.petopia-brand-link .petopia-brand-emblem {
+.petzera-brand-link .petzera-brand-emblem {
   transition: transform 0.28s cubic-bezier(0.16, 1, 0.3, 1), filter 0.28s ease;
 }
 
-.petopia-brand-link:hover .petopia-brand-emblem {
+.petzera-brand-link:hover .petzera-brand-emblem {
   transform: translateY(-2px) rotate(-4deg) scale(1.04);
   filter: drop-shadow(0 12px 22px rgba(255, 90, 31, 0.36));
 }
@@ -1123,7 +1123,7 @@ tr:hover td { background: #f8fafc; }
    ========================================================= */
 
 /* 0. Luxury Brand Splash Curtain (1s Fast Entrance) */
-.petopia-intro-curtain {
+.petzera-intro-curtain {
   position: fixed;
   inset: 0;
   z-index: 100000;
@@ -1136,20 +1136,20 @@ tr:hover td { background: #f8fafc; }
   transition: opacity 0.48s cubic-bezier(0.16, 1, 0.3, 1), transform 0.55s cubic-bezier(0.16, 1, 0.3, 1);
 }
 
-.petopia-intro-curtain.is-closing {
+.petzera-intro-curtain.is-closing {
   opacity: 0;
   transform: translateY(-28px) scale(1.03);
   pointer-events: none;
 }
 
-.petopia-intro-orb {
+.petzera-intro-orb {
   position: absolute;
   border-radius: 50%;
   filter: blur(55px);
   pointer-events: none;
 }
 
-.petopia-intro-orb.orb-1 {
+.petzera-intro-orb.orb-1 {
   width: 340px;
   height: 340px;
   top: -80px;
@@ -1157,7 +1157,7 @@ tr:hover td { background: #f8fafc; }
   background: rgba(255, 107, 53, 0.28);
 }
 
-.petopia-intro-orb.orb-2 {
+.petzera-intro-orb.orb-2 {
   width: 320px;
   height: 320px;
   bottom: -90px;
@@ -1165,7 +1165,7 @@ tr:hover td { background: #f8fafc; }
   background: rgba(14, 165, 233, 0.22);
 }
 
-.petopia-intro-card {
+.petzera-intro-card {
   position: relative;
   z-index: 2;
   display: flex;
@@ -1181,7 +1181,7 @@ tr:hover td { background: #f8fafc; }
   to { opacity: 1; transform: translateY(0) scale(1); }
 }
 
-.petopia-intro-ring {
+.petzera-intro-ring {
   position: relative;
   padding: 1.25rem 2rem;
   border-radius: 28px;
@@ -1190,7 +1190,7 @@ tr:hover td { background: #f8fafc; }
   box-shadow: 0 22px 55px rgba(255, 107, 53, 0.18);
 }
 
-.petopia-intro-tagline {
+.petzera-intro-tagline {
   margin-top: 1.15rem;
   font-size: 0.92rem;
   font-weight: 700;
@@ -1198,7 +1198,7 @@ tr:hover td { background: #f8fafc; }
   letter-spacing: 0.01em;
 }
 
-.petopia-intro-progress-track {
+.petzera-intro-progress-track {
   width: 200px;
   height: 5px;
   border-radius: 999px;
@@ -1207,7 +1207,7 @@ tr:hover td { background: #f8fafc; }
   margin-top: 1rem;
 }
 
-.petopia-intro-progress-bar {
+.petzera-intro-progress-bar {
   height: 100%;
   width: 0%;
   border-radius: 999px;

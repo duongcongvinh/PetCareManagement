@@ -41,7 +41,7 @@ export default function Navbar({
   return (
     <div style={{ display: 'flex', flexDirection: 'column' }}>
 
-      {/* 1. Petopia Top Announcement Bar */}
+      {/* 1. Petzera Top Announcement Bar */}
       <div className="top-announcement-bar">
         <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
           <span style={{ background: 'rgba(255,255,255,0.25)', padding: '2px 8px', borderRadius: '12px', fontSize: '0.75rem' }}>🎁 ĐƠN ĐẦU TẠI APP</span>
@@ -61,13 +61,13 @@ export default function Navbar({
       </div>
 
       {/* 2. Main Light Theme Header */}
-      <header className="petopia-main-header">
+      <header className="petzera-main-header">
         
         {/* Brand Logo (Semantic anchor, never steals page H1) */}
         <a
           href={portalMode === 'CUSTOMER' ? '/' : '/admin'}
-          aria-label="Trang chủ Petopia"
-          className="petopia-brand-link"
+          aria-label="Trang chủ Petzera"
+          className="petzera-brand-link"
           style={{ display: 'inline-flex', alignItems: 'center', cursor: 'pointer', flexShrink: 0, textDecoration: 'none' }}
           onClick={(e) => {
             e.preventDefault();

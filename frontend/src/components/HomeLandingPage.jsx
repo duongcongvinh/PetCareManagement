@@ -165,7 +165,7 @@ export default function HomeLandingPage({
   // Cinematic Splash Intro (shows once per browser session, skippable immediately, replayable)
   const [showSplash, setShowSplash] = useState(() => {
     try {
-      return !sessionStorage.getItem('petopia_intro_seen');
+      return !sessionStorage.getItem('petzera_intro_seen');
     } catch {
       return false;
     }
@@ -192,7 +192,7 @@ export default function HomeLandingPage({
   // Fast 1.05s Luxury Brand Splash Curtain
   useEffect(() => {
     if (!showSplash) return;
-    try { sessionStorage.setItem('petopia_intro_seen', '1'); } catch {}
+    try { sessionStorage.setItem('petzera_intro_seen', '1'); } catch {}
     const t1 = setTimeout(() => setSplashClosing(true), 950);
     const t2 = setTimeout(() => { setShowSplash(false); setSplashClosing(false); }, 1480);
     return () => { clearTimeout(t1); clearTimeout(t2); };
@@ -320,7 +320,7 @@ export default function HomeLandingPage({
       petName: 'Bé Miu Miu • Mèo Anh Lông Ngắn',
       serviceTag: 'Khoa Sinh Sản & Siêu Âm Thai',
       photo: HERO_IMAGES.heroBritishCat,
-      quote: 'Cảm ơn đội ngũ bác sĩ Petopia đã trực hộ sinh lúc nửa đêm cho bé Miu mẹ tròn con vuông 4 bé mèo con khỏe mạnh. Bác sĩ hướng dẫn chăm sau sinh siêu tận tâm.'
+      quote: 'Cảm ơn đội ngũ bác sĩ Petzera đã trực hộ sinh lúc nửa đêm cho bé Miu mẹ tròn con vuông 4 bé mèo con khỏe mạnh. Bác sĩ hướng dẫn chăm sau sinh siêu tận tâm.'
     },
     {
       petName: 'Bé Max • Golden Retriever',
@@ -355,21 +355,21 @@ export default function HomeLandingPage({
       {/* LUXURY BRAND INTRO SPLASH CURTAIN (~1s, click anywhere to skip) */}
       {showSplash && (
         <div
-          className={`petopia-intro-curtain ${splashClosing ? 'is-closing' : ''}`}
+          className={`petzera-intro-curtain ${splashClosing ? 'is-closing' : ''}`}
           onClick={() => { setSplashClosing(true); setTimeout(() => setShowSplash(false), 380); }}
           title="Chạm để bỏ qua intro"
         >
-          <div className="petopia-intro-orb orb-1" />
-          <div className="petopia-intro-orb orb-2" />
-          <div className="petopia-intro-card">
-            <div className="petopia-intro-ring">
+          <div className="petzera-intro-orb orb-1" />
+          <div className="petzera-intro-orb orb-2" />
+          <div className="petzera-intro-card">
+            <div className="petzera-intro-ring">
               <BrandLogo variant="stacked" size="lg" subtitle="SPA • THÚ Y 24/7 • PET SHOP" />
             </div>
-            <p className="petopia-intro-tagline">
+            <p className="petzera-intro-tagline">
               Chăm Sóc Toàn Diện — Nâng Niu Từng Khoảnh Khắc Cùng Bé Cưng
             </p>
-            <div className="petopia-intro-progress-track">
-              <div className="petopia-intro-progress-bar" />
+            <div className="petzera-intro-progress-track">
+              <div className="petzera-intro-progress-bar" />
             </div>
           </div>
         </div>
@@ -406,7 +406,7 @@ export default function HomeLandingPage({
                 <span className="home-live-dot" aria-hidden="true" />
                 <span>{activeReel.badge}</span>
                 <span style={{ opacity: 0.5 }}>•</span>
-                <span>PETOPIA FLAGSHIP</span>
+                <span>PETZERA FLAGSHIP</span>
               </div>
 
               <h1 className="cinema-hero-h1 hero-stagger-2">
@@ -507,7 +507,7 @@ export default function HomeLandingPage({
               >
                 <img
                   src={HERO_IMAGES.heroMain}
-                  alt="Spa Grooming 5 sao Petopia"
+                  alt="Spa Grooming 5 sao Petzera"
                   onError={(e) => { e.currentTarget.src = FALLBACK_IMAGES.service; }}
                   style={{ width: 52, height: 52, borderRadius: '14px', objectFit: 'cover', border: '2px solid rgba(255,255,255,0.8)', flexShrink: 0 }}
                 />
@@ -600,7 +600,7 @@ export default function HomeLandingPage({
         </section>
 
         {/* INFINITE SMOOTH MARQUEE TICKER RIBBON */}
-        <div className="home-marquee-wrapper" aria-label="Ưu đãi nổi bật Petopia">
+        <div className="home-marquee-wrapper" aria-label="Ưu đãi nổi bật Petzera">
           <div className="home-marquee-track">
             {[...marqueeItems, ...marqueeItems].map((text, idx) => (
               <span key={idx} className="home-marquee-item">
@@ -667,12 +667,12 @@ export default function HomeLandingPage({
           </div>
         </section>
 
-        {/* SECTION 3: INTERACTIVE VIDEO LOOKBOOK — KHOẢNH KHẮC THỰC TẾ TẠI PETOPIA */}
+        {/* SECTION 3: INTERACTIVE VIDEO LOOKBOOK — KHOẢNH KHẮC THỰC TẾ TẠI PETZERA */}
         <section className="glass-panel reveal-on-scroll" style={{ padding: '2rem' }}>
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.45rem', flexWrap: 'wrap', gap: '1rem' }}>
             <div>
               <span style={{ fontSize: '0.74rem', fontWeight: 800, color: '#ea580c', letterSpacing: '0.08em', textTransform: 'uppercase' }}>
-                PETOPIA CINEMA REELS
+                PETZERA CINEMA REELS
               </span>
               <h2 style={{ fontSize: '1.5rem', fontWeight: 900, display: 'flex', alignItems: 'center', gap: '8px', marginTop: '3px', color: '#0f172a' }}>
                 <Film color="#ff6b35" size={22} /> Trải Nghiệm Thực Tế Qua Video Sống Động
@@ -777,7 +777,7 @@ export default function HomeLandingPage({
           >
             <img
               src={HERO_IMAGES.reproBanner}
-              alt="Bác sĩ thú y siêu âm và kiểm tra thai cho thú cưng tại Khoa Sinh Sản Petopia"
+              alt="Bác sĩ thú y siêu âm và kiểm tra thai cho thú cưng tại Khoa Sinh Sản Petzera"
               className="home-collage-img"
               style={{ height: '260px' }}
               loading="lazy"
@@ -927,7 +927,7 @@ export default function HomeLandingPage({
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '1rem' }}>
             <div>
               <span style={{ fontSize: '0.74rem', fontWeight: 800, color: '#0284c7', letterSpacing: '0.08em', textTransform: 'uppercase' }}>
-                PETOPIA SUPER SHOP • HÀNG CHÍNH HÃNG
+                PETZERA SUPER SHOP • HÀNG CHÍNH HÃNG
               </span>
               <h2 style={{ fontSize: '1.5rem', fontWeight: 900, display: 'flex', alignItems: 'center', gap: '8px', marginTop: '3px', color: '#0f172a' }}>
                 <Flame color="#ff6b35" size={22} /> Sản Phẩm Bán Chạy &amp; Quà Tặng Hấp Dẫn
@@ -1142,15 +1142,15 @@ export default function HomeLandingPage({
           </div>
         </section>
 
-        {/* SECTION 7: TẠI SAO CHỌN PETOPIA & ĐÁNH GIÁ THỰC TẾ */}
+        {/* SECTION 7: TẠI SAO CHỌN PETZERA & ĐÁNH GIÁ THỰC TẾ */}
         <section className="reveal-on-scroll" style={{ display: 'flex', flexDirection: 'column', gap: '1.75rem' }}>
           <div className="glass-panel" style={{ padding: '2rem' }}>
             <div style={{ textAlign: 'center', maxWidth: '640px', margin: '0 auto 1.75rem auto' }}>
               <span style={{ fontSize: '0.74rem', fontWeight: 800, color: '#ea580c', letterSpacing: '0.08em', textTransform: 'uppercase' }}>
-                CAM KẾT CHẤT LƯỢNG PETOPIA
+                CAM KẾT CHẤT LƯỢNG PETZERA
               </span>
               <h2 style={{ fontSize: '1.55rem', fontWeight: 900, color: '#0f172a', marginTop: '4px' }}>
-                Vì Sao 5.000+ Chủ Nuôi Luôn Tin Chọn Petopia?
+                Vì Sao 5.000+ Chủ Nuôi Luôn Tin Chọn Petzera?
               </h2>
             </div>
 
@@ -1265,7 +1265,7 @@ export default function HomeLandingPage({
               Sẵn Sàng Mang Đến Trải Nghiệm 5★ Cho Bé Cưng Của Bạn?
             </h2>
             <p style={{ fontSize: '0.92rem', opacity: 0.94, lineHeight: 1.6, margin: 0 }}>
-              Đặt lịch Spa Grooming, khám sức khỏe định kỳ hoặc nhắn ngay Zalo để bác sĩ thú y Petopia tư vấn hoàn toàn miễn phí.
+              Đặt lịch Spa Grooming, khám sức khỏe định kỳ hoặc nhắn ngay Zalo để bác sĩ thú y Petzera tư vấn hoàn toàn miễn phí.
             </p>
           </div>
 

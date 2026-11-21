@@ -82,7 +82,7 @@ const getCategoryVisual = (category) => {
 };
 
 const getProductBrand = (p) => {
-  if (!p || !p.name) return 'Petopia Mall';
+  if (!p || !p.name) return 'Petzera Mall';
   const n = p.name;
   if (n.includes('Royal Canin')) return 'Royal Canin';
   if (n.includes('6 Free Natural')) return 'ANF 6 Free';
@@ -108,7 +108,7 @@ const getProductBrand = (p) => {
   if (n.includes('Probiotic')) return 'Probiotic Pet';
   if (n.includes('Frontline')) return 'Frontline Plus';
   if (n.includes('Drontal')) return 'Drontal Elanco';
-  return 'Petopia Mall';
+  return 'Petzera Mall';
 };
 
 const getProductRichDetails = (p) => {
@@ -134,7 +134,7 @@ const getProductRichDetails = (p) => {
     : n.includes('frontline') ? 'Pháp (Boehringer Ingelheim)'
     : n.includes('drontal') ? 'Đức (Elanco Animal Health)'
     : n.includes('ciao') ? 'Nhật Bản (Inaba Foods)'
-    : 'Phân phối chính hãng bởi Petopia';
+    : 'Phân phối chính hãng bởi Petzera';
 
   if (cat === 'Thức ăn') {
     return {
@@ -157,7 +157,7 @@ const getProductRichDetails = (p) => {
         'Công thức dễ hấp thu, thân thiện với hệ tiêu hóa nhạy cảm của chó mèo nhỏ.',
         'Hỗ trợ tăng sức đề kháng, phát triển chiều cao, răng chắc và lông bóng khỏe.',
         'Phù hợp cho bé biếng ăn, thú cưng sau sinh, sau ốm hoặc giai đoạn cai sữa.',
-        n.includes('tặng') ? 'Đi kèm quà tặng khuyến mãi hấp dẫn từ chương trình VPet\'s / Petopia.' : 'An toàn sử dụng hằng ngày theo đúng liều lượng khuyến nghị.'
+        n.includes('tặng') ? 'Đi kèm quà tặng khuyến mãi hấp dẫn từ chương trình VPet\'s / Petzera.' : 'An toàn sử dụng hằng ngày theo đúng liều lượng khuyến nghị.'
       ],
       usage: n.includes('sữa bột')
         ? 'Pha 1–2 muỗng sữa bột với nước ấm khoảng 40°C, khuấy tan đều và cho bé uống khi còn ấm. Đậy chặt nắp lon sau khi sử dụng.'
@@ -241,7 +241,7 @@ const getProductRichDetails = (p) => {
 };
 
 const getServiceRichDetails = (s) => {
-  if (!s) return { steps: [], prepNote: '', targetPet: 'Chó & Mèo', standard: 'Chuẩn Petopia 5★' };
+  if (!s) return { steps: [], prepNote: '', targetPet: 'Chó & Mèo', standard: 'Chuẩn Petzera 5★' };
   const cat = (s.category || '').toLowerCase();
   const n = (s.name || '').toLowerCase();
 
@@ -446,7 +446,7 @@ export default function CustomerPortal({
     onAddPet(newPet);
     setNewPet({ name: '', species: 'Chó', breed: '', ageMonths: '', weightKg: '', medicalHistory: '' });
     setShowAddPet(false);
-    toast.success('Hồ sơ thú cưng đã được tạo thành công!', 'Thú Cưng Petopia');
+    toast.success('Hồ sơ thú cưng đã được tạo thành công!', 'Thú Cưng Petzera');
   };
 
   const handleBookingSubmit = async (e) => {
@@ -498,7 +498,7 @@ export default function CustomerPortal({
     } else {
       setCart([...cart, { ...product, quantity }]);
     }
-    toast.success(`Đã thêm "${product.name}" vào giỏ hàng Petopia!`, '🛒 Đã Thêm Giỏ Hàng', {
+    toast.success(`Đã thêm "${product.name}" vào giỏ hàng Petzera!`, '🛒 Đã Thêm Giỏ Hàng', {
       actionText: 'Xem Giỏ Hàng',
       onAction: () => openCartPage()
     });
@@ -683,7 +683,7 @@ export default function CustomerPortal({
   return (
     <div className="animate-fade-in" style={{ display: 'flex', flexDirection: 'column', gap: '2.5rem' }}>
       
-      {/* 1. TRANG CHỦ PETOPIA LANDING PAGE (home tab) */}
+      {/* 1. TRANG CHỦ PETZERA LANDING PAGE (home tab) */}
       {(activeTab === 'home' || !activeTab) && (
         <HomeLandingPage
           services={services}
@@ -784,7 +784,7 @@ export default function CustomerPortal({
         <div>
           <div style={{ marginBottom: '1.5rem', display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end', flexWrap: 'wrap', gap: '1rem' }}>
             <div>
-              <h1 style={{ fontSize: '1.5rem', fontWeight: 800 }}>Dịch Vụ Spa, Lưu Trú &amp; Khám Thú Y Petopia</h1>
+              <h1 style={{ fontSize: '1.5rem', fontWeight: 800 }}>Dịch Vụ Spa, Lưu Trú &amp; Khám Thú Y Petzera</h1>
               <p style={{ fontSize: '0.85rem', color: 'var(--text-muted)' }}>Xem bảng giá công khai, chọn khung giờ và đặt lịch hẹn giữ chỗ không trùng slot</p>
             </div>
             <span style={{ fontSize: '0.85rem', color: '#ff6b35', fontWeight: 700, background: '#fff7ed', padding: '4px 12px', borderRadius: '14px', border: '1px solid #ffedd5' }}>
@@ -1106,7 +1106,7 @@ export default function CustomerPortal({
             {/* Step-by-Step Protocol & Preparation Notes */}
             <section className="glass-panel" style={{ padding: '2rem', borderRadius: '22px' }}>
               <h2 style={{ fontSize: '1.3rem', fontWeight: 800, color: '#0f172a', marginBottom: '1.15rem', display: 'flex', alignItems: 'center', gap: '8px' }}>
-                <CheckCircle size={20} color="#059669" /> Quy Trình Thực Hiện Chuẩn Petopia ({durationText})
+                <CheckCircle size={20} color="#059669" /> Quy Trình Thực Hiện Chuẩn Petzera ({durationText})
               </h2>
 
               <div className="grid-2" style={{ gap: '1rem', marginBottom: '1.25rem' }}>
@@ -1133,7 +1133,7 @@ export default function CustomerPortal({
               <section className="glass-panel" style={{ padding: '2rem', borderRadius: '22px' }}>
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.25rem', flexWrap: 'wrap', gap: '0.75rem' }}>
                   <h2 style={{ fontSize: '1.25rem', fontWeight: 800, color: '#0f172a' }}>
-                    Dịch Vụ Khác Tại Petopia
+                    Dịch Vụ Khác Tại Petzera
                   </h2>
                   <button type="button" className="btn btn-secondary" style={{ padding: '0.45rem 0.9rem', fontSize: '0.82rem' }} onClick={() => onTabChange('booking')}>
                     Xem tất cả dịch vụ <ArrowRight size={15} />
@@ -1179,11 +1179,11 @@ export default function CustomerPortal({
         );
       })()}
 
-      {/* 4. CỬA HÀNG PETOPIA SHOP TAB (shop tab) */}
+      {/* 4. CỬA HÀNG PETZERA SHOP TAB (shop tab) */}
       {activeTab === 'shop' && (
         <div style={{ display: 'flex', flexDirection: 'column', gap: '1.75rem' }}>
           
-          {/* PETOPIA SHOP HERO PROMO BANNER */}
+          {/* PETZERA SHOP HERO PROMO BANNER */}
           <div style={{
             background: 'linear-gradient(135deg, #ff6b35 0%, #ea580c 45%, #c2410c 100%)',
             borderRadius: '24px',
@@ -1207,7 +1207,7 @@ export default function CustomerPortal({
                 </div>
 
                 <h1 style={{ fontSize: '2.1rem', fontWeight: 900, lineHeight: 1.25, margin: '0 0 0.6rem 0', textShadow: '0 2px 4px rgba(0,0,0,0.1)' }}>
-                  Cửa Hàng Vật Phẩm Petopia Super Shop
+                  Cửa Hàng Vật Phẩm Petzera Super Shop
                 </h1>
                 <p style={{ fontSize: '0.95rem', opacity: 0.95, lineHeight: 1.6, margin: '0 0 1.25rem 0' }}>
                   Hơn 30+ dòng thức ăn Royal Canin, súp thưởng Ciao, cát đậu nành hữu cơ & mỹ phẩm chăm sóc lông chính hãng 100%. Giao hỏa tốc 2 giờ nội thành!
@@ -1780,7 +1780,7 @@ export default function CustomerPortal({
                     </div>
                     <div style={{ display: 'flex', justifyContent: 'space-between', gap: '1rem' }}>
                       <span style={{ color: '#64748b' }}>Nhà phân phối:</span>
-                      <strong style={{ color: '#0284c7', textAlign: 'right' }}>{dp.supplierName || 'Petopia Official'}</strong>
+                      <strong style={{ color: '#0284c7', textAlign: 'right' }}>{dp.supplierName || 'Petzera Official'}</strong>
                     </div>
                   </div>
 
@@ -1992,7 +1992,7 @@ export default function CustomerPortal({
                   Giỏ hàng của bạn đang trống!
                 </h2>
                 <p style={{ color: 'var(--text-muted)', fontSize: '0.92rem', maxWidth: 460, margin: '0 auto 1.5rem', lineHeight: 1.6 }}>
-                  Hãy dạo quanh cửa hàng Petopia Super Shop để chọn thức ăn hạt Royal Canin, sữa bột dinh dưỡng, cát vệ sinh và phụ kiện chính hãng cho bé cưng nhé.
+                  Hãy dạo quanh cửa hàng Petzera Super Shop để chọn thức ăn hạt Royal Canin, sữa bột dinh dưỡng, cát vệ sinh và phụ kiện chính hãng cho bé cưng nhé.
                 </p>
                 <button
                   type="button"
@@ -2128,7 +2128,7 @@ export default function CustomerPortal({
                     {/* Voucher Input & Chips */}
                     <div style={{ marginBottom: '1.25rem' }}>
                       <label style={{ display: 'block', fontSize: '0.82rem', fontWeight: 700, color: '#334155', marginBottom: '6px' }}>
-                        Mã giảm giá / Voucher Petopia
+                        Mã giảm giá / Voucher Petzera
                       </label>
                       <div style={{ display: 'flex', gap: '6px', marginBottom: '8px' }}>
                         <input
@@ -2276,7 +2276,7 @@ export default function CustomerPortal({
         );
       })()}
 
-      {/* 5. DEDICATED TRANG THANH TOÁN PETOPIA (/thanh-toan + Bước 3 Hoàn Tất) */}
+      {/* 5. DEDICATED TRANG THANH TOÁN PETZERA (/thanh-toan + Bước 3 Hoàn Tất) */}
       {activeTab === 'checkout' && (
         <div style={{ display: 'flex', flexDirection: 'column', gap: '1.75rem' }}>
           
@@ -2298,7 +2298,7 @@ export default function CustomerPortal({
               </h1>
               <p style={{ fontSize: '0.85rem', color: 'var(--text-muted)', marginTop: '2px' }}>
                 {completedOrderReceipt
-                  ? 'Cảm ơn bạn đã tin tưởng Petopia! Đơn hàng của bạn đang được bộ phận kho tiếp nhận & đóng gói.'
+                  ? 'Cảm ơn bạn đã tin tưởng Petzera! Đơn hàng của bạn đang được bộ phận kho tiếp nhận & đóng gói.'
                   : 'Vui lòng điền thông tin người nhận, chọn phương thức vận chuyển và hoàn tất thanh toán'}
               </p>
             </div>
@@ -2344,7 +2344,7 @@ export default function CustomerPortal({
                   MÃ ĐƠN HÀNG: {completedOrderReceipt.orderId}
                 </span>
                 <h2 style={{ fontSize: '1.55rem', fontWeight: 900, color: '#0f172a', margin: '0.35rem 0' }}>
-                  Cảm Ơn Bạn Đã Đặt Hàng Tại Petopia!
+                  Cảm Ơn Bạn Đã Đặt Hàng Tại Petzera!
                 </h2>
                 <p style={{ fontSize: '0.9rem', color: '#64748b', margin: 0 }}>
                   Thời gian đặt: <strong>{completedOrderReceipt.createdAt}</strong> • Nhân viên sẽ sớm liên hệ xác nhận giao hàng.
@@ -2382,7 +2382,7 @@ export default function CustomerPortal({
                     </div>
                     <div>
                       <strong>Vận chuyển:</strong>{' '}
-                      {completedOrderReceipt.shippingMethod === 'EXPRESS' ? 'Hỏa Tốc Petopia 2H' : 'Giao Hàng Tiêu Chuẩn (1-2 ngày)'}
+                      {completedOrderReceipt.shippingMethod === 'EXPRESS' ? 'Hỏa Tốc Petzera 2H' : 'Giao Hàng Tiêu Chuẩn (1-2 ngày)'}
                     </div>
                     <div>
                       <strong>Tổng thanh toán:</strong>{' '}
@@ -2459,7 +2459,7 @@ export default function CustomerPortal({
               </div>
               <h3 style={{ fontSize: '1.4rem', fontWeight: 800, marginBottom: '0.5rem', color: '#0f172a' }}>Giỏ Hàng Của Bạn Đang Trống</h3>
               <p style={{ color: 'var(--text-muted)', maxWidth: 450, margin: '0 auto 1.5rem', fontSize: '0.9rem' }}>
-                Hiện tại không có sản phẩm nào để tiến hành thanh toán. Hãy ghé qua Cửa Hàng Petopia để lựa chọn thức ăn, đồ dùng và đồ chơi cho bé cưng!
+                Hiện tại không có sản phẩm nào để tiến hành thanh toán. Hãy ghé qua Cửa Hàng Petzera để lựa chọn thức ăn, đồ dùng và đồ chơi cho bé cưng!
               </p>
               <button className="btn btn-coral" style={{ padding: '0.75rem 1.75rem', fontSize: '0.95rem' }} onClick={() => onTabChange('shop')}>
                 Khám Phá Cửa Hàng Ngay <ArrowRight size={18} />
@@ -2599,7 +2599,7 @@ export default function CustomerPortal({
                             🚚 Giao Hàng Tiêu Chuẩn (1 - 2 Ngày)
                           </div>
                           <div style={{ fontSize: '0.8rem', color: 'var(--text-muted)' }}>
-                            Miễn phí vận chuyển toàn quốc cho đơn hàng Petopia
+                            Miễn phí vận chuyển toàn quốc cho đơn hàng Petzera
                           </div>
                         </div>
                       </div>
@@ -2631,7 +2631,7 @@ export default function CustomerPortal({
                         />
                         <div>
                           <div style={{ fontWeight: 800, fontSize: '0.95rem', color: '#0f172a', display: 'flex', alignItems: 'center', gap: '6px' }}>
-                            ⚡ Hỏa Tốc Petopia 2H (Nội Thành)
+                            ⚡ Hỏa Tốc Petzera 2H (Nội Thành)
                             <span style={{ background: '#fef08a', color: '#854d0e', fontSize: '0.68rem', padding: '1px 6px', borderRadius: '10px', fontWeight: 800 }}>SIÊU TỐC</span>
                           </div>
                           <div style={{ fontSize: '0.8rem', color: 'var(--text-muted)' }}>
@@ -2756,7 +2756,7 @@ export default function CustomerPortal({
                           alignItems: 'center'
                         }}>
                           <img 
-                            src={`https://img.vietqr.io/image/MB-0762409021-compact2.png?amount=${grandTotal}&addInfo=PETOPIA%20${tempOrderCode}&accountName=DUONG%20CONG%20VINH`}
+                            src={`https://img.vietqr.io/image/MB-0762409021-compact2.png?amount=${grandTotal}&addInfo=PETZERA%20${tempOrderCode}&accountName=DUONG%20CONG%20VINH`}
                             alt="VietQR MB Bank 0762409021"
                             style={{ width: '220px', height: '220px', objectFit: 'contain', borderRadius: '8px' }}
                             onError={(e) => {
@@ -2808,11 +2808,11 @@ export default function CustomerPortal({
                             <span style={{ color: '#64748b' }}>Nội Dung Chuyển Khoản:</span>
                             <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
                               <strong style={{ color: '#ff6b35', background: '#fff7ed', padding: '2px 6px', borderRadius: '4px' }}>
-                                PETOPIA {tempOrderCode}
+                                PETZERA {tempOrderCode}
                               </strong>
                               <button 
                                 type="button" 
-                                onClick={() => handleCopyText(`PETOPIA ${tempOrderCode}`, 'Nội dung CK')}
+                                onClick={() => handleCopyText(`PETZERA ${tempOrderCode}`, 'Nội dung CK')}
                                 style={{ background: '#f1f5f9', border: '1px solid #cbd5e1', borderRadius: '6px', padding: '2px 6px', fontSize: '0.72rem', cursor: 'pointer' }}
                               >
                                 Copy
@@ -2880,8 +2880,8 @@ export default function CustomerPortal({
                           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderTop: '1px dashed #fbcfe8', paddingTop: '4px' }}>
                             <span style={{ color: '#64748b' }}>Lời nhắn:</span>
                             <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-                              <strong style={{ color: '#be185d', background: '#fce7f3', padding: '2px 6px', borderRadius: '4px' }}>PETOPIA {tempOrderCode}</strong>
-                              <button type="button" onClick={() => handleCopyText(`PETOPIA ${tempOrderCode}`, 'Lời nhắn chuyển tiền')} style={{ background: '#f1f5f9', border: '1px solid #cbd5e1', borderRadius: '6px', padding: '2px 6px', fontSize: '0.72rem', cursor: 'pointer' }}>Copy</button>
+                              <strong style={{ color: '#be185d', background: '#fce7f3', padding: '2px 6px', borderRadius: '4px' }}>PETZERA {tempOrderCode}</strong>
+                              <button type="button" onClick={() => handleCopyText(`PETZERA ${tempOrderCode}`, 'Lời nhắn chuyển tiền')} style={{ background: '#f1f5f9', border: '1px solid #cbd5e1', borderRadius: '6px', padding: '2px 6px', fontSize: '0.72rem', cursor: 'pointer' }}>Copy</button>
                             </div>
                           </div>
                         </div>
@@ -3215,14 +3215,14 @@ export default function CustomerPortal({
         </div>
       )}
 
-      {/* PETOPIA FOOTER */}
-      <footer className="petopia-footer">
+      {/* PETZERA FOOTER */}
+      <footer className="petzera-footer">
         <div className="grid-4">
           <div>
             <a
               href="/"
-              className="petopia-brand-link"
-              aria-label="Trang chủ Petopia"
+              className="petzera-brand-link"
+              aria-label="Trang chủ Petzera"
               style={{ display: 'inline-flex', textDecoration: 'none', marginBottom: '0.9rem' }}
               onClick={(e) => {
                 e.preventDefault();
@@ -3293,7 +3293,7 @@ export default function CustomerPortal({
                   📘 Facebook
                 </a>
               </div>
-              <span style={{ fontSize: '0.78rem', color: '#64748b', marginTop: '2px' }}>Email: hello@petopia.vn</span>
+              <span style={{ fontSize: '0.78rem', color: '#64748b', marginTop: '2px' }}>Email: hello@petzera.vn</span>
             </div>
           </div>
           <div>
@@ -3304,7 +3304,7 @@ export default function CustomerPortal({
           </div>
         </div>
         <div style={{ textAlign: 'center', fontSize: '0.8rem', color: 'var(--text-muted)', paddingTop: '1.25rem', borderTop: '1px solid var(--border-light)' }}>
-          Petopia © 2026 — Hệ Thống Quản Lý Dịch Vụ Thú Cưng & Dự Báo Kho Thông Minh.
+          Petzera © 2026 — Hệ Thống Quản Lý Dịch Vụ Thú Cưng & Dự Báo Kho Thông Minh.
           <span style={{ margin: '0 8px' }}>•</span>
           <a href="/admin" rel="nofollow" style={{ color: '#64748b', textDecoration: 'none', fontWeight: 600 }}>🔒 Dành Cho Nhân Viên &amp; Quản Trị</a>
         </div>

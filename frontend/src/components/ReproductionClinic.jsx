@@ -552,7 +552,7 @@ export default function ReproductionClinic({ onBookService, services = [] }) {
               🌟 BẢNG GIÁ NIÊM YẾT MINH BẠCH
             </span>
             <h2 style={{ fontSize: '1.6rem', fontWeight: 800, color: '#0f172a' }}>
-              Các Dịch Vụ Mũi Nhọn Của Khoa Sinh Sản Petopia
+              Các Dịch Vụ Mũi Nhọn Của Khoa Sinh Sản Petzera
             </h2>
             <p style={{ fontSize: '0.85rem', color: 'var(--text-muted)' }}>
               Được thực hiện trực tiếp bởi đội ngũ Bác sĩ chuyên khoa Ngoại Sản Thú Y với hệ thống trang thiết bị nhập khẩu.
@@ -937,7 +937,7 @@ export default function ReproductionClinic({ onBookService, services = [] }) {
       }}>
         <div>
           <span style={{ background: '#ea580c', color: '#fff', padding: '3px 10px', borderRadius: '12px', fontSize: '0.75rem', fontWeight: 800 }}>
-            HỆ THỐNG PHÒNG KHÁM SẢN KHOA PETOPIA
+            HỆ THỐNG PHÒNG KHÁM SẢN KHOA PETZERA
           </span>
           <h3 style={{ fontSize: '1.6rem', fontWeight: 800, marginTop: '0.5rem', marginBottom: '0.4rem' }}>
             Cần Hỗ Trợ Ca Khó Sinh Hoặc Đặt Lịch Triệt Sản Thẩm Mỹ?

@@ -44,9 +44,9 @@ const ROLE_META = {
 };
 
 const DEFAULT_SYSTEM_CONFIG = {
-  storeName: 'Petopia Pet Care & Smart AI Platform',
+  storeName: 'Petzera Pet Care & Smart AI Platform',
   hotline: '0348 639 603',
-  supportEmail: 'hello@petopia.vn',
+  supportEmail: 'hello@petzera.vn',
   openHours: '08:00 - 21:00 (Thứ 2 - Chủ Nhật)',
   freeShipThreshold: 500000,
   expressShipFee: 30000,
@@ -214,7 +214,7 @@ export default function AdminDashboard({
     const url = URL.createObjectURL(blob);
     const link = document.createElement('a');
     link.href = url;
-    link.download = `Petopia_BaoCao_HeThong_${new Date().toISOString().split('T')[0]}.csv`;
+    link.download = `Petzera_BaoCao_HeThong_${new Date().toISOString().split('T')[0]}.csv`;
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);

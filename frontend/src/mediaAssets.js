@@ -1,4 +1,4 @@
-// Real, high-resolution photography library (Pexels) mapped 1-to-1 to Petopia avatars, pets, services & products
+// Real, high-resolution photography library (Pexels) mapped 1-to-1 to Petzera avatars, pets, services & products
 
 const pexels = (id, width = 640) =>
   `https://images.pexels.com/photos/${id}/pexels-photo-${id}.jpeg?auto=compress&cs=tinysrgb&w=${width}`;
