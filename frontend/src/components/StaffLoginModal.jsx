@@ -1,16 +1,30 @@
 import React, { useState } from 'react';
 import { Shield, Lock, Mail, UserCheck, AlertCircle, Package, Briefcase } from 'lucide-react';
+import { apiService } from '../apiService';
 import BrandLogo from './BrandLogo';
+
+const STAFF_ROLES = ['CARE_STAFF', 'WAREHOUSE_STAFF', 'ADMIN'];
+const ROLE_LABELS = {
+  CARE_STAFF: 'Nhân Viên',
+  WAREHOUSE_STAFF: 'Quản Lý Kho',
+  ADMIN: 'Admin',
+};
 
 export default function StaffLoginModal({ isOpen = true, onClose, onLoginSuccess, isFullPage = false, users = [] }) {
   const [account, setAccount] = useState('');
   const [password, setPassword] = useState('');
   const [selectedRole, setSelectedRole] = useState('ADMIN');
+  const [loading, setLoading] = useState(false);
   const [errorMessage, setErrorMessage] = useState('');
 
   if (!isOpen) return null;
 
-  const handleSubmit = (e) => {
+  const handleSelectRole = (targetRole) => {
+    setSelectedRole(targetRole);
+    setErrorMessage('');
+  };
+
+  const handleSubmit = async (e) => {
     e.preventDefault();
     setErrorMessage('');
 
@@ -23,59 +37,74 @@ export default function StaffLoginModal({ isOpen = true, onClose, onLoginSuccess
       return;
     }
 
-    // Kiểm tra xem có khớp tài khoản nội bộ trong danh sách users không
-    const matched = users.find(
-      (u) =>
-        ['CARE_STAFF', 'WAREHOUSE_STAFF', 'ADMIN'].includes(u.role) &&
-        ((u.email && u.email.toLowerCase() === lower) ||
-          (u.phone && u.phone.replace(/[\s.-]/g, '') === cleanedPhone))
-    );
+    setLoading(true);
+    try {
+      const res = await apiService.login(raw, password);
 
-    if (matched) {
+      if (res && res.user && res.token) {
+        if (!STAFF_ROLES.includes(res.user.role)) {
+          setErrorMessage('Tài khoản khách hàng không có quyền truy cập Cổng Nội Bộ.');
+          return;
+        }
+
+        if (res.user.role !== selectedRole) {
+          setErrorMessage(
+            `Tài khoản này thuộc vai trò ${ROLE_LABELS[res.user.role] || res.user.role}. Vui lòng chọn đúng vai trò ở trên.`
+          );
+          return;
+        }
+
+        const matchedLocal = users.find(
+          (u) =>
+            (u.email && u.email.toLowerCase() === (res.user.email || '').toLowerCase()) ||
+            (u.phone && res.user.phone && u.phone.replace(/[\s.-]/g, '') === res.user.phone.replace(/[\s.-]/g, ''))
+        );
+        if (matchedLocal && matchedLocal.status === 'LOCKED') {
+          setErrorMessage('Tài khoản này đang bị khóa. Vui lòng liên hệ Admin.');
+          return;
+        }
+
+        const userItem = {
+          ...res.user,
+          status: 'ACTIVE',
+          createdAt: res.user.createdAt ? res.user.createdAt.split('T')[0] : new Date().toISOString().split('T')[0],
+        };
+        onLoginSuccess(userItem, res.token);
+        if (onClose) onClose();
+        return;
+      }
+
+      setErrorMessage((res && res.message) || 'Email/Số điện thoại hoặc mật khẩu không chính xác.');
+      return;
+    } catch (err) {
+      console.warn('Backend staff login unavailable:', err);
+      // Fallback chỉ khi chạy offline không có backend
+      const matched = users.find(
+        (u) =>
+          STAFF_ROLES.includes(u.role) &&
+          ((u.email && u.email.toLowerCase() === lower) ||
+            (u.phone && u.phone.replace(/[\s.-]/g, '') === cleanedPhone))
+      );
+
+      if (!matched) {
+        setErrorMessage('Không thể kết nối máy chủ xác thực hoặc tài khoản không tồn tại.');
+        return;
+      }
+      if (matched.role !== selectedRole) {
+        setErrorMessage(
+          `Tài khoản này thuộc vai trò ${ROLE_LABELS[matched.role] || matched.role}. Vui lòng chọn đúng vai trò ở trên.`
+        );
+        return;
+      }
       if (matched.status === 'LOCKED') {
         setErrorMessage('Tài khoản này đang bị khóa. Vui lòng liên hệ Admin.');
         return;
       }
       onLoginSuccess(matched, 'mock-staff-jwt-token-2026');
       if (onClose) onClose();
-      return;
+    } finally {
+      setLoading(false);
     }
-
-    let userRole = selectedRole;
-    let fullName = 'Nguyễn Văn Admin';
-
-    if (lower.startsWith('warehouse') || lower.startsWith('kho')) {
-      userRole = 'WAREHOUSE_STAFF';
-      fullName = 'Lê Văn Kho';
-    } else if (lower.startsWith('care') || lower.startsWith('spa') || lower.startsWith('nv')) {
-      userRole = 'CARE_STAFF';
-      fullName = 'Trần Thị Chăm Sóc';
-    } else if (lower.startsWith('admin')) {
-      userRole = 'ADMIN';
-      fullName = 'Nguyễn Văn Admin';
-    } else {
-      if (selectedRole === 'CARE_STAFF') fullName = 'Trần Thị Chăm Sóc';
-      else if (selectedRole === 'WAREHOUSE_STAFF') fullName = 'Lê Văn Kho';
-      else fullName = 'Nguyễn Văn Admin';
-    }
-
-    const userObj = {
-      id: userRole === 'ADMIN' ? 'u-1' : userRole === 'CARE_STAFF' ? 'u-2' : 'u-3',
-      email: raw,
-      fullName,
-      role: userRole,
-      status: 'ACTIVE'
-    };
-
-    onLoginSuccess(userObj, 'mock-staff-jwt-token-2026');
-    if (onClose) onClose();
-  };
-
-  const fillQuickAccount = (targetEmail, targetRole) => {
-    setAccount(targetEmail);
-    setPassword('123456');
-    setSelectedRole(targetRole);
-    setErrorMessage('');
   };
 
   const loginCard = (
@@ -103,14 +132,14 @@ export default function StaffLoginModal({ isOpen = true, onClose, onLoginSuccess
           Đăng Nhập Hệ Thống Nội Bộ
         </h3>
         <p style={{ fontSize: '0.82rem', color: '#64748b', marginTop: '4px' }}>
-          Chọn vai trò hoặc nhập tài khoản Nhân viên, Quản lý kho, Admin
+          Chọn vai trò và nhập tài khoản Nhân viên, Quản lý kho hoặc Admin
         </p>
       </div>
 
-      {/* Quick Demo Staff Login Buttons */}
+      {/* Staff Role Selector (không tự điền tài khoản / mật khẩu) */}
       <div style={{ background: '#f8fafc', border: '1px solid #e2e8f0', padding: '0.9rem', borderRadius: '14px', marginBottom: '1.25rem' }}>
         <div style={{ fontSize: '0.75rem', color: '#475569', fontWeight: 800, marginBottom: '8px', display: 'flex', alignItems: 'center', gap: '5px' }}>
-          <UserCheck size={14} color="#0284c7" /> Chọn Nhanh Tài Khoản Nội Bộ:
+          <UserCheck size={14} color="#0284c7" /> Chọn Vai Trò Đăng Nhập:
         </div>
         <div style={{ display: 'flex', flexDirection: 'column', gap: '0.45rem' }}>
           <button
@@ -126,7 +155,7 @@ export default function StaffLoginModal({ isOpen = true, onClose, onLoginSuccess
               borderRadius: '10px',
               justifyContent: 'space-between',
             }}
-            onClick={() => fillQuickAccount('care@petcare.com', 'CARE_STAFF')}
+            onClick={() => handleSelectRole('CARE_STAFF')}
           >
             <span style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
               <Briefcase size={14} /> Nhân Viên (Lịch hẹn, Dịch vụ, KM, Thú cưng, Báo cáo)
@@ -146,7 +175,7 @@ export default function StaffLoginModal({ isOpen = true, onClose, onLoginSuccess
               borderRadius: '10px',
               justifyContent: 'space-between',
             }}
-            onClick={() => fillQuickAccount('warehouse@petcare.com', 'WAREHOUSE_STAFF')}
+            onClick={() => handleSelectRole('WAREHOUSE_STAFF')}
           >
             <span style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
               <Package size={14} /> Quản Lý Kho (Nhập/Xuất/Tồn, Dự báo AI, Đề xuất nhập)
@@ -166,7 +195,7 @@ export default function StaffLoginModal({ isOpen = true, onClose, onLoginSuccess
               borderRadius: '10px',
               justifyContent: 'space-between',
             }}
-            onClick={() => fillQuickAccount('admin@petcare.com', 'ADMIN')}
+            onClick={() => handleSelectRole('ADMIN')}
           >
             <span style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
               <Shield size={14} /> Admin (Tổng quan, Tài khoản, Phân quyền, Duyệt nhập, NCC, Cấu hình)
@@ -196,6 +225,7 @@ export default function StaffLoginModal({ isOpen = true, onClose, onLoginSuccess
               placeholder="Nhập email hoặc số điện thoại"
               value={account}
               onChange={(e) => setAccount(e.target.value)}
+              autoComplete="username"
               required
             />
           </div>
@@ -214,6 +244,7 @@ export default function StaffLoginModal({ isOpen = true, onClose, onLoginSuccess
               placeholder="Nhập mật khẩu"
               value={password}
               onChange={(e) => setPassword(e.target.value)}
+              autoComplete="current-password"
               required
             />
           </div>
@@ -221,10 +252,11 @@ export default function StaffLoginModal({ isOpen = true, onClose, onLoginSuccess
 
         <button
           type="submit"
+          disabled={loading}
           className="btn btn-primary"
-          style={{ width: '100%', padding: '0.78rem', borderRadius: '12px', fontWeight: 800, fontSize: '0.9rem', justifyContent: 'center' }}
+          style={{ width: '100%', padding: '0.78rem', borderRadius: '12px', fontWeight: 800, fontSize: '0.9rem', justifyContent: 'center', opacity: loading ? 0.7 : 1 }}
         >
-          Đăng Nhập Vào Hệ Thống
+          {loading ? 'Đang Xác Thực...' : 'Đăng Nhập Vào Hệ Thống'}
         </button>
       </form>
 

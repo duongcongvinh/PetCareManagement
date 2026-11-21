@@ -261,26 +261,6 @@ export default function LoginModal({ isOpen, onClose, onLoginSuccess, onAddUser,
           </button>
         </div>
 
-        <div style={{ marginTop: '1rem', borderTop: '1px solid #e2e8f0', paddingTop: '1rem' }}>
-          <button 
-            type="button" 
-            className="btn btn-secondary" 
-            style={{ width: '100%', borderRadius: '12px', fontSize: '0.82rem', justifyContent: 'center', background: '#f8fafc', border: '1px dashed #cbd5e1' }}
-            onClick={() => {
-              onLoginSuccess({
-                id: 'u-4',
-                email: 'khachhang@gmail.com',
-                phone: '0934567890',
-                fullName: 'Phạm Minh Anh',
-                role: 'CUSTOMER'
-              }, 'customer-jwt-token-demo');
-              onClose();
-            }}
-          >
-            ⚡ Đăng Nhập Nhanh Mẫu: Phạm Minh Anh (Khách Hàng)
-          </button>
-        </div>
-
         <button 
           type="button"
           className="btn btn-secondary" 
