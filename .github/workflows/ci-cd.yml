@@ -66,6 +66,9 @@ jobs:
       - name: Syntax check Backend JS files
         run: find src -name "*.js" -exec node --check {} +
 
+      - name: Run Backend unit tests
+        run: npm test
+
   # ==================== 3. CI: AI SERVICE ====================
   ci-ai-service:
     name: CI - AI Service (FastAPI)
@@ -91,6 +94,11 @@ jobs:
         run: |
           python -m py_compile main.py
           python -c "import main; assert main.app is not None"
+
+      - name: Run AI Service unit tests
+        run: |
+          pip install pytest httpx
+          pytest -v
 
   # ==================== 4. CD: BUILD & PUSH DOCKER IMAGES ====================
   build-and-push:
