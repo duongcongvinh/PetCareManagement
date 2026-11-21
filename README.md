@@ -7,6 +7,7 @@
 ![MongoDB](https://img.shields.io/badge/Database-MongoDB_7.0-47A248?style=flat-square&logo=mongodb)
 ![FastAPI](https://img.shields.io/badge/AI_Service-Python_FastAPI_+_Scikit--Learn-0284c7?style=flat-square&logo=fastapi)
 ![Docker](https://img.shields.io/badge/DevOps-Docker_Compose_(5_Containers)-2496ED?style=flat-square&logo=docker)
+![CI/CD](https://github.com/duongcongvinh/PetCareManagement/actions/workflows/ci-cd.yml/badge.svg)
 
 ---
 
