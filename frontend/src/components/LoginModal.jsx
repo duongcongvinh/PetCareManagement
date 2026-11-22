@@ -57,6 +57,11 @@ export default function LoginModal({ isOpen, onClose, onLoginSuccess, onAddUser,
       return;
     }
 
+    if (isRegister && password.length < 8) {
+      toast.warning('Mật khẩu đăng ký phải có ít nhất 8 ký tự!', 'Mật Khẩu Quá Ngắn');
+      return;
+    }
+
     const normalizedId = parsed.value;
     const isPhone = parsed.type === 'phone';
     const nameToUse = fullName.trim() || (isPhone ? `Khách ${normalizedId.slice(-4)}` : normalizedId.split('@')[0]);
@@ -74,10 +79,10 @@ export default function LoginModal({ isOpen, onClose, onLoginSuccess, onAddUser,
         if (res && res.user) {
           const userItem = {
             ...res.user,
-            status: 'ACTIVE',
+            status: res.user.status || 'ACTIVE',
             createdAt: res.user.createdAt ? res.user.createdAt.split('T')[0] : new Date().toISOString().split('T')[0]
           };
-          if (onAddUser) onAddUser(userItem);
+          if (onAddUser) onAddUser({ ...userItem, _alreadySavedInDb: true });
           onLoginSuccess(userItem, res.token);
           toast.success(`Chào mừng ${userItem.fullName}! Bạn đã đăng ký tài khoản thành công.`, 'Đăng Ký Thành Công');
           onClose();
@@ -230,13 +235,47 @@ export default function LoginModal({ isOpen, onClose, onLoginSuccess, onAddUser,
           </div>
 
           <div className="form-group" style={{ marginBottom: '1rem' }}>
-            <label style={{ fontSize: '0.82rem', fontWeight: 700, color: '#334155' }}>Mật Khẩu *</label>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+              <label style={{ fontSize: '0.82rem', fontWeight: 700, color: '#334155' }}>Mật Khẩu *</label>
+              {isRegister && (
+                password.length === 0 ? (
+                  <span style={{ fontSize: '0.7rem', fontWeight: 600, color: '#64748b' }}>
+                    Tối thiểu 8 ký tự
+                  </span>
+                ) : password.length < 8 ? (
+                  <span style={{
+                    fontSize: '0.7rem',
+                    fontWeight: 800,
+                    color: '#dc2626',
+                    background: '#fef2f2',
+                    padding: '1px 8px',
+                    borderRadius: '10px',
+                    border: '1px solid #fecaca'
+                  }}>
+                    Thiếu {8 - password.length} ký tự ({password.length}/8)
+                  </span>
+                ) : (
+                  <span style={{
+                    fontSize: '0.7rem',
+                    fontWeight: 800,
+                    color: '#059669',
+                    background: '#ecfdf5',
+                    padding: '1px 8px',
+                    borderRadius: '10px',
+                    border: '1px solid #a7f3d0'
+                  }}>
+                    ✓ Đủ độ dài (≥ 8 ký tự)
+                  </span>
+                )
+              )}
+            </div>
             <input 
               type="password" 
               className="form-control" 
               value={password} 
               onChange={e => setPassword(e.target.value)} 
-              placeholder="Nhập mật khẩu" 
+              placeholder={isRegister ? 'Nhập mật khẩu (ít nhất 8 ký tự)' : 'Nhập mật khẩu'}
+              minLength={isRegister ? 8 : undefined}
               required 
             />
           </div>

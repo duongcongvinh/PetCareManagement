@@ -268,7 +268,7 @@ export default function AdminDashboard({
           email: userForm.email.trim(),
           phone: userForm.phone.trim(),
           role: userForm.role,
-          password: userForm.password || '123456'
+          password: userForm.password || 'password123'
         });
       }
       toast.success(`Đã tạo tài khoản "${userForm.fullName}" (${ROLE_META[userForm.role]?.label})!`, 'Quản Lý Tài Khoản');

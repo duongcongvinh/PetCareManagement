@@ -29,6 +29,10 @@ const registerUser = async ({ identifier, email, password, fullName, phone, role
     throw new Error('Vui lòng nhập đúng định dạng Email hoặc Số điện thoại (VD: 0901234567).');
   }
 
+  if (!password || String(password).length < 8) {
+    throw new Error('Mật khẩu đăng ký phải có ít nhất 8 ký tự.');
+  }
+
   const storedEmail = parsed.value;
   const storedPhone = parsed.type === 'phone' ? parsed.value : (phone ? phone.trim() : null);
 
@@ -57,6 +61,7 @@ const registerUser = async ({ identifier, email, password, fullName, phone, role
       fullName: fullName.trim(),
       phone: storedPhone,
       role: userRole,
+      status: 'ACTIVE',
     },
     select: {
       id: true,
@@ -64,6 +69,7 @@ const registerUser = async ({ identifier, email, password, fullName, phone, role
       fullName: true,
       phone: true,
       role: true,
+      status: true,
       createdAt: true,
     },
   });
@@ -102,6 +108,10 @@ const loginUser = async ({ identifier, email, password }) => {
     throw new Error('Email/Số điện thoại hoặc mật khẩu không chính xác.');
   }
 
+  if (user.status === 'LOCKED') {
+    throw new Error('Tài khoản này đang bị khóa. Vui lòng liên hệ Admin.');
+  }
+
   const isMatch = await bcrypt.compare(password, user.password);
   if (!isMatch) {
     throw new Error('Email/Số điện thoại hoặc mật khẩu không chính xác.');
@@ -114,7 +124,7 @@ const loginUser = async ({ identifier, email, password }) => {
   );
 
   const { password: _, ...userWithoutPassword } = user;
-  return { token, user: userWithoutPassword };
+  return { token, user: { ...userWithoutPassword, status: userWithoutPassword.status || 'ACTIVE' } };
 };
 
 const getUserProfile = async (userId) => {
@@ -126,6 +136,7 @@ const getUserProfile = async (userId) => {
       fullName: true,
       phone: true,
       role: true,
+      status: true,
       createdAt: true,
       pets: true,
     },
@@ -140,13 +151,14 @@ const getAllUsers = async () => {
       fullName: true,
       phone: true,
       role: true,
+      status: true,
       createdAt: true,
     },
     orderBy: { createdAt: 'desc' },
   });
   return users.map(u => ({
     ...u,
-    status: 'ACTIVE',
+    status: u.status || 'ACTIVE',
     createdAt: u.createdAt ? u.createdAt.toISOString().split('T')[0] : '2026-01-01'
   }));
 };
@@ -166,8 +178,50 @@ const updateUserProfile = async (userId, { fullName, phone, password }) => {
       fullName: true,
       phone: true,
       role: true,
+      status: true,
       createdAt: true,
     },
+  });
+};
+
+const updateUserById = async (userId, { fullName, phone, role, status, password }) => {
+  const data = {};
+  if (fullName !== undefined && fullName.trim()) data.fullName = fullName.trim();
+  if (phone !== undefined) data.phone = phone ? phone.trim() : null;
+  if (role && ['CUSTOMER', 'CARE_STAFF', 'WAREHOUSE_STAFF', 'ADMIN'].includes(role)) {
+    data.role = role;
+  }
+  if (status && ['ACTIVE', 'LOCKED'].includes(status)) {
+    data.status = status;
+  }
+  if (password && password.trim()) {
+    data.password = await bcrypt.hash(password.trim(), 10);
+  }
+
+  const updated = await prisma.user.update({
+    where: { id: userId },
+    data,
+    select: {
+      id: true,
+      email: true,
+      fullName: true,
+      phone: true,
+      role: true,
+      status: true,
+      createdAt: true,
+    },
+  });
+
+  return {
+    ...updated,
+    status: updated.status || 'ACTIVE',
+    createdAt: updated.createdAt ? updated.createdAt.toISOString().split('T')[0] : '2026-01-01',
+  };
+};
+
+const deleteUserById = async (userId) => {
+  return await prisma.user.delete({
+    where: { id: userId },
   });
 };
 
@@ -177,4 +231,6 @@ module.exports = {
   getUserProfile,
   getAllUsers,
   updateUserProfile,
+  updateUserById,
+  deleteUserById,
 };
