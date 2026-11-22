@@ -8,6 +8,7 @@ const appointmentController = require('../controllers/appointmentController');
 const inventoryController = require('../controllers/inventoryController');
 const orderController = require('../controllers/orderController');
 const forecastingController = require('../controllers/forecastingController');
+const paymentController = require('../controllers/paymentController');
 
 // --- 1. Auth & User Management Routes ---
 router.post('/auth/register', authController.register);
@@ -16,6 +17,8 @@ router.get('/auth/me', authenticateToken, authController.getProfile);
 router.put('/auth/profile', authenticateToken, authController.updateProfile);
 router.get('/users', authController.getUsers);
 router.post('/users', authController.createUser);
+router.put('/users/:id', authenticateToken, authorizeRoles('ADMIN'), authController.updateUser);
+router.delete('/users/:id', authenticateToken, authorizeRoles('ADMIN'), authController.deleteUser);
 
 // --- 2. Pet Routes ---
 router.get('/pets', authenticateToken, petController.getPets);
@@ -40,9 +43,13 @@ router.get('/products/low-stock', authenticateToken, authorizeRoles('WAREHOUSE_S
 router.get('/suppliers', authenticateToken, authorizeRoles('WAREHOUSE_STAFF', 'ADMIN'), inventoryController.getSuppliers);
 router.post('/suppliers', authenticateToken, authorizeRoles('WAREHOUSE_STAFF', 'ADMIN'), inventoryController.createSupplier);
 
-// --- 5. E-Commerce Order Routes ---
+// --- 5. E-Commerce Order & payOS Payment Routes ---
 router.post('/orders', authenticateToken, orderController.createOrder);
 router.get('/orders', authenticateToken, orderController.getOrders);
+router.post('/payment/payos/create', paymentController.createPayOSPayment);
+router.get('/payment/payos/status/:orderCode', paymentController.getPayOSPaymentStatus);
+router.post('/payment/payos/cancel/:orderCode', paymentController.cancelPayOSPayment);
+router.post('/payment/payos-webhook', paymentController.handlePayOSWebhook);
 
 // --- 6. AI Smart Forecasting & Reorder Proposal Routes ---
 router.get('/forecasting/proposals', authenticateToken, authorizeRoles('WAREHOUSE_STAFF', 'ADMIN'), forecastingController.getProposals);

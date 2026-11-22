@@ -2,6 +2,9 @@ import React, { useState, useEffect } from 'react';
 import ReproductionClinic from './ReproductionClinic';
 import BrandLogo from './BrandLogo';
 import HomeLandingPage from './HomeLandingPage';
+import AddressMapPicker from './AddressMapPicker';
+import PayOSEmbeddedBox from './PayOSEmbeddedBox';
+import { apiService } from '../apiService';
 import { 
   PawPrint, Calendar, ShoppingBag, Plus, Minus, Trash2, Clock, ShieldCheck, HeartHandshake, 
   Truck, Award, Sparkles, Tag, Search, Filter, Star, ShoppingCart, CheckCircle, ArrowRight, ArrowLeft, 
@@ -384,25 +387,60 @@ export default function CustomerPortal({
   const cart = propsCart !== undefined ? propsCart : internalCart;
   const setCart = propsSetCart || setInternalCart;
 
+  // Selected Cart Item IDs for Selective Checkout (chọn sản phẩm bất kỳ để thanh toán)
+  const [selectedCartIds, setSelectedCartIds] = useState(() => {
+    try {
+      const saved = localStorage.getItem('petcare_selected_cart_ids');
+      if (saved) {
+        const parsed = JSON.parse(saved);
+        if (Array.isArray(parsed)) return parsed;
+      }
+    } catch (e) {}
+    return (propsCart || []).map(i => i.id);
+  });
+
+  useEffect(() => {
+    try {
+      localStorage.setItem('petcare_selected_cart_ids', JSON.stringify(selectedCartIds));
+    } catch (e) {}
+  }, [selectedCartIds]);
+
+  // Keep selectedCartIds in sync when items are removed from cart
+  useEffect(() => {
+    const validIds = new Set(cart.map(i => i.id));
+    setSelectedCartIds(prev => {
+      const cleaned = prev.filter(id => validIds.has(id));
+      return cleaned.length === prev.length ? prev : cleaned;
+    });
+  }, [cart]);
+
   // Checkout Form State
   const [checkoutForm, setCheckoutForm] = useState({
     recipientName: currentUser?.fullName || '',
     recipientPhone: currentUser?.phone || '',
     deliveryAddress: '',
+    deliveryCoords: null,
     deliveryNotes: '',
     shippingMethod: 'STANDARD', // 'STANDARD' (0 đ) or 'EXPRESS' (30.000 đ)
     paymentMethod: 'COD', // 'COD', 'VIETQR', 'MOMO'
   });
+  const [showMapPicker, setShowMapPicker] = useState(true);
 
   // Unique Order Code for VietQR/MoMo & Order Completion Receipt (Step 3)
   const [tempOrderCode, setTempOrderCode] = useState(() => 'ORD-' + Math.floor(100000 + Math.random() * 900000));
   const [completedOrderReceipt, setCompletedOrderReceipt] = useState(null);
 
+  // payOS Embedded Inline Checkout State (hiển thị trực tiếp ngay trên trang /thanh-toan)
+  const [payosEmbedded, setPayosEmbedded] = useState(null);
+  const [payosLoading, setPayosLoading] = useState(false);
+  const [payosChecking, setPayosChecking] = useState(false);
+  const [payosVerifyingReturn, setPayosVerifyingReturn] = useState(false);
+
   useEffect(() => {
-    if (cart.length > 0 && completedOrderReceipt) {
+    if (activeTab !== 'checkout' && completedOrderReceipt) {
       setCompletedOrderReceipt(null);
     }
-  }, [cart.length]);
+  }, [activeTab]);
 
   useEffect(() => {
     if (currentUser) {
@@ -469,11 +507,47 @@ export default function CustomerPortal({
   useEffect(() => {
     if (!currentUser) {
       setCart([]);
+      setSelectedCartIds([]);
     }
   }, [currentUser]);
 
+  // Cart Selection Helpers (chọn sản phẩm bất kỳ để thanh toán)
+  const selectedCartItems = cart.filter(item => selectedCartIds.includes(item.id));
+  const selectedTotalQty = selectedCartItems.reduce((sum, item) => sum + item.quantity, 0);
+  const allCartSelected = cart.length > 0 && selectedCartItems.length === cart.length;
+
+  const toggleSelectCartItem = (productId) => {
+    setSelectedCartIds(prev =>
+      prev.includes(productId) ? prev.filter(id => id !== productId) : [...prev, productId]
+    );
+  };
+
+  const toggleSelectAllCart = () => {
+    if (allCartSelected) {
+      setSelectedCartIds([]);
+    } else {
+      setSelectedCartIds(cart.map(item => item.id));
+    }
+  };
+
+  const handleRemoveSelectedItems = async () => {
+    if (selectedCartItems.length === 0) return;
+    const confirmed = await confirmModal(
+      `Bạn có chắc chắn muốn xóa ${selectedCartItems.length} sản phẩm đã chọn khỏi giỏ hàng?`,
+      'Xóa Sản Phẩm Đã Chọn?',
+      { type: 'danger', confirmText: 'Xóa Mục Đã Chọn', cancelText: 'Hủy' }
+    );
+    if (confirmed) {
+      const removeSet = new Set(selectedCartIds);
+      setCart(cart.filter(item => !removeSet.has(item.id)));
+      setSelectedCartIds([]);
+      toast.info(`Đã xóa ${selectedCartItems.length} sản phẩm khỏi giỏ hàng.`, 'Giỏ Hàng');
+    }
+  };
+
   // Cart Management Functions
-  const handleAddToCart = (product, quantity = 1) => {
+  const handleAddToCart = (product, quantity = 1, options = {}) => {
+    const { selectOnly = false } = options || {};
     if (!currentUser) {
       toast.warning(
         'Vui lòng đăng nhập tài khoản khách hàng để thêm sản phẩm vào giỏ hàng và mua sắm!',
@@ -498,6 +572,13 @@ export default function CustomerPortal({
     } else {
       setCart([...cart, { ...product, quantity }]);
     }
+
+    if (selectOnly) {
+      setSelectedCartIds([product.id]);
+    } else {
+      setSelectedCartIds(prev => (prev.includes(product.id) ? prev : [...prev, product.id]));
+    }
+
     toast.success(`Đã thêm "${product.name}" vào giỏ hàng Petzera!`, '🛒 Đã Thêm Giỏ Hàng', {
       actionText: 'Xem Giỏ Hàng',
       onAction: () => openCartPage()
@@ -524,6 +605,7 @@ export default function CustomerPortal({
   const removeCartItem = (productId) => {
     const item = cart.find(i => i.id === productId);
     setCart(cart.filter(i => i.id !== productId));
+    setSelectedCartIds(prev => prev.filter(id => id !== productId));
     if (item) {
       toast.info(`Đã bỏ "${item.name}" khỏi giỏ hàng.`, 'Cập Nhật Giỏ Hàng');
     }
@@ -538,14 +620,19 @@ export default function CustomerPortal({
     );
     if (confirmed) {
       setCart([]);
+      setSelectedCartIds([]);
       toast.info('Đã xóa tất cả sản phẩm trong giỏ hàng.', 'Giỏ Hàng');
     }
   };
 
-  // Proceed from Cart Page to Dedicated Checkout Page
+  // Proceed from Cart Page to Dedicated Checkout Page (chỉ thanh toán các sản phẩm đã tích chọn)
   const handleProceedToCheckout = () => {
     if (cart.length === 0) {
       toast.warning('Giỏ hàng của bạn đang trống! Hãy chọn sản phẩm trước khi thanh toán.', 'Giỏ Hàng Rỗng');
+      return;
+    }
+    if (selectedCartItems.length === 0) {
+      toast.warning('Vui lòng tích chọn ít nhất 1 sản phẩm trong giỏ hàng để thanh toán!', 'Chưa Chọn Sản Phẩm');
       return;
     }
     if (!currentUser) {
@@ -556,9 +643,10 @@ export default function CustomerPortal({
       if (onOpenLogin) onOpenLogin();
       return;
     }
+    setCompletedOrderReceipt(null);
     onTabChange('checkout');
     window.scrollTo({ top: 0, behavior: 'smooth' });
-    toast.info('Đã chuyển đến trang thanh toán. Vui lòng kiểm tra thông tin và đặt hàng!', 'Trang Thanh Toán');
+    toast.info(`Đã chuyển ${selectedTotalQty} sản phẩm đã chọn đến trang thanh toán!`, 'Trang Thanh Toán');
   };
 
   const applyPromoCode = (codeOverride) => {
@@ -583,12 +671,227 @@ export default function CustomerPortal({
     }
   };
 
-  // Final Order Submission from Checkout Page
-  const handleFinalPlaceOrder = (e) => {
+  const finalizeOrderSuccess = (receiptSummary, { paidViaPayOS = false } = {}) => {
+    const finalReceipt = {
+      ...receiptSummary,
+      paymentStatus: paidViaPayOS ? 'PAID' : 'PENDING',
+    };
+
+    onCheckoutOrder(finalReceipt.items, finalReceipt.grandTotal, {
+      orderId: finalReceipt.orderId,
+      recipientName: finalReceipt.recipientName,
+      recipientPhone: finalReceipt.recipientPhone,
+      deliveryAddress: finalReceipt.deliveryAddress,
+      deliveryNotes: finalReceipt.deliveryNotes,
+      shippingMethod: finalReceipt.shippingMethod,
+      paymentMethod: finalReceipt.paymentMethod,
+      status: paidViaPayOS ? 'PAID' : 'PENDING',
+    });
+
+    const orderedIds = new Set(finalReceipt.items.map(item => item.id));
+    setCompletedOrderReceipt(finalReceipt);
+    setPayosEmbedded(null);
+    try { localStorage.removeItem('petcare_pending_payos'); } catch (e) {}
+    setCart(prev => prev.filter(item => !orderedIds.has(item.id)));
+    setSelectedCartIds([]);
+    setDiscountPercent(0);
+    setPromoCode('');
+    setTempOrderCode('ORD-' + Math.floor(100000 + Math.random() * 900000));
+
+    toast.success(
+      paidViaPayOS
+        ? `Thanh toán Online thành công mã đơn ${finalReceipt.orderId}! Đã nhận ${finalReceipt.grandTotal.toLocaleString('vi-VN')} đ.`
+        : `Đặt hàng thành công mã đơn ${finalReceipt.orderId}! Tổng thanh toán: ${finalReceipt.grandTotal.toLocaleString('vi-VN')} đ.`,
+      paidViaPayOS ? '✅ THANH TOÁN ONLINE THÀNH CÔNG' : '🎉 ĐẶT HÀNG THÀNH CÔNG',
+      { duration: 6000 }
+    );
+
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  };
+
+  // Xử lý khi cổng payOS chuyển hướng người dùng quay lại PETZERA (?payos=success|cancel&orderCode=...)
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+    const params = new URLSearchParams(window.location.search);
+    const payosFlag = params.get('payos');
+    const returnedCode = params.get('orderCode');
+    const isCancelParam = params.get('cancel') === 'true' || params.get('status') === 'CANCELLED';
+    if (!payosFlag || !returnedCode) return;
+
+    window.history.replaceState({}, '', '/thanh-toan');
+
+    if (payosFlag === 'cancel' || isCancelParam) {
+      apiService.cancelPayOSPayment(returnedCode).catch(() => {});
+      try { localStorage.removeItem('petcare_pending_payos'); } catch (e) {}
+      toast.info('Bạn đã hủy thanh toán trên cổng payOS. Giỏ hàng vẫn được giữ nguyên!', 'Thanh Toán Đã Hủy');
+      return;
+    }
+
+    if (payosFlag === 'success') {
+      setPayosVerifyingReturn(true);
+      (async () => {
+        try {
+          // Kiểm tra trạng thái giao dịch thật từ API payOS (thử tối đa 3 lần phòng độ trễ mạng 1-2s)
+          let verifiedStatus = 'PENDING';
+          for (let attempt = 0; attempt < 3; attempt++) {
+            const res = await apiService.getPayOSStatus(returnedCode);
+            verifiedStatus = res?.data?.status || 'PENDING';
+            if (verifiedStatus === 'PAID') break;
+            await new Promise((r) => setTimeout(r, 1200));
+          }
+
+          const savedRaw = localStorage.getItem('petcare_pending_payos');
+          const saved = savedRaw ? JSON.parse(savedRaw) : null;
+
+          if (verifiedStatus === 'PAID') {
+            if (saved && String(saved.orderCode) === String(returnedCode) && saved.pendingOrder) {
+              finalizeOrderSuccess(saved.pendingOrder, { paidViaPayOS: true });
+            } else {
+              toast.success(`Thanh toán Online thành công cho mã giao dịch #${returnedCode}!`, '✅ Đã Thanh Toán');
+            }
+          } else {
+            toast.warning('Giao dịch chưa hoàn tất trên cổng thanh toán. Vui lòng kiểm tra lại.', 'Chưa Xác Nhận Thanh Toán');
+          }
+        } catch (err) {
+          toast.error('Không thể xác minh kết quả thanh toán lúc này.', 'Lỗi Xác Minh');
+        } finally {
+          setPayosVerifyingReturn(false);
+        }
+      })();
+    }
+  }, []);
+
+  // Kiểm tra trạng thái giao dịch payOS đang nhúng trực tiếp
+  const checkEmbeddedPayOSStatus = async (sessionOverride = null, { silent = false } = {}) => {
+    const active = sessionOverride || payosEmbedded;
+    if (!active?.orderCode) return;
+    if (!silent) setPayosChecking(true);
+    try {
+      const res = await apiService.getPayOSStatus(active.orderCode);
+      const status = res?.data?.status;
+      if (status === 'PAID') {
+        finalizeOrderSuccess(active.pendingOrder, { paidViaPayOS: true });
+      } else if (status === 'EXPIRED') {
+        handleExpireAndRegeneratePayOS(active);
+      } else if (status === 'CANCELLED') {
+        setPayosEmbedded(null);
+        try { localStorage.removeItem('petcare_pending_payos'); } catch (e) {}
+        toast.info('Giao dịch thanh toán online đã bị hủy.', 'Thanh Toán Online');
+      } else if (!silent) {
+        toast.info('Hệ thống chưa nhận được chuyển khoản. Bạn vui lòng quét mã QR phía trên nhé!', 'Đang Chờ Thanh Toán');
+      }
+    } catch (err) {
+      if (!silent) toast.warning('Chưa thể kiểm tra trạng thái lúc này.', 'Thanh Toán Online');
+    } finally {
+      if (!silent) setPayosChecking(false);
+    }
+  };
+
+  // Tự động kiểm tra trạng thái mỗi 3 giây khi khung payOS nhúng đang mở
+  useEffect(() => {
+    if (!payosEmbedded?.orderCode) return;
+    const timer = setInterval(() => {
+      checkEmbeddedPayOSStatus(payosEmbedded, { silent: true });
+    }, 3000);
+    return () => clearInterval(timer);
+  }, [payosEmbedded]);
+
+  const handleCancelEmbeddedPayOS = async () => {
+    if (payosEmbedded?.orderCode) {
+      apiService.cancelPayOSPayment(payosEmbedded.orderCode, 'Khach hang huy thanh toan').catch(() => {});
+    }
+    setPayosEmbedded(null);
+    try { localStorage.removeItem('petcare_pending_payos'); } catch (e) {}
+    toast.info('Đã hủy mã QR thanh toán hiện tại.', 'Thanh Toán Online');
+  };
+
+  // Sau 10 phút chưa thanh toán: kiểm tra lần cuối -> hủy mã cũ -> tự động tạo mã QR mới
+  const handleExpireAndRegeneratePayOS = async (sessionOverride = null) => {
+    const active = sessionOverride || payosEmbedded;
+    if (!active?.orderCode) return;
+
+    setPayosLoading(true);
+    try {
+      // Kiểm tra lần cuối đề phòng khách vừa chuyển khoản đúng giây cuối
+      try {
+        const latest = await apiService.getPayOSStatus(active.orderCode);
+        if (latest?.data?.status === 'PAID') {
+          finalizeOrderSuccess(active.pendingOrder, { paidViaPayOS: true });
+          return;
+        }
+      } catch (e) {}
+
+      // 1. Hủy mã cũ trên payOS
+      await apiService.cancelPayOSPayment(active.orderCode, 'Het han 10 phut chua thanh toan').catch(() => {});
+
+      // Bảo vệ hạn mức đơn payOS nếu người dùng treo tab quá lâu (> 3 lần tự gia hạn = 40 phút)
+      const nextRenewCount = (active.autoRenewCount || 0) + 1;
+      if (nextRenewCount > 3) {
+        setPayosEmbedded(null);
+        try { localStorage.removeItem('petcare_pending_payos'); } catch (e) {}
+        toast.warning('Mã QR đã hết hạn. Khi nào sẵn sàng thanh toán, hãy bấm "Tạo Mã QR Thanh Toán Tại Đây" nhé!', 'Mã QR Hết Hạn');
+        return;
+      }
+
+      // 2. Tự động tạo mã QR mới với thông tin & số tiền hiện tại
+      const freshAmount = grandTotal >= 2000 ? grandTotal : active.amount;
+      const freshItems = selectedCartItems.length > 0 ? selectedCartItems : (active.pendingOrder?.items || []);
+      const res = await apiService.createPayOSPayment({
+        amount: freshAmount,
+        items: freshItems,
+        buyerName: active.pendingOrder?.recipientName || checkoutForm.recipientName.trim(),
+        buyerPhone: active.pendingOrder?.recipientPhone || checkoutForm.recipientPhone.trim(),
+        buyerAddress: active.pendingOrder?.deliveryAddress || checkoutForm.deliveryAddress.trim(),
+        origin: window.location.origin,
+      });
+
+      if (res && res._ok && res.data && res.data.checkoutUrl) {
+        const updatedPending = {
+          ...(active.pendingOrder || {}),
+          items: freshItems,
+          grandTotal: freshAmount,
+          orderId: `PAYOS-${res.data.orderCode}`,
+          payosOrderCode: res.data.orderCode,
+        };
+        try {
+          localStorage.setItem(
+            'petcare_pending_payos',
+            JSON.stringify({ orderCode: res.data.orderCode, pendingOrder: updatedPending })
+          );
+        } catch (err) {}
+        setPayosEmbedded({
+          checkoutUrl: res.data.checkoutUrl,
+          orderCode: res.data.orderCode,
+          amount: res.data.amount || freshAmount,
+          expiresAt: res.data.expiresAt || Date.now() + 10 * 60 * 1000,
+          accountNumber: res.data.accountNumber || '',
+          accountName: res.data.accountName || '',
+          description: res.data.description || '',
+          autoRenewCount: nextRenewCount,
+          pendingOrder: updatedPending,
+        });
+        toast.info(
+          `Mã QR #${active.orderCode} đã hết hạn (10 phút) — đã tự hủy và tạo mã QR mới #${res.data.orderCode}!`,
+          '🔄 Đã Tạo Mã QR Mới'
+        );
+      } else {
+        setPayosEmbedded(null);
+        toast.warning('Mã QR đã hết hạn 10 phút. Vui lòng bấm tạo lại mã mới!', 'Hết Hạn Thanh Toán');
+      }
+    } catch (err) {
+      setPayosEmbedded(null);
+      toast.warning('Mã QR đã hết hạn 10 phút. Vui lòng bấm tạo lại mã mới!', 'Hết Hạn Thanh Toán');
+    } finally {
+      setPayosLoading(false);
+    }
+  };
+
+  // Final Order Submission from Checkout Page (COD đặt ngay, Thanh Toán Online nhúng trực tiếp cổng payOS ngay tại trang)
+  const handleFinalPlaceOrder = async (e) => {
     if (e) e.preventDefault();
-    if (cart.length === 0) {
-      toast.warning('Giỏ hàng trống! Hãy chọn sản phẩm trước khi thanh toán.', 'Giỏ Hàng Rỗng');
-      onTabChange('shop');
+    if (selectedCartItems.length === 0) {
+      toast.warning('Chưa có sản phẩm nào được chọn để thanh toán!', 'Chưa Chọn Sản Phẩm');
+      onTabChange(cart.length > 0 ? 'cart' : 'shop');
       return;
     }
     if (!currentUser) {
@@ -613,7 +916,7 @@ export default function CustomerPortal({
     }
 
     const orderId = tempOrderCode;
-    const orderedItemsSnapshot = cart.map(item => ({ ...item }));
+    const orderedItemsSnapshot = selectedCartItems.map(item => ({ ...item }));
     const receiptSummary = {
       orderId,
       items: orderedItemsSnapshot,
@@ -631,29 +934,64 @@ export default function CustomerPortal({
       createdAt: new Date().toLocaleString('vi-VN', { hour: '2-digit', minute: '2-digit', day: '2-digit', month: '2-digit', year: 'numeric' })
     };
 
-    onCheckoutOrder(cart, grandTotal, {
-      orderId,
-      recipientName: receiptSummary.recipientName,
-      recipientPhone: receiptSummary.recipientPhone,
-      deliveryAddress: receiptSummary.deliveryAddress,
-      deliveryNotes: receiptSummary.deliveryNotes,
-      shippingMethod: receiptSummary.shippingMethod,
-      paymentMethod: receiptSummary.paymentMethod
-    });
+    // Nếu chọn Thanh Toán Online -> gọi Backend tạo link payOS rồi nhúng trực tiếp ngay tại mục 3 trên trang /thanh-toan
+    if (checkoutForm.paymentMethod === 'PAYOS') {
+      if (grandTotal < 2000) {
+        toast.warning('Cổng thanh toán online yêu cầu giá trị tối thiểu 2.000 đ.', 'Số Tiền Không Hợp Lệ');
+        return;
+      }
+      // Nếu đang có phiên cũ chưa thanh toán, hủy trước để tạo mã mới sạch sẽ
+      if (payosEmbedded?.orderCode) {
+        apiService.cancelPayOSPayment(payosEmbedded.orderCode).catch(() => {});
+      }
+      setPayosLoading(true);
+      try {
+        const res = await apiService.createPayOSPayment({
+          amount: grandTotal,
+          items: orderedItemsSnapshot,
+          buyerName: receiptSummary.recipientName,
+          buyerPhone: receiptSummary.recipientPhone,
+          buyerAddress: receiptSummary.deliveryAddress,
+          origin: window.location.origin,
+        });
 
-    setCompletedOrderReceipt(receiptSummary);
-    setCart([]);
-    setDiscountPercent(0);
-    setPromoCode('');
-    setTempOrderCode('ORD-' + Math.floor(100000 + Math.random() * 900000));
+        if (res && res._ok && res.data && res.data.checkoutUrl) {
+          const pendingOrder = {
+            ...receiptSummary,
+            orderId: `PAYOS-${res.data.orderCode}`,
+            payosOrderCode: res.data.orderCode,
+          };
+          try {
+            localStorage.setItem(
+              'petcare_pending_payos',
+              JSON.stringify({ orderCode: res.data.orderCode, pendingOrder })
+            );
+          } catch (err) {}
+          setPayosEmbedded({
+            checkoutUrl: res.data.checkoutUrl,
+            orderCode: res.data.orderCode,
+            amount: res.data.amount || grandTotal,
+            expiresAt: res.data.expiresAt || Date.now() + 10 * 60 * 1000,
+            accountNumber: res.data.accountNumber || '',
+            accountName: res.data.accountName || '',
+            description: res.data.description || '',
+            autoRenewCount: 0,
+            pendingOrder,
+          });
+          toast.success('Đã tạo mã QR thanh toán trực tiếp ngay tại trang! Quét mã để hoàn tất.', '⚡ Thanh Toán Online');
+          return;
+        }
+        toast.error((res && res.message) || 'Không thể khởi tạo cổng thanh toán online. Vui lòng thử lại!', 'Lỗi Thanh Toán');
+      } catch (err) {
+        toast.error('Không kết nối được tới máy chủ thanh toán.', 'Lỗi Kết Nối');
+      } finally {
+        setPayosLoading(false);
+      }
+      return;
+    }
 
-    toast.success(
-      `Đặt hàng thành công mã đơn ${orderId}! Tổng thanh toán: ${grandTotal.toLocaleString('vi-VN')} đ.`,
-      '🎉 ĐẶT HÀNG THÀNH CÔNG',
-      { duration: 6000 }
-    );
-
-    window.scrollTo({ top: 0, behavior: 'smooth' });
+    // Thanh toán COD
+    finalizeOrderSuccess(receiptSummary, { paidViaPayOS: false });
   };
 
   // Filter & Sort Products
@@ -672,11 +1010,112 @@ export default function CustomerPortal({
     return selectedServiceCategory === 'ALL' || s.category === selectedServiceCategory;
   });
 
-  // Financial calculations
-  const cartSubtotal = cart.reduce((sum, item) => sum + item.unitPrice * item.quantity, 0);
+  // Geo-fencing kiểm tra phạm vi Giao Hỏa Tốc 2H (chỉ áp dụng Nội Thành TP.HCM <= 20 km)
+  const expressEligibility = (() => {
+    const STORE_HCMC = { lat: 10.776889, lng: 106.700806 }; // Petzera Flagship Quận 1, TP.HCM
+    const MAX_INNER_HCMC_KM = 20;
+
+    const normalizeText = (str) =>
+      (str || '')
+        .toLowerCase()
+        .normalize('NFD')
+        .replace(/[̀-ͯ]/g, '')
+        .replace(/đ/g, 'd');
+
+    const normalizedAddr = normalizeText(checkoutForm.deliveryAddress);
+    const suburbanKeywords = ['cu chi', 'can gio', 'binh chanh', 'hoc mon', 'nha be'];
+    const isSuburbanHcmc = suburbanKeywords.some((kw) => normalizedAddr.includes(kw));
+
+    const calcDistanceKm = (lat1, lng1, lat2, lng2) => {
+      const toRad = (deg) => (deg * Math.PI) / 180;
+      const R = 6371;
+      const dLat = toRad(lat2 - lat1);
+      const dLng = toRad(lng2 - lng1);
+      const a =
+        Math.sin(dLat / 2) ** 2 +
+        Math.cos(toRad(lat1)) * Math.cos(toRad(lat2)) * Math.sin(dLng / 2) ** 2;
+      return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+    };
+
+    if (checkoutForm.deliveryCoords && typeof checkoutForm.deliveryCoords.lat === 'number') {
+      const distKm = calcDistanceKm(
+        STORE_HCMC.lat,
+        STORE_HCMC.lng,
+        checkoutForm.deliveryCoords.lat,
+        checkoutForm.deliveryCoords.lng
+      );
+      if (isSuburbanHcmc) {
+        return {
+          eligible: false,
+          distanceKm: distKm,
+          reason: `Huyện ngoại thành TP.HCM (cách ~${distKm.toFixed(1)} km) chưa hỗ trợ giao hỏa tốc 2H.`,
+        };
+      }
+      if (distKm <= MAX_INNER_HCMC_KM) {
+        return {
+          eligible: true,
+          distanceKm: distKm,
+          reason: `Nội thành TP.HCM (cách Petzera ~${distKm.toFixed(1)} km) — hỗ trợ giao nhanh trong 120 phút.`,
+        };
+      }
+      return {
+        eligible: false,
+        distanceKm: distKm,
+        reason: `Vị trí ngoài nội thành TP.HCM (cách ~${Math.round(distKm).toLocaleString('vi-VN')} km) — chỉ áp dụng Giao Hàng Tiêu Chuẩn.`,
+      };
+    }
+
+    if (!normalizedAddr.trim()) {
+      return {
+        eligible: false,
+        distanceKm: null,
+        reason: 'Vui lòng nhập hoặc chọn địa chỉ nội thành TP.HCM trên bản đồ để bật Hỏa Tốc 2H.',
+      };
+    }
+
+    if (isSuburbanHcmc) {
+      return {
+        eligible: false,
+        distanceKm: null,
+        reason: 'Khu vực ngoại thành TP.HCM chưa hỗ trợ Hỏa Tốc 2H — chỉ áp dụng Giao Hàng Tiêu Chuẩn.',
+      };
+    }
+
+    const innerHcmcKeywords = [
+      'ho chi minh', 'tp.hcm', 'tphcm', 'tp hcm', 'sai gon', 'saigon',
+      'quan 1', 'quan 3', 'quan 4', 'quan 5', 'quan 6', 'quan 7', 'quan 8',
+      'quan 10', 'quan 11', 'quan 12', 'binh thanh', 'phu nhuan', 'tan binh',
+      'tan phu', 'go vap', 'binh tan', 'thu duc'
+    ];
+    const isInnerHcmc = innerHcmcKeywords.some((kw) => normalizedAddr.includes(kw));
+
+    if (isInnerHcmc) {
+      return {
+        eligible: true,
+        distanceKm: null,
+        reason: 'Địa chỉ thuộc nội thành TP.HCM — hỗ trợ giao nhanh trong 120 phút (Miễn phí từ 500k).',
+      };
+    }
+
+    return {
+      eligible: false,
+      distanceKm: null,
+      reason: 'Địa chỉ ngoài nội thành TP.HCM — chỉ hỗ trợ Giao Hàng Tiêu Chuẩn (1 - 2 Ngày).',
+    };
+  })();
+
+  // Tự động chuyển về Giao Hàng Tiêu Chuẩn nếu khách đổi sang địa chỉ ngoài nội thành TP.HCM
+  useEffect(() => {
+    if (!expressEligibility.eligible && checkoutForm.shippingMethod === 'EXPRESS') {
+      setCheckoutForm((prev) => ({ ...prev, shippingMethod: 'STANDARD' }));
+    }
+  }, [expressEligibility.eligible, checkoutForm.shippingMethod]);
+
+  // Financial calculations (chỉ tính trên các sản phẩm đã tích chọn)
+  const cartSubtotal = selectedCartItems.reduce((sum, item) => sum + item.unitPrice * item.quantity, 0);
   const discountAmount = Math.round(cartSubtotal * discountPercent / 100);
-  const shippingFee = checkoutForm.shippingMethod === 'EXPRESS' 
-    ? (cartSubtotal >= 500000 ? 0 : 30000) 
+  const shippingFee = checkoutForm.shippingMethod === 'EXPRESS' && expressEligibility.eligible
+    ? (selectedCartItems.length === 0 || cartSubtotal >= 500000 ? 0 : 30000) 
     : 0;
   const grandTotal = Math.max(0, cartSubtotal - discountAmount + shippingFee);
 
@@ -1577,8 +2016,9 @@ export default function CustomerPortal({
                       }} 
                       disabled={p.currentStock <= 0} 
                       onClick={() => {
-                        const added = handleAddToCart(p);
+                        const added = handleAddToCart(p, 1, { selectOnly: true });
                         if (added) {
+                          setCompletedOrderReceipt(null);
                           onTabChange('checkout');
                           window.scrollTo({ top: 0, behavior: 'smooth' });
                         }
@@ -1826,8 +2266,9 @@ export default function CustomerPortal({
                       disabled={dp.currentStock <= 0}
                       style={{ flex: 1, minWidth: 200, padding: '0.95rem 1rem', fontSize: '0.95rem', fontWeight: 800, borderRadius: '14px' }}
                       onClick={() => {
-                        const added = handleAddToCart(dp, detailQuantity);
+                        const added = handleAddToCart(dp, detailQuantity, { selectOnly: true });
                         if (added) {
+                          setCompletedOrderReceipt(null);
                           onTabChange('checkout');
                           window.scrollTo({ top: 0, behavior: 'smooth' });
                         }
@@ -2024,26 +2465,67 @@ export default function CustomerPortal({
 
                   {/* Cart Items Panel */}
                   <div className="glass-panel" style={{ padding: '1.5rem', borderRadius: '20px' }}>
-                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', paddingBottom: '1rem', marginBottom: '1rem', borderBottom: '1px solid var(--border-light)' }}>
-                      <h2 style={{ fontSize: '1.15rem', fontWeight: 800, color: '#0f172a', margin: 0 }}>
-                        Danh Sách Sản Phẩm ({totalQty} món)
-                      </h2>
-                      <button
-                        type="button"
-                        onClick={handleClearCart}
-                        style={{ background: '#fef2f2', border: '1px solid #fecaca', color: '#dc2626', fontSize: '0.8rem', fontWeight: 700, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '5px', padding: '5px 11px', borderRadius: '10px' }}
-                      >
-                        <Trash2 size={14} /> Xóa Toàn Bộ Giỏ
-                      </button>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '0.75rem', paddingBottom: '1rem', marginBottom: '1rem', borderBottom: '1px solid var(--border-light)' }}>
+                      <label style={{ display: 'flex', alignItems: 'center', gap: '10px', cursor: 'pointer', userSelect: 'none' }}>
+                        <input
+                          type="checkbox"
+                          checked={allCartSelected}
+                          onChange={toggleSelectAllCart}
+                          style={{ width: 19, height: 19, accentColor: '#ff6b35', cursor: 'pointer' }}
+                        />
+                        <h2 style={{ fontSize: '1.1rem', fontWeight: 800, color: '#0f172a', margin: 0 }}>
+                          Chọn Tất Cả ({selectedCartItems.length}/{cart.length} loại • {selectedTotalQty} món)
+                        </h2>
+                      </label>
+
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', flexWrap: 'wrap' }}>
+                        {selectedCartItems.length > 0 && selectedCartItems.length < cart.length && (
+                          <button
+                            type="button"
+                            onClick={handleRemoveSelectedItems}
+                            style={{ background: '#fff7ed', border: '1px solid #fed7aa', color: '#ea580c', fontSize: '0.8rem', fontWeight: 700, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '5px', padding: '5px 11px', borderRadius: '10px' }}
+                          >
+                            <Trash2 size={14} /> Xóa Đã Chọn ({selectedCartItems.length})
+                          </button>
+                        )}
+                        <button
+                          type="button"
+                          onClick={handleClearCart}
+                          style={{ background: '#fef2f2', border: '1px solid #fecaca', color: '#dc2626', fontSize: '0.8rem', fontWeight: 700, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '5px', padding: '5px 11px', borderRadius: '10px' }}
+                        >
+                          <Trash2 size={14} /> Xóa Toàn Bộ Giỏ
+                        </button>
+                      </div>
                     </div>
 
                     <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
-                      {cart.map((item) => (
+                      {cart.map((item) => {
+                        const isSelected = selectedCartIds.includes(item.id);
+                        return (
                         <div
                           key={item.id}
-                          style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '1rem', background: '#f8fafc', padding: '1rem 1.15rem', borderRadius: '16px', border: '1px solid #e2e8f0' }}
+                          style={{
+                            display: 'flex',
+                            justifyContent: 'space-between',
+                            alignItems: 'center',
+                            flexWrap: 'wrap',
+                            gap: '1rem',
+                            background: isSelected ? '#fffaf5' : '#f8fafc',
+                            padding: '1rem 1.15rem',
+                            borderRadius: '16px',
+                            border: isSelected ? '1.5px solid #fdba74' : '1px solid #e2e8f0',
+                            opacity: isSelected ? 1 : 0.72,
+                            transition: 'all 0.18s ease'
+                          }}
                         >
-                          <div style={{ display: 'flex', alignItems: 'center', gap: '1rem', flex: 1, minWidth: 230 }}>
+                          <div style={{ display: 'flex', alignItems: 'center', gap: '0.9rem', flex: 1, minWidth: 240 }}>
+                            <input
+                              type="checkbox"
+                              checked={isSelected}
+                              onChange={() => toggleSelectCartItem(item.id)}
+                              aria-label={`Chọn thanh toán ${item.name}`}
+                              style={{ width: 20, height: 20, accentColor: '#ff6b35', cursor: 'pointer', flexShrink: 0 }}
+                            />
                             <div
                               onClick={() => openProductDetail(item)}
                               title="Xem chi tiết sản phẩm"
@@ -2100,7 +2582,7 @@ export default function CustomerPortal({
                             </div>
 
                             <div style={{ textAlign: 'right', minWidth: 105 }}>
-                              <strong style={{ color: '#ea580c', fontSize: '1.08rem', display: 'block' }}>
+                              <strong style={{ color: isSelected ? '#ea580c' : '#94a3b8', fontSize: '1.08rem', display: 'block' }}>
                                 {(item.unitPrice * item.quantity).toLocaleString('vi-VN')} đ
                               </strong>
                               <button
@@ -2113,7 +2595,8 @@ export default function CustomerPortal({
                             </div>
                           </div>
                         </div>
-                      ))}
+                        );
+                      })}
                     </div>
                   </div>
                 </div>
@@ -2164,14 +2647,14 @@ export default function CustomerPortal({
                     {/* Financial Breakdown */}
                     <div style={{ background: '#f8fafc', padding: '1.1rem', borderRadius: '14px', border: '1px solid #e2e8f0', display: 'flex', flexDirection: 'column', gap: '0.65rem', fontSize: '0.9rem', marginBottom: '1.25rem' }}>
                       <div style={{ display: 'flex', justifyContent: 'space-between', color: '#64748b' }}>
-                        <span>Tạm tính ({totalQty} sản phẩm):</span>
+                        <span>Đã chọn ({selectedTotalQty} sản phẩm):</span>
                         <strong style={{ color: '#0f172a' }}>{cartSubtotal.toLocaleString('vi-VN')} đ</strong>
                       </div>
                       <div style={{ display: 'flex', justifyContent: 'space-between', color: '#64748b' }}>
                         <span>Giao hàng tiêu chuẩn:</span>
                         <strong style={{ color: '#059669' }}>MIỄN PHÍ</strong>
                       </div>
-                      {discountPercent > 0 && (
+                      {discountPercent > 0 && selectedCartItems.length > 0 && (
                         <div style={{ display: 'flex', justifyContent: 'space-between', color: '#059669' }}>
                           <span>Giảm giá ({discountPercent}%):</span>
                           <strong>-{discountAmount.toLocaleString('vi-VN')} đ</strong>
@@ -2185,14 +2668,30 @@ export default function CustomerPortal({
                       </div>
                     </div>
 
+                    {selectedCartItems.length === 0 && (
+                      <div style={{ fontSize: '0.8rem', color: '#ea580c', background: '#fff7ed', border: '1px solid #fed7aa', borderRadius: '10px', padding: '0.6rem 0.85rem', marginBottom: '0.85rem', fontWeight: 600, textAlign: 'center' }}>
+                        Hãy tích chọn ít nhất 1 sản phẩm ở bên trái để thanh toán.
+                      </div>
+                    )}
+
                     {/* Primary CTA */}
                     <button
                       type="button"
                       className="btn btn-coral"
                       onClick={handleProceedToCheckout}
-                      style={{ width: '100%', padding: '1rem', fontSize: '1rem', fontWeight: 800, borderRadius: '14px', marginBottom: '0.75rem' }}
+                      disabled={selectedCartItems.length === 0}
+                      style={{
+                        width: '100%',
+                        padding: '1rem',
+                        fontSize: '1rem',
+                        fontWeight: 800,
+                        borderRadius: '14px',
+                        marginBottom: '0.75rem',
+                        opacity: selectedCartItems.length === 0 ? 0.5 : 1,
+                        cursor: selectedCartItems.length === 0 ? 'not-allowed' : 'pointer'
+                      }}
                     >
-                      Tiến Hành Thanh Toán <ArrowRight size={18} />
+                      Tiến Hành Thanh Toán ({selectedTotalQty}) <ArrowRight size={18} />
                     </button>
                     <button
                       type="button"
@@ -2333,7 +2832,19 @@ export default function CustomerPortal({
             </div>
           </div>
 
-          {completedOrderReceipt ? (
+          {payosVerifyingReturn ? (
+            <div className="glass-panel" style={{ padding: '4rem 2rem', textAlign: 'center', borderRadius: '22px', maxWidth: 640, width: '100%', margin: '0 auto' }}>
+              <div style={{ width: 68, height: 68, borderRadius: '50%', background: '#ecfdf5', border: '2px solid #6ee7b7', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 1.25rem' }}>
+                <RefreshCw size={32} color="#059669" className="animate-spin" />
+              </div>
+              <h2 style={{ fontSize: '1.35rem', fontWeight: 800, color: '#0f172a', marginBottom: '0.5rem' }}>
+                Đang Xác Nhận Thanh Toán Online...
+              </h2>
+              <p style={{ color: '#64748b', fontSize: '0.9rem', margin: 0 }}>
+                Hệ thống đang đối chiếu giao dịch trực tiếp với cổng thanh toán payOS. Vui lòng đợi trong giây lát!
+              </p>
+            </div>
+          ) : completedOrderReceipt ? (
             /* STEP 3: ORDER CONFIRMATION RECEIPT */
             <div className="glass-panel" style={{ padding: '2.25rem', borderRadius: '22px', maxWidth: 820, width: '100%', margin: '0 auto' }}>
               <div style={{ textAlign: 'center', paddingBottom: '1.5rem', marginBottom: '1.5rem', borderBottom: '1px solid var(--border-light)' }}>
@@ -2374,11 +2885,9 @@ export default function CustomerPortal({
                   <div style={{ color: '#334155', lineHeight: 1.65 }}>
                     <div>
                       <strong>Thanh toán:</strong>{' '}
-                      {completedOrderReceipt.paymentMethod === 'VIETQR'
-                        ? 'Chuyển Khoản VietQR (MB Bank)'
-                        : completedOrderReceipt.paymentMethod === 'MOMO'
-                          ? 'Ví Điện Tử MoMo / ZaloPay'
-                          : 'Tiền Mặt Khi Nhận Hàng (COD)'}
+                      {completedOrderReceipt.paymentMethod === 'PAYOS'
+                        ? 'Thanh Toán Online (ĐÃ THANH TOÁN ✅)'
+                        : 'Tiền Mặt Khi Nhận Hàng (COD)'}
                     </div>
                     <div>
                       <strong>Vận chuyển:</strong>{' '}
@@ -2452,17 +2961,25 @@ export default function CustomerPortal({
                 </button>
               </div>
             </div>
-          ) : cart.length === 0 ? (
+          ) : selectedCartItems.length === 0 ? (
             <div className="glass-panel" style={{ padding: '3.5rem 2rem', textAlign: 'center', borderRadius: '20px' }}>
               <div style={{ width: 80, height: 80, borderRadius: '50%', background: '#fff7ed', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 1.25rem', border: '1px solid #ffedd5' }}>
                 <ShoppingBag size={40} color="#ff6b35" />
               </div>
-              <h3 style={{ fontSize: '1.4rem', fontWeight: 800, marginBottom: '0.5rem', color: '#0f172a' }}>Giỏ Hàng Của Bạn Đang Trống</h3>
-              <p style={{ color: 'var(--text-muted)', maxWidth: 450, margin: '0 auto 1.5rem', fontSize: '0.9rem' }}>
-                Hiện tại không có sản phẩm nào để tiến hành thanh toán. Hãy ghé qua Cửa Hàng Petzera để lựa chọn thức ăn, đồ dùng và đồ chơi cho bé cưng!
+              <h3 style={{ fontSize: '1.4rem', fontWeight: 800, marginBottom: '0.5rem', color: '#0f172a' }}>
+                {cart.length > 0 ? 'Chưa Chọn Sản Phẩm Để Thanh Toán' : 'Giỏ Hàng Của Bạn Đang Trống'}
+              </h3>
+              <p style={{ color: 'var(--text-muted)', maxWidth: 460, margin: '0 auto 1.5rem', fontSize: '0.9rem' }}>
+                {cart.length > 0
+                  ? `Bạn đang có ${cart.length} sản phẩm trong giỏ hàng. Hãy quay lại Giỏ Hàng để tích chọn sản phẩm muốn thanh toán nhé!`
+                  : 'Hiện tại không có sản phẩm nào để tiến hành thanh toán. Hãy ghé qua Cửa Hàng Petzera để lựa chọn thức ăn, đồ dùng và đồ chơi cho bé cưng!'}
               </p>
-              <button className="btn btn-coral" style={{ padding: '0.75rem 1.75rem', fontSize: '0.95rem' }} onClick={() => onTabChange('shop')}>
-                Khám Phá Cửa Hàng Ngay <ArrowRight size={18} />
+              <button
+                className="btn btn-coral"
+                style={{ padding: '0.75rem 1.75rem', fontSize: '0.95rem' }}
+                onClick={() => (cart.length > 0 ? openCartPage() : onTabChange('shop'))}
+              >
+                {cart.length > 0 ? 'Quay Lại Giỏ Hàng Chọn Sản Phẩm' : 'Khám Phá Cửa Hàng Ngay'} <ArrowRight size={18} />
               </button>
             </div>
           ) : (
@@ -2471,94 +2988,171 @@ export default function CustomerPortal({
               {/* LEFT COLUMN: Recipient Information, Shipping, Payment */}
               <div style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
                 
-                {/* 1. Recipient Information */}
-                <div className="glass-panel" style={{ padding: '1.75rem', borderRadius: '18px' }}>
-                  <h3 style={{ fontSize: '1.15rem', fontWeight: 800, display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '1.25rem', color: '#0f172a' }}>
-                    <MapPin size={20} color="#ff6b35" /> 1. Thông Tin Nhận Hàng
-                  </h3>
-                  
-                  <div className="grid-2" style={{ gap: '1rem', marginBottom: '1rem' }}>
-                    <div>
-                      <label style={{ display: 'block', fontSize: '0.85rem', fontWeight: 700, color: '#334155', marginBottom: '6px' }}>
-                        Họ và tên người nhận *
-                      </label>
-                      <input 
-                        type="text" 
-                        required 
-                        className="form-control" 
-                        placeholder="Nhập họ và tên người nhận"
-                        value={checkoutForm.recipientName}
-                        onChange={e => setCheckoutForm({ ...checkoutForm, recipientName: e.target.value })}
-                      />
-                    </div>
-                    <div>
-                      <label style={{ display: 'block', fontSize: '0.85rem', fontWeight: 700, color: '#334155', marginBottom: '6px' }}>
-                        Số điện thoại liên hệ *
-                      </label>
-                      <input 
-                        type="tel" 
-                        required 
-                        className="form-control" 
-                        placeholder="Nhập số điện thoại liên hệ"
-                        value={checkoutForm.recipientPhone}
-                        onChange={e => setCheckoutForm({ ...checkoutForm, recipientPhone: e.target.value })}
-                      />
+                {/* 1. Recipient Information & Interactive Map Address Picker */}
+                <div className="glass-panel" style={{ padding: '1.75rem', borderRadius: '20px', border: '1px solid #e2e8f0' }}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '0.75rem', paddingBottom: '1rem', marginBottom: '1.25rem', borderBottom: '1px solid #f1f5f9' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                      <div style={{ width: 40, height: 40, borderRadius: '12px', background: 'linear-gradient(135deg, #fff7ed 0%, #ffedd5 100%)', border: '1px solid #fed7aa', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+                        <MapPin size={20} color="#ea580c" />
+                      </div>
+                      <div>
+                        <h3 style={{ fontSize: '1.15rem', fontWeight: 800, color: '#0f172a', margin: 0 }}>
+                          1. Thông Tin Nhận Hàng
+                        </h3>
+                        <p style={{ fontSize: '0.8rem', color: '#64748b', margin: '2px 0 0 0' }}>
+                          Điền thông tin liên hệ và ghim địa chỉ giao hàng chính xác trên bản đồ
+                        </p>
+                      </div>
                     </div>
                   </div>
 
-                  <div style={{ marginBottom: '1rem' }}>
-                    <label style={{ display: 'block', fontSize: '0.85rem', fontWeight: 700, color: '#334155', marginBottom: '6px' }}>
-                      Địa chỉ nhận hàng chi tiết *
-                    </label>
-                    <input 
-                      type="text" 
-                      required 
-                      className="form-control" 
-                      placeholder="Số nhà, tên đường, phường/xã, quận/huyện, tỉnh/thành phố"
-                      value={checkoutForm.deliveryAddress}
-                      onChange={e => setCheckoutForm({ ...checkoutForm, deliveryAddress: e.target.value })}
-                    />
+                  {/* Row 1: Recipient Name & Phone (Full-width balanced 2 columns) */}
+                  <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: '1rem', marginBottom: '1.1rem' }}>
+                    <div>
+                      <label style={{ display: 'block', fontSize: '0.84rem', fontWeight: 700, color: '#334155', marginBottom: '6px' }}>
+                        Họ và tên người nhận <span style={{ color: '#ef4444' }}>*</span>
+                      </label>
+                      <div style={{ position: 'relative' }}>
+                        <User size={16} color="#94a3b8" style={{ position: 'absolute', left: '12px', top: '50%', transform: 'translateY(-50%)', pointerEvents: 'none' }} />
+                        <input
+                          type="text"
+                          required
+                          className="form-control"
+                          style={{ paddingLeft: '38px' }}
+                          placeholder="Nhập họ và tên người nhận"
+                          value={checkoutForm.recipientName}
+                          onChange={e => setCheckoutForm({ ...checkoutForm, recipientName: e.target.value })}
+                        />
+                      </div>
+                    </div>
+
+                    <div>
+                      <label style={{ display: 'block', fontSize: '0.84rem', fontWeight: 700, color: '#334155', marginBottom: '6px' }}>
+                        Số điện thoại liên hệ <span style={{ color: '#ef4444' }}>*</span>
+                      </label>
+                      <div style={{ position: 'relative' }}>
+                        <PhoneCall size={16} color="#94a3b8" style={{ position: 'absolute', left: '12px', top: '50%', transform: 'translateY(-50%)', pointerEvents: 'none' }} />
+                        <input
+                          type="tel"
+                          required
+                          className="form-control"
+                          style={{ paddingLeft: '38px' }}
+                          placeholder="VD: 0348 639 603"
+                          value={checkoutForm.recipientPhone}
+                          onChange={e => setCheckoutForm({ ...checkoutForm, recipientPhone: e.target.value })}
+                        />
+                      </div>
+                    </div>
                   </div>
 
+                  {/* Row 2: Detailed Delivery Address + Interactive Map Picker */}
+                  <div style={{ marginBottom: '1.15rem' }}>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '0.5rem', marginBottom: '6px' }}>
+                      <label style={{ fontSize: '0.84rem', fontWeight: 700, color: '#334155', margin: 0 }}>
+                        Địa chỉ nhận hàng chi tiết <span style={{ color: '#ef4444' }}>*</span>
+                      </label>
+                      <button
+                        type="button"
+                        onClick={() => setShowMapPicker(prev => !prev)}
+                        style={{
+                          background: showMapPicker ? '#eff6ff' : '#fff7ed',
+                          border: showMapPicker ? '1px solid #bfdbfe' : '1px solid #fed7aa',
+                          color: showMapPicker ? '#1d4ed8' : '#ea580c',
+                          borderRadius: '999px',
+                          padding: '3px 11px',
+                          fontSize: '0.76rem',
+                          fontWeight: 800,
+                          cursor: 'pointer',
+                          display: 'inline-flex',
+                          alignItems: 'center',
+                          gap: '5px',
+                        }}
+                      >
+                        <MapPin size={13} />
+                        {showMapPicker ? 'Thu gọn bản đồ' : 'Chọn địa chỉ trên bản đồ'}
+                      </button>
+                    </div>
+
+                    <div style={{ position: 'relative' }}>
+                      <MapPin size={16} color="#ff6b35" style={{ position: 'absolute', left: '12px', top: '50%', transform: 'translateY(-50%)', pointerEvents: 'none' }} />
+                      <input
+                        type="text"
+                        required
+                        className="form-control"
+                        style={{ paddingLeft: '38px' }}
+                        placeholder="Số nhà, tên đường, phường/xã, quận/huyện, tỉnh/thành phố (hoặc chọn trên bản đồ bên dưới)"
+                        value={checkoutForm.deliveryAddress}
+                        onChange={e => setCheckoutForm({ ...checkoutForm, deliveryAddress: e.target.value, deliveryCoords: null })}
+                      />
+                    </div>
+
+                    {checkoutForm.deliveryCoords && (
+                      <div style={{ marginTop: '6px', display: 'inline-flex', alignItems: 'center', gap: '6px', fontSize: '0.75rem', fontWeight: 700, color: '#047857', background: '#ecfdf5', border: '1px solid #a7f3d0', padding: '3px 10px', borderRadius: '999px' }}>
+                        <CheckCircle size={13} /> Đã ghim tọa độ bản đồ: {checkoutForm.deliveryCoords.lat.toFixed(5)}, {checkoutForm.deliveryCoords.lng.toFixed(5)}
+                      </div>
+                    )}
+
+                    {showMapPicker && (
+                      <AddressMapPicker
+                        value={checkoutForm.deliveryAddress}
+                        coords={checkoutForm.deliveryCoords}
+                        onSelectAddress={({ address, lat, lng }) =>
+                          setCheckoutForm(prev => ({
+                            ...prev,
+                            deliveryAddress: address,
+                            deliveryCoords: { lat, lng },
+                          }))
+                        }
+                      />
+                    )}
+                  </div>
+
+                  {/* Row 3: Delivery Notes */}
                   <div>
-                    <label style={{ display: 'block', fontSize: '0.85rem', fontWeight: 700, color: '#334155', marginBottom: '6px' }}>
-                      Ghi chú đơn hàng (Tùy chọn)
+                    <label style={{ display: 'block', fontSize: '0.84rem', fontWeight: 700, color: '#334155', marginBottom: '6px' }}>
+                      Ghi chú đơn hàng <span style={{ color: '#94a3b8', fontWeight: 500 }}>(Tùy chọn)</span>
                     </label>
-                    <textarea 
-                      className="form-control" 
+                    <textarea
+                      className="form-control"
                       rows={2}
-                      placeholder="Nhập ghi chú giao hàng nếu cần..."
+                      placeholder="VD: Gọi trước khi giao 15 phút, giao cổng sau..."
                       value={checkoutForm.deliveryNotes}
                       onChange={e => setCheckoutForm({ ...checkoutForm, deliveryNotes: e.target.value })}
-                      style={{ resize: 'vertical' }}
+                      style={{ resize: 'vertical', minHeight: '68px' }}
                     />
-                    <div style={{ display: 'flex', gap: '0.45rem', flexWrap: 'wrap', marginTop: '0.5rem' }}>
+                    <div style={{ display: 'flex', gap: '0.45rem', flexWrap: 'wrap', marginTop: '0.6rem' }}>
                       {[
                         '📞 Gọi trước 15 phút',
                         '🏢 Giao giờ hành chính',
                         '📦 Gửi lễ tân / bảo vệ',
                         '🐾 Hàng thú cưng nhẹ tay'
-                      ].map((chip, idx) => (
-                        <button
-                          type="button"
-                          key={idx}
-                          onClick={() => {
-                            const newNotes = checkoutForm.deliveryNotes ? `${checkoutForm.deliveryNotes}, ${chip}` : chip;
-                            setCheckoutForm({ ...checkoutForm, deliveryNotes: newNotes });
-                          }}
-                          style={{
-                            background: '#f1f5f9',
-                            border: '1px solid #e2e8f0',
-                            borderRadius: '12px',
-                            padding: '3px 8px',
-                            fontSize: '0.75rem',
-                            color: '#475569',
-                            cursor: 'pointer'
-                          }}
-                        >
-                          + {chip}
-                        </button>
-                      ))}
+                      ].map((chip, idx) => {
+                        const alreadyAdded = (checkoutForm.deliveryNotes || '').includes(chip);
+                        return (
+                          <button
+                            type="button"
+                            key={idx}
+                            onClick={() => {
+                              if (alreadyAdded) return;
+                              const newNotes = checkoutForm.deliveryNotes ? `${checkoutForm.deliveryNotes}, ${chip}` : chip;
+                              setCheckoutForm({ ...checkoutForm, deliveryNotes: newNotes });
+                            }}
+                            style={{
+                              background: alreadyAdded ? '#fff7ed' : '#f8fafc',
+                              border: alreadyAdded ? '1px solid #fdba74' : '1px solid #e2e8f0',
+                              borderRadius: '999px',
+                              padding: '4px 10px',
+                              fontSize: '0.76rem',
+                              fontWeight: 600,
+                              color: alreadyAdded ? '#ea580c' : '#475569',
+                              cursor: 'pointer',
+                              transition: 'all 0.15s ease'
+                            }}
+                          >
+                            {alreadyAdded ? '✓ ' : '+ '}{chip}
+                          </button>
+                        );
+                      })}
                     </div>
                   </div>
                 </div>
@@ -2606,41 +3200,68 @@ export default function CustomerPortal({
                       <span style={{ fontWeight: 800, color: '#059669', fontSize: '0.95rem' }}>MIỄN PHÍ (0 đ)</span>
                     </label>
 
-                    {/* Option: Express */}
-                    <label 
-                      onClick={() => setCheckoutForm({ ...checkoutForm, shippingMethod: 'EXPRESS' })}
-                      style={{ 
-                        display: 'flex', 
-                        justifyContent: 'space-between', 
-                        alignItems: 'center', 
-                        padding: '1rem 1.25rem', 
-                        borderRadius: '14px', 
-                        border: checkoutForm.shippingMethod === 'EXPRESS' ? '2px solid #ff6b35' : '1px solid #e2e8f0', 
-                        background: checkoutForm.shippingMethod === 'EXPRESS' ? '#fff7ed' : '#ffffff', 
-                        cursor: 'pointer',
+                    {/* Option: Express (chỉ bật khi địa chỉ thuộc nội thành TP.HCM) */}
+                    <label
+                      onClick={() => {
+                        if (!expressEligibility.eligible) {
+                          toast.warning(expressEligibility.reason, 'Không Hỗ Trợ Hỏa Tốc 2H');
+                          return;
+                        }
+                        setCheckoutForm({ ...checkoutForm, shippingMethod: 'EXPRESS' });
+                      }}
+                      style={{
+                        display: 'flex',
+                        justifyContent: 'space-between',
+                        alignItems: 'center',
+                        gap: '1rem',
+                        padding: '1rem 1.25rem',
+                        borderRadius: '14px',
+                        border: checkoutForm.shippingMethod === 'EXPRESS' && expressEligibility.eligible
+                          ? '2px solid #ff6b35'
+                          : '1px solid #e2e8f0',
+                        background: !expressEligibility.eligible
+                          ? '#f8fafc'
+                          : checkoutForm.shippingMethod === 'EXPRESS'
+                            ? '#fff7ed'
+                            : '#ffffff',
+                        opacity: expressEligibility.eligible ? 1 : 0.68,
+                        cursor: expressEligibility.eligible ? 'pointer' : 'not-allowed',
                         transition: 'all 0.2s ease'
                       }}
                     >
                       <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-                        <input 
-                          type="radio" 
-                          name="shippingMethod" 
-                          checked={checkoutForm.shippingMethod === 'EXPRESS'} 
-                          onChange={() => setCheckoutForm({ ...checkoutForm, shippingMethod: 'EXPRESS' })}
-                          style={{ accentColor: '#ff6b35', width: 18, height: 18 }}
+                        <input
+                          type="radio"
+                          name="shippingMethod"
+                          disabled={!expressEligibility.eligible}
+                          checked={checkoutForm.shippingMethod === 'EXPRESS' && expressEligibility.eligible}
+                          onChange={() => {
+                            if (expressEligibility.eligible) {
+                              setCheckoutForm({ ...checkoutForm, shippingMethod: 'EXPRESS' });
+                            }
+                          }}
+                          style={{ accentColor: '#ff6b35', width: 18, height: 18, cursor: expressEligibility.eligible ? 'pointer' : 'not-allowed' }}
                         />
                         <div>
-                          <div style={{ fontWeight: 800, fontSize: '0.95rem', color: '#0f172a', display: 'flex', alignItems: 'center', gap: '6px' }}>
-                            ⚡ Hỏa Tốc Petzera 2H (Nội Thành)
-                            <span style={{ background: '#fef08a', color: '#854d0e', fontSize: '0.68rem', padding: '1px 6px', borderRadius: '10px', fontWeight: 800 }}>SIÊU TỐC</span>
+                          <div style={{ fontWeight: 800, fontSize: '0.95rem', color: expressEligibility.eligible ? '#0f172a' : '#64748b', display: 'flex', alignItems: 'center', gap: '6px', flexWrap: 'wrap' }}>
+                            ⚡ Hỏa Tốc Petzera 2H (Nội Thành TP.HCM)
+                            {expressEligibility.eligible ? (
+                              <span style={{ background: '#dcfce7', color: '#15803d', fontSize: '0.68rem', padding: '2px 7px', borderRadius: '10px', fontWeight: 800 }}>
+                                ✓ HỖ TRỢ
+                              </span>
+                            ) : (
+                              <span style={{ background: '#fee2e2', color: '#b91c1c', fontSize: '0.68rem', padding: '2px 7px', borderRadius: '10px', fontWeight: 800 }}>
+                                NGOÀI PHẠM VI
+                              </span>
+                            )}
                           </div>
-                          <div style={{ fontSize: '0.8rem', color: 'var(--text-muted)' }}>
-                            Giao ngay trong 120 phút qua GrabExpress / Ahamove (Miễn phí từ 500k)
+                          <div style={{ fontSize: '0.79rem', color: expressEligibility.eligible ? '#047857' : '#b45309', marginTop: '2px', fontWeight: expressEligibility.eligible ? 600 : 500 }}>
+                            {expressEligibility.reason}
                           </div>
                         </div>
                       </div>
-                      <span style={{ fontWeight: 800, color: cartSubtotal >= 500000 ? '#059669' : '#ea580c', fontSize: '0.95rem' }}>
-                        {cartSubtotal >= 500000 ? 'MIỄN PHÍ' : '30.000 đ'}
+                      <span style={{ fontWeight: 800, color: !expressEligibility.eligible ? '#94a3b8' : cartSubtotal >= 500000 ? '#059669' : '#ea580c', fontSize: '0.92rem', whiteSpace: 'nowrap' }}>
+                        {!expressEligibility.eligible ? 'Không áp dụng' : cartSubtotal >= 500000 ? 'MIỄN PHÍ' : '30.000 đ'}
                       </span>
                     </label>
 
@@ -2688,17 +3309,17 @@ export default function CustomerPortal({
                       </div>
                     </label>
 
-                    {/* Method 2: VietQR */}
+                    {/* Method 2: Thanh Toán Online (payOS VietQR Tự Động) */}
                     <label 
-                      onClick={() => setCheckoutForm({ ...checkoutForm, paymentMethod: 'VIETQR' })}
+                      onClick={() => setCheckoutForm({ ...checkoutForm, paymentMethod: 'PAYOS' })}
                       style={{ 
                         display: 'flex', 
                         alignItems: 'center', 
                         gap: '12px',
                         padding: '1rem 1.25rem', 
                         borderRadius: '14px', 
-                        border: checkoutForm.paymentMethod === 'VIETQR' ? '2px solid #ff6b35' : '1px solid #e2e8f0', 
-                        background: checkoutForm.paymentMethod === 'VIETQR' ? '#fff7ed' : '#ffffff', 
+                        border: checkoutForm.paymentMethod === 'PAYOS' ? '2px solid #ff6b35' : '1px solid #e2e8f0', 
+                        background: checkoutForm.paymentMethod === 'PAYOS' ? '#fff7ed' : '#ffffff', 
                         cursor: 'pointer',
                         transition: 'all 0.2s ease'
                       }}
@@ -2706,186 +3327,89 @@ export default function CustomerPortal({
                       <input 
                         type="radio" 
                         name="paymentMethod" 
-                        checked={checkoutForm.paymentMethod === 'VIETQR'} 
-                        onChange={() => setCheckoutForm({ ...checkoutForm, paymentMethod: 'VIETQR' })}
+                        checked={checkoutForm.paymentMethod === 'PAYOS'} 
+                        onChange={() => setCheckoutForm({ ...checkoutForm, paymentMethod: 'PAYOS' })}
                         style={{ accentColor: '#ff6b35', width: 18, height: 18 }}
                       />
-                      <div style={{ fontSize: '1.4rem' }}>📱</div>
+                      <div style={{ fontSize: '1.45rem' }}>⚡</div>
                       <div style={{ flex: 1 }}>
-                        <div style={{ fontWeight: 800, fontSize: '0.95rem', color: '#0f172a', display: 'flex', alignItems: 'center', gap: '6px' }}>
-                          Chuyển Khoản Ngân Hàng 24/7 (VietQR Siêu Tốc)
-                          <span style={{ background: '#dbeafe', color: '#1d4ed8', fontSize: '0.68rem', padding: '1px 6px', borderRadius: '10px', fontWeight: 800 }}>KHUYÊN DÙNG ⭐</span>
+                        <div style={{ fontWeight: 800, fontSize: '0.95rem', color: '#0f172a', display: 'flex', alignItems: 'center', gap: '6px', flexWrap: 'wrap' }}>
+                          Thanh Toán Online
+                          <span style={{ background: '#059669', color: '#ffffff', fontSize: '0.68rem', padding: '2px 8px', borderRadius: '10px', fontWeight: 800 }}>TỰ ĐỘNG XÁC NHẬN ⭐</span>
                         </div>
-                        <div style={{ fontSize: '0.8rem', color: 'var(--text-muted)' }}>
-                          Quét mã QR tự động điền số tài khoản, số tiền và nội dung qua bất kỳ App ngân hàng nào
+                        <div style={{ fontSize: '0.8rem', color: 'var(--text-muted)', marginTop: '2px' }}>
+                          Quét mã QR ngân hàng (VietQR 24/7 qua payOS) — tự động xác nhận ĐÃ THANH TOÁN sau 2–5 giây
                         </div>
                       </div>
                     </label>
 
-                    {/* VietQR Detail Box if selected */}
-                    {checkoutForm.paymentMethod === 'VIETQR' && (
-                      <div style={{ 
-                        background: '#f8fafc', 
-                        border: '1.5px dashed #0284c7', 
-                        borderRadius: '16px', 
-                        padding: '1.5rem', 
-                        marginTop: '0.25rem',
-                        display: 'flex',
-                        flexDirection: 'column',
-                        alignItems: 'center',
-                        gap: '1.25rem'
-                      }}>
-                        <div style={{ textAlign: 'center' }}>
-                          <span style={{ background: '#0284c7', color: '#fff', fontSize: '0.75rem', fontWeight: 800, padding: '3px 10px', borderRadius: '20px' }}>
-                            MÃ THANH TOÁN VIETQR NGÂN HÀNG QUÂN ĐỘI (MB BANK)
-                          </span>
-                          <p style={{ fontSize: '0.82rem', color: '#64748b', marginTop: '6px' }}>
-                            Mở ứng dụng ngân hàng và quét mã để thanh toán tự động chính xác 100%
-                          </p>
-                        </div>
-
-                        {/* VietQR Live Image */}
-                        <div style={{ 
-                          background: '#ffffff', 
-                          padding: '12px', 
-                          borderRadius: '16px', 
-                          boxShadow: '0 8px 25px rgba(2, 132, 199, 0.15)',
-                          border: '1px solid #bae6fd',
+                    {/* Online Payment Embedded payOS Box right inside Section 3 */}
+                    {checkoutForm.paymentMethod === 'PAYOS' && (
+                      payosEmbedded ? (
+                        <PayOSEmbeddedBox
+                          checkoutUrl={payosEmbedded.checkoutUrl}
+                          orderCode={payosEmbedded.orderCode}
+                          amount={payosEmbedded.amount}
+                          currentTotal={grandTotal}
+                          expiresAt={payosEmbedded.expiresAt}
+                          accountNumber={payosEmbedded.accountNumber}
+                          accountName={payosEmbedded.accountName}
+                          description={payosEmbedded.description}
+                          onCopyText={handleCopyText}
+                          checkingStatus={payosChecking}
+                          regenerating={payosLoading}
+                          onSuccess={() => finalizeOrderSuccess(payosEmbedded.pendingOrder, { paidViaPayOS: true })}
+                          onCancel={handleCancelEmbeddedPayOS}
+                          onExpireAndRegenerate={() => handleExpireAndRegeneratePayOS(payosEmbedded)}
+                          onRefreshAmount={() => handleFinalPlaceOrder()}
+                          onCheckStatusNow={() => checkEmbeddedPayOSStatus(payosEmbedded, { silent: false })}
+                        />
+                      ) : (
+                        <div style={{
+                          background: 'linear-gradient(135deg, #f0fdf4 0%, #eff6ff 100%)',
+                          border: '1.5px dashed #10b981',
+                          borderRadius: '16px',
+                          padding: '1.15rem 1.35rem',
                           display: 'flex',
                           flexDirection: 'column',
-                          alignItems: 'center'
+                          gap: '0.75rem',
+                          fontSize: '0.84rem',
+                          color: '#1e293b',
                         }}>
-                          <img 
-                            src={`https://img.vietqr.io/image/MB-0762409021-compact2.png?amount=${grandTotal}&addInfo=PETZERA%20${tempOrderCode}&accountName=DUONG%20CONG%20VINH`}
-                            alt="VietQR MB Bank 0762409021"
-                            style={{ width: '220px', height: '220px', objectFit: 'contain', borderRadius: '8px' }}
-                            onError={(e) => {
-                              e.target.style.display = 'none';
+                          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '0.5rem' }}>
+                            <span style={{ background: '#059669', color: '#ffffff', fontSize: '0.73rem', fontWeight: 800, padding: '3px 10px', borderRadius: '999px' }}>
+                              THANH TOÁN ONLINE • VIETQR PAYOS
+                            </span>
+                            <span style={{ fontSize: '0.76rem', fontWeight: 700, color: '#047857' }}>
+                              🔒 Quét mã trực tiếp ngay tại trang
+                            </span>
+                          </div>
+                          <p style={{ margin: 0, lineHeight: 1.55, color: '#334155' }}>
+                            Bấm nút bên dưới (hoặc nút <strong>"Thanh Toán Online Ngay"</strong> bên phải) để tạo mã QR thanh toán chính thức của <strong>payOS</strong> ngay tại đây cho số tiền{' '}
+                            <strong style={{ color: '#ea580c' }}>{grandTotal.toLocaleString('vi-VN')} đ</strong> — không cần chuyển trang!
+                          </p>
+                          <button
+                            type="button"
+                            disabled={payosLoading}
+                            onClick={() => handleFinalPlaceOrder()}
+                            className="btn"
+                            style={{
+                              alignSelf: 'flex-start',
+                              padding: '0.65rem 1.25rem',
+                              borderRadius: '11px',
+                              background: 'linear-gradient(135deg, #059669 0%, #0284c7 100%)',
+                              color: '#ffffff',
+                              fontWeight: 800,
+                              fontSize: '0.85rem',
+                              border: 'none',
+                              cursor: payosLoading ? 'wait' : 'pointer',
+                              opacity: payosLoading ? 0.7 : 1,
                             }}
-                          />
-                          <div style={{ marginTop: '8px', fontSize: '0.75rem', fontWeight: 700, color: '#0284c7' }}>
-                            MB Bank • DUONG CONG VINH
-                          </div>
+                          >
+                            <QrCode size={16} /> {payosLoading ? 'Đang tạo mã QR payOS...' : 'Tạo Mã QR Thanh Toán Tại Đây'}
+                          </button>
                         </div>
-
-                        {/* Bank Details Table */}
-                        <div style={{ width: '100%', background: '#ffffff', padding: '1rem', borderRadius: '12px', border: '1px solid #e2e8f0', fontSize: '0.85rem', display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
-                          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                            <span style={{ color: '#64748b' }}>Ngân Hàng:</span>
-                            <strong style={{ color: '#0f172a' }}>MB Bank (Ngân hàng TMCP Quân Đội)</strong>
-                          </div>
-                          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                            <span style={{ color: '#64748b' }}>Số Tài Khoản:</span>
-                            <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-                              <strong style={{ color: '#0284c7', fontSize: '1rem' }}>0762409021</strong>
-                              <button 
-                                type="button" 
-                                onClick={() => handleCopyText('0762409021', 'Số tài khoản')}
-                                style={{ background: '#f1f5f9', border: '1px solid #cbd5e1', borderRadius: '6px', padding: '2px 6px', fontSize: '0.72rem', cursor: 'pointer' }}
-                              >
-                                Copy
-                              </button>
-                            </div>
-                          </div>
-                          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                            <span style={{ color: '#64748b' }}>Chủ Tài Khoản:</span>
-                            <strong style={{ color: '#0f172a' }}>DUONG CONG VINH</strong>
-                          </div>
-                          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                            <span style={{ color: '#64748b' }}>Số Tiền:</span>
-                            <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-                              <strong style={{ color: '#ea580c', fontSize: '1.05rem' }}>{grandTotal.toLocaleString('vi-VN')} đ</strong>
-                              <button 
-                                type="button" 
-                                onClick={() => handleCopyText(grandTotal.toString(), 'Số tiền')}
-                                style={{ background: '#f1f5f9', border: '1px solid #cbd5e1', borderRadius: '6px', padding: '2px 6px', fontSize: '0.72rem', cursor: 'pointer' }}
-                              >
-                                Copy
-                              </button>
-                            </div>
-                          </div>
-                          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', paddingTop: '4px', borderTop: '1px dashed #e2e8f0' }}>
-                            <span style={{ color: '#64748b' }}>Nội Dung Chuyển Khoản:</span>
-                            <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-                              <strong style={{ color: '#ff6b35', background: '#fff7ed', padding: '2px 6px', borderRadius: '4px' }}>
-                                PETZERA {tempOrderCode}
-                              </strong>
-                              <button 
-                                type="button" 
-                                onClick={() => handleCopyText(`PETZERA ${tempOrderCode}`, 'Nội dung CK')}
-                                style={{ background: '#f1f5f9', border: '1px solid #cbd5e1', borderRadius: '6px', padding: '2px 6px', fontSize: '0.72rem', cursor: 'pointer' }}
-                              >
-                                Copy
-                              </button>
-                            </div>
-                          </div>
-                        </div>
-
-                        <div style={{ fontSize: '0.78rem', color: '#059669', display: 'flex', alignItems: 'center', gap: '6px', fontWeight: 600 }}>
-                          <CheckCircle size={15} /> Hệ thống tự động xác nhận sau khi nhận được chuyển khoản thành công
-                        </div>
-                      </div>
-                    )}
-
-                    {/* Method 3: MoMo */}
-                    <label 
-                      onClick={() => setCheckoutForm({ ...checkoutForm, paymentMethod: 'MOMO' })}
-                      style={{ 
-                        display: 'flex', 
-                        alignItems: 'center', 
-                        gap: '12px',
-                        padding: '1rem 1.25rem', 
-                        borderRadius: '14px', 
-                        border: checkoutForm.paymentMethod === 'MOMO' ? '2px solid #ff6b35' : '1px solid #e2e8f0', 
-                        background: checkoutForm.paymentMethod === 'MOMO' ? '#fff7ed' : '#ffffff', 
-                        cursor: 'pointer',
-                        transition: 'all 0.2s ease'
-                      }}
-                    >
-                      <input 
-                        type="radio" 
-                        name="paymentMethod" 
-                        checked={checkoutForm.paymentMethod === 'MOMO'} 
-                        onChange={() => setCheckoutForm({ ...checkoutForm, paymentMethod: 'MOMO' })}
-                        style={{ accentColor: '#ff6b35', width: 18, height: 18 }}
-                      />
-                      <div style={{ fontSize: '1.4rem' }}>👛</div>
-                      <div>
-                        <div style={{ fontWeight: 800, fontSize: '0.95rem', color: '#0f172a' }}>
-                          Ví Điện Tử MoMo / ZaloPay
-                        </div>
-                        <div style={{ fontSize: '0.8rem', color: 'var(--text-muted)' }}>
-                          Thanh toán bảo mật nhanh chóng qua ví điện tử liên kết
-                        </div>
-                      </div>
-                    </label>
-
-                    {checkoutForm.paymentMethod === 'MOMO' && (
-                      <div style={{ background: '#fdf2f8', border: '1.5px dashed #db2777', borderRadius: '16px', padding: '1.25rem', display: 'flex', flexDirection: 'column', gap: '0.65rem', fontSize: '0.85rem' }}>
-                        <div style={{ fontWeight: 800, color: '#be185d', fontSize: '0.88rem' }}>
-                          👛 Thông Tin Chuyển Khoản Ví MoMo / ZaloPay
-                        </div>
-                        <div style={{ background: '#ffffff', borderRadius: '12px', padding: '0.9rem 1rem', border: '1px solid #fbcfe8', display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
-                          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                            <span style={{ color: '#64748b' }}>Số điện thoại ví:</span>
-                            <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-                              <strong style={{ color: '#be185d', fontSize: '0.98rem' }}>{CONTACT_INFO.phoneRaw}</strong>
-                              <button type="button" onClick={() => handleCopyText(CONTACT_INFO.phoneRaw, 'Số ví MoMo/ZaloPay')} style={{ background: '#f1f5f9', border: '1px solid #cbd5e1', borderRadius: '6px', padding: '2px 6px', fontSize: '0.72rem', cursor: 'pointer' }}>Copy</button>
-                            </div>
-                          </div>
-                          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                            <span style={{ color: '#64748b' }}>Số tiền:</span>
-                            <strong style={{ color: '#ea580c', fontSize: '1rem' }}>{grandTotal.toLocaleString('vi-VN')} đ</strong>
-                          </div>
-                          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderTop: '1px dashed #fbcfe8', paddingTop: '4px' }}>
-                            <span style={{ color: '#64748b' }}>Lời nhắn:</span>
-                            <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-                              <strong style={{ color: '#be185d', background: '#fce7f3', padding: '2px 6px', borderRadius: '4px' }}>PETZERA {tempOrderCode}</strong>
-                              <button type="button" onClick={() => handleCopyText(`PETZERA ${tempOrderCode}`, 'Lời nhắn chuyển tiền')} style={{ background: '#f1f5f9', border: '1px solid #cbd5e1', borderRadius: '6px', padding: '2px 6px', fontSize: '0.72rem', cursor: 'pointer' }}>Copy</button>
-                            </div>
-                          </div>
-                        </div>
-                      </div>
+                      )
                     )}
 
                   </div>
@@ -2902,13 +3426,13 @@ export default function CustomerPortal({
                       🧾 Đơn Hàng Của Bạn
                     </h3>
                     <span style={{ fontSize: '0.82rem', fontWeight: 700, color: '#ff6b35', background: '#fff7ed', padding: '3px 10px', borderRadius: '14px' }}>
-                      {cart.reduce((s, i) => s + i.quantity, 0)} sản phẩm
+                      {selectedTotalQty} sản phẩm đã chọn
                     </span>
                   </div>
 
-                  {/* Cart Items List */}
+                  {/* Selected Cart Items List */}
                   <div style={{ display: 'flex', flexDirection: 'column', gap: '0.85rem', maxHeight: '280px', overflowY: 'auto', paddingRight: '4px', marginBottom: '1.25rem' }}>
-                    {cart.map((item) => (
+                    {selectedCartItems.map((item) => (
                       <div key={item.id} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '10px', background: '#f8fafc', padding: '0.75rem 0.95rem', borderRadius: '12px', border: '1px solid #e2e8f0' }}>
                         <img
                           src={getProductImage(item)}
@@ -2965,20 +3489,20 @@ export default function CustomerPortal({
 
                   {/* Promo Code Input & Quick Suggestion Chips */}
                   <div style={{ marginBottom: '1.25rem' }}>
-                    <div style={{ display: 'flex', gap: '6px', marginBottom: '6px' }}>
+                    <div style={{ display: 'flex', gap: '8px', marginBottom: '8px' }}>
                       <input 
                         type="text" 
                         className="form-control" 
                         value={promoCode} 
                         onChange={e => setPromoCode(e.target.value)} 
                         placeholder="Mã voucher (SPA10OFF, PETLOVER20)" 
-                        style={{ textTransform: 'uppercase', fontSize: '0.85rem', padding: '0.55rem 0.75rem' }}
+                        style={{ flex: 1, minWidth: 0, textTransform: 'uppercase', fontSize: '0.85rem', padding: '0.55rem 0.75rem' }}
                       />
                       <button 
                         type="button" 
                         className="btn btn-secondary" 
                         onClick={() => applyPromoCode()}
-                        style={{ padding: '0.55rem 1rem', fontSize: '0.85rem' }}
+                        style={{ flexShrink: 0, whiteSpace: 'nowrap', padding: '0.55rem 1rem', fontSize: '0.85rem' }}
                       >
                         Áp Dụng
                       </button>
@@ -3034,21 +3558,28 @@ export default function CustomerPortal({
                   {/* Submit CTA Button */}
                   <button 
                     type="submit" 
+                    disabled={payosLoading}
                     className="btn btn-coral" 
                     style={{ 
                       width: '100%', 
                       padding: '1rem', 
-                      fontSize: '1.05rem', 
+                      fontSize: '1.02rem', 
                       fontWeight: 800, 
                       borderRadius: '14px', 
                       display: 'flex', 
                       alignItems: 'center', 
                       justifyContent: 'center', 
                       gap: '8px',
-                      boxShadow: '0 4px 20px rgba(255, 107, 53, 0.4)'
+                      opacity: payosLoading ? 0.7 : 1,
+                      background: checkoutForm.paymentMethod === 'PAYOS' ? 'linear-gradient(135deg, #059669 0%, #0284c7 100%)' : undefined,
+                      boxShadow: checkoutForm.paymentMethod === 'PAYOS' ? '0 4px 20px rgba(5, 150, 105, 0.35)' : '0 4px 20px rgba(255, 107, 53, 0.4)'
                     }}
                   >
-                    Xác Nhận Đặt Hàng & Hoàn Tất <CheckCircle size={20} />
+                    {payosLoading
+                      ? 'Đang Tạo Mã QR payOS...'
+                      : checkoutForm.paymentMethod === 'PAYOS'
+                        ? (payosEmbedded ? <>Tạo Lại Mã QR Thanh Toán <QrCode size={20} /></> : <>Thanh Toán Online Ngay <QrCode size={20} /></>)
+                        : <>Xác Nhận Đặt Hàng &amp; Hoàn Tất <CheckCircle size={20} /></>}
                   </button>
 
                   {/* Security Reassurance Points */}
@@ -3073,7 +3604,7 @@ export default function CustomerPortal({
         </div>
       )}
 
-      {/* 6. LỊCH SỬ & TIẾN ĐỘ THỜI GIAN THỰC TAB (history tab) */}
+      {/* 6. LỊCH SỬ & TIẾN ĐỘ (history tab) */}
       {activeTab === 'history' && (
         <div className="glass-panel" style={{ padding: '2rem' }}>
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.25rem', flexWrap: 'wrap', gap: '1rem' }}>

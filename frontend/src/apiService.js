@@ -44,7 +44,7 @@ export const apiService = {
   },
 
   getUsers: async () => {
-    const res = await fetch(`${API_BASE_URL}/users`);
+    const res = await fetch(`${API_BASE_URL}/users`, { cache: 'no-store' });
     return res.json();
   },
 
@@ -55,6 +55,25 @@ export const apiService = {
       body: JSON.stringify(userData)
     });
     return res.json();
+  },
+
+  updateUser: async (id, userData, token) => {
+    const res = await fetch(`${API_BASE_URL}/users/${id}`, {
+      method: 'PUT',
+      headers: getHeaders(token),
+      body: JSON.stringify(userData)
+    });
+    const data = await res.json();
+    return { ...data, _httpStatus: res.status };
+  },
+
+  deleteUser: async (id, token) => {
+    const res = await fetch(`${API_BASE_URL}/users/${id}`, {
+      method: 'DELETE',
+      headers: getHeaders(token)
+    });
+    const data = await res.json();
+    return { ...data, _httpStatus: res.status };
   },
 
   // Pet APIs
@@ -161,6 +180,34 @@ export const apiService = {
       method: 'POST',
       headers: getHeaders(token),
       body: JSON.stringify({ items })
+    });
+    return res.json();
+  },
+
+  // payOS Real-time VietQR Payment Gateway APIs
+  createPayOSPayment: async (payload) => {
+    const res = await fetch(`${API_BASE_URL}/payment/payos/create`, {
+      method: 'POST',
+      headers: getHeaders(),
+      body: JSON.stringify(payload)
+    });
+    const data = await res.json();
+    return { ...data, _ok: res.ok };
+  },
+
+  getPayOSStatus: async (orderCode) => {
+    const res = await fetch(`${API_BASE_URL}/payment/payos/status/${orderCode}`, {
+      cache: 'no-store'
+    });
+    const data = await res.json();
+    return { ...data, _ok: res.ok };
+  },
+
+  cancelPayOSPayment: async (orderCode, reason) => {
+    const res = await fetch(`${API_BASE_URL}/payment/payos/cancel/${orderCode}`, {
+      method: 'POST',
+      headers: getHeaders(),
+      body: JSON.stringify(reason ? { reason } : {})
     });
     return res.json();
   },

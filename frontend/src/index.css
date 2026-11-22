@@ -242,7 +242,7 @@ tr:hover td { background: #f8fafc; }
 /* Forms in Light Theme */
 .form-group { display: flex; flex-direction: column; gap: 0.45rem; margin-bottom: 1.1rem; }
 .form-group label { font-size: 0.85rem; font-weight: 600; color: var(--text-secondary); }
-.form-control { background: #ffffff; border: 1px solid #cbd5e1; border-radius: 12px; padding: 0.7rem 1rem; color: var(--text-primary); font-size: 0.9rem; outline: none; transition: border-color 0.2s ease, box-shadow 0.2s ease; }
+.form-control { width: 100%; box-sizing: border-box; background: #ffffff; border: 1px solid #cbd5e1; border-radius: 12px; padding: 0.7rem 1rem; color: var(--text-primary); font-size: 0.9rem; outline: none; transition: border-color 0.2s ease, box-shadow 0.2s ease; }
 .form-control:focus { border-color: var(--primary-orange); box-shadow: 0 0 12px rgba(255, 107, 53, 0.2); }
 
 /* Grid System */

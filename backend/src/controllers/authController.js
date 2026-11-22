@@ -92,11 +92,36 @@ const updateProfile = async (req, res) => {
   }
 };
 
+const updateUser = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { fullName, phone, role, status, password } = req.body;
+    const updated = await authService.updateUserById(id, { fullName, phone, role, status, password });
+    return res.json({ message: 'Cập nhật tài khoản thành công!', user: updated });
+  } catch (error) {
+    console.error('updateUser error:', error);
+    return res.status(400).json({ message: error.message || 'Lỗi server khi cập nhật tài khoản.' });
+  }
+};
+
+const deleteUser = async (req, res) => {
+  try {
+    const { id } = req.params;
+    await authService.deleteUserById(id);
+    return res.json({ message: 'Xóa tài khoản thành công!' });
+  } catch (error) {
+    console.error('deleteUser error:', error);
+    return res.status(400).json({ message: error.message || 'Lỗi server khi xóa tài khoản.' });
+  }
+};
+
 module.exports = {
   register,
   login,
   getProfile,
   getUsers,
   createUser,
+  updateUser,
+  deleteUser,
   updateProfile,
 };

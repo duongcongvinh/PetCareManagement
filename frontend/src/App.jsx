@@ -288,8 +288,17 @@ export default function App() {
     }
   }, [authToken]);
   
-  // Core Data State
-  const [users, setUsers] = useState(() => getInitialState('petcare_users', INITIAL_USERS));
+  // Core Data State (users luôn đồng bộ trực tiếp từ MongoDB, không trộn lại INITIAL_USERS mock)
+  const [users, setUsers] = useState(() => {
+    try {
+      const saved = localStorage.getItem('petcare_users');
+      if (saved) {
+        const parsed = JSON.parse(saved);
+        if (Array.isArray(parsed) && parsed.length > 0) return parsed;
+      }
+    } catch (e) {}
+    return INITIAL_USERS;
+  });
   const [pets, setPets] = useState(() => getInitialState('petcare_pets', INITIAL_PETS));
   const [services, setServices] = useState(() => getInitialState('petcare_services', INITIAL_SERVICES));
   const [appointments, setAppointments] = useState(() => getInitialState('petcare_appointments', INITIAL_APPOINTMENTS));
@@ -365,18 +374,26 @@ export default function App() {
 
     window.addEventListener('storage', handleStorageChange);
 
+    // Fetch real users directly from MongoDB (Single Source of Truth)
+    const fetchLiveUsers = async () => {
+      try {
+        const liveUsers = await apiService.getUsers();
+        if (Array.isArray(liveUsers)) {
+          setUsers(liveUsers);
+          localStorage.setItem('petcare_users', JSON.stringify(liveUsers));
+        }
+      } catch (err) {}
+    };
+
     // Cross-Browser Sync with Backend API (Syncs Chrome <-> Edge <-> Firefox <-> Mobile)
     let lastSyncTimestamp = 0;
 
     const pullServerSync = async () => {
+      await fetchLiveUsers();
       try {
         const res = await apiService.getLiveSyncState();
         if (res && res.data && res.data.lastUpdated && res.data.lastUpdated > lastSyncTimestamp) {
           lastSyncTimestamp = res.data.lastUpdated;
-          if (res.data.users) {
-            setUsers(res.data.users);
-            localStorage.setItem('petcare_users', JSON.stringify(res.data.users));
-          }
           if (res.data.appointments) {
             setAppointments(res.data.appointments);
             localStorage.setItem('petcare_appointments', JSON.stringify(res.data.appointments));
@@ -398,8 +415,8 @@ export default function App() {
             localStorage.setItem('petcare_pets', JSON.stringify(res.data.pets));
           }
         } else if (res && !res.data) {
-          // If server store is empty, push current active browser state to initialize server
-          apiService.postLiveSyncState({ appointments, orders, products, pets, users });
+          // If server store is empty, push current active browser state to initialize server (excluding users which live in MongoDB)
+          apiService.postLiveSyncState({ appointments, orders, products, pets });
         }
       } catch (err) {}
     };
@@ -407,8 +424,8 @@ export default function App() {
     // Initial pull
     pullServerSync();
 
-    // Poll every 2 seconds for cross-browser sync
-    const syncInterval = setInterval(pullServerSync, 2000);
+    // Poll every 3 seconds for cross-browser sync (including real MongoDB users)
+    const syncInterval = setInterval(pullServerSync, 3000);
     window.addEventListener('focus', pullServerSync);
 
     return () => {
@@ -419,7 +436,7 @@ export default function App() {
     };
   }, []);
 
-  // Sync helper (Broadcasts to other tabs + pushes to backend server for other browsers)
+  // Sync helper (Broadcasts to other tabs + pushes non-user state to backend sync engine)
   const broadcastSync = (type, payload, storageKey) => {
     try {
       localStorage.setItem(storageKey, JSON.stringify(payload));
@@ -428,9 +445,8 @@ export default function App() {
       channel.close();
     } catch (e) {}
 
-    // Push to backend sync engine for cross-browser (Chrome <-> Edge)
+    // Push to backend sync engine for cross-browser (Chrome <-> Edge); users sync directly via MongoDB /api/users
     const keyMap = {
-      'SYNC_USERS': 'users',
       'SYNC_APPOINTMENTS': 'appointments',
       'SYNC_ORDERS': 'orders',
       'SYNC_PRODUCTS': 'products',
@@ -441,7 +457,24 @@ export default function App() {
     }
   };
 
-  // Load Live Services, Products & Users from Express API & MongoDB
+  const refreshUsersFromServer = async () => {
+    try {
+      const liveUsers = await apiService.getUsers();
+      if (Array.isArray(liveUsers)) {
+        setUsers(liveUsers);
+        broadcastSync('SYNC_USERS', liveUsers, 'petcare_users');
+      }
+    } catch (err) {}
+  };
+
+  // Refresh MongoDB users immediately when Admin opens accounts/roles/overview tabs
+  useEffect(() => {
+    if (portalMode === 'STAFF' && ['overview', 'accounts-admin', 'roles-admin'].includes(activeTab)) {
+      refreshUsersFromServer();
+    }
+  }, [portalMode, activeTab]);
+
+  // Load Live Services & Users from Express API & MongoDB
   useEffect(() => {
     async function loadLiveData() {
       try {
@@ -453,91 +486,143 @@ export default function App() {
         console.log('Using local fallback state for services');
       }
 
-      try {
-        const liveUsers = await apiService.getUsers();
-        if (Array.isArray(liveUsers) && liveUsers.length > 0) {
-          setUsers(liveUsers);
-          localStorage.setItem('petcare_users', JSON.stringify(liveUsers));
-        }
-      } catch (err) {
-        console.log('Using local fallback state for users');
-      }
+      await refreshUsersFromServer();
     }
     loadLiveData();
   }, []);
 
   const handleAddUser = async (userData) => {
+    const { _alreadySavedInDb, ...cleanData } = userData || {};
     let created = null;
-    try {
-      const res = await apiService.createUser(userData);
-      if (res && res.user) {
+
+    if (_alreadySavedInDb) {
+      created = {
+        ...cleanData,
+        status: cleanData.status || 'ACTIVE',
+        createdAt: cleanData.createdAt || new Date().toISOString().split('T')[0],
+      };
+    } else {
+      try {
+        const res = await apiService.createUser(cleanData);
+        if (res && res.user) {
+          created = {
+            ...res.user,
+            status: res.user.status || 'ACTIVE',
+            createdAt: res.user.createdAt ? res.user.createdAt.split('T')[0] : new Date().toISOString().split('T')[0]
+          };
+        } else if (res && res.message) {
+          toast.error(res.message, 'Không Thể Tạo Tài Khoản');
+          return null;
+        }
+      } catch (err) {
+        console.warn('Backend user creation error:', err);
+      }
+
+      if (!created) {
         created = {
-          ...res.user,
+          id: 'u-' + Date.now(),
+          fullName: cleanData.fullName,
+          email: cleanData.email,
+          phone: cleanData.phone || '',
+          role: cleanData.role || 'CUSTOMER',
           status: 'ACTIVE',
-          createdAt: res.user.createdAt ? res.user.createdAt.split('T')[0] : new Date().toISOString().split('T')[0]
+          createdAt: new Date().toISOString().split('T')[0]
         };
       }
-    } catch (err) {
-      console.warn('Backend user creation error:', err);
     }
 
-    if (!created) {
-      created = {
-        id: 'u-' + Date.now(),
-        fullName: userData.fullName,
-        email: userData.email,
-        phone: userData.phone || '0901234567',
-        role: userData.role || 'CUSTOMER',
-        status: 'ACTIVE',
-        createdAt: new Date().toISOString().split('T')[0]
-      };
-    }
-
-    const updated = [created, ...users.filter(u => u.email !== created.email)];
-    setUsers(updated);
-    broadcastSync('SYNC_USERS', updated, 'petcare_users');
+    setUsers(prev => {
+      const updated = [created, ...prev.filter(u => u.id !== created.id && u.email !== created.email)];
+      broadcastSync('SYNC_USERS', updated, 'petcare_users');
+      return updated;
+    });
+    await refreshUsersFromServer();
     handleAddAuditLog('ACCOUNT', 'Tạo tài khoản mới', `Tạo tài khoản "${created.fullName}" (${created.email}) với vai trò ${created.role}.`);
     return created;
   };
 
-  const handleUpdateUser = (userId, updates) => {
+  const handleUpdateUser = async (userId, updates) => {
     const target = users.find(u => u.id === userId);
+    try {
+      const res = await apiService.updateUser(userId, updates, authToken);
+      if (res && (res._httpStatus === 401 || res._httpStatus === 403)) {
+        toast.warning('Phiên đăng nhập Admin đã cũ. Vui lòng Đăng xuất rồi Đăng nhập lại để lưu thay đổi!', 'Yêu Cầu Đăng Nhập Lại');
+        return;
+      }
+    } catch (err) {
+      console.warn('Backend updateUser error:', err);
+    }
+
     const updated = users.map(u => u.id === userId ? { ...u, ...updates } : u);
     setUsers(updated);
     broadcastSync('SYNC_USERS', updated, 'petcare_users');
+    await refreshUsersFromServer();
     if (target) {
       handleAddAuditLog('ACCOUNT', 'Cập nhật tài khoản', `Cập nhật thông tin tài khoản "${updates.fullName || target.fullName}" (${target.email}).`);
     }
   };
 
-  const handleDeleteUser = (userId) => {
+  const handleDeleteUser = async (userId) => {
     const target = users.find(u => u.id === userId);
+    try {
+      const res = await apiService.deleteUser(userId, authToken);
+      if (res && (res._httpStatus === 401 || res._httpStatus === 403)) {
+        toast.warning('Phiên đăng nhập Admin đã cũ. Vui lòng Đăng xuất rồi Đăng nhập lại để xóa tài khoản!', 'Yêu Cầu Đăng Nhập Lại');
+        return;
+      }
+    } catch (err) {
+      console.warn('Backend deleteUser error:', err);
+    }
+
     const updated = users.filter(u => u.id !== userId);
     setUsers(updated);
     broadcastSync('SYNC_USERS', updated, 'petcare_users');
+    await refreshUsersFromServer();
     if (target) {
       handleAddAuditLog('ACCOUNT', 'Xóa tài khoản', `Đã xóa tài khoản "${target.fullName}" (${target.email}).`);
       toast.info(`Đã xóa tài khoản "${target.fullName}".`, 'Quản Lý Tài Khoản');
     }
   };
 
-  const handleUpdateUserRole = (userId, newRole) => {
+  const handleUpdateUserRole = async (userId, newRole) => {
     const target = users.find(u => u.id === userId);
+    try {
+      const res = await apiService.updateUser(userId, { role: newRole }, authToken);
+      if (res && (res._httpStatus === 401 || res._httpStatus === 403)) {
+        toast.warning('Phiên đăng nhập Admin đã cũ. Vui lòng Đăng xuất rồi Đăng nhập lại để đổi quyền!', 'Yêu Cầu Đăng Nhập Lại');
+        return;
+      }
+    } catch (err) {
+      console.warn('Backend updateUserRole error:', err);
+    }
+
     const updated = users.map(u => u.id === userId ? { ...u, role: newRole } : u);
     setUsers(updated);
     broadcastSync('SYNC_USERS', updated, 'petcare_users');
+    await refreshUsersFromServer();
     if (target) {
       handleAddAuditLog('SECURITY', 'Thay đổi vai trò người dùng', `Đổi quyền "${target.fullName}" từ ${target.role} sang ${newRole}.`);
       toast.success(`Đã đổi vai trò của "${target.fullName}" sang ${newRole}!`, 'Phân Quyền Người Dùng');
     }
   };
 
-  const handleToggleUserStatus = (userId) => {
+  const handleToggleUserStatus = async (userId) => {
     const target = users.find(u => u.id === userId);
     const nextStatus = target?.status === 'LOCKED' ? 'ACTIVE' : 'LOCKED';
+    try {
+      const res = await apiService.updateUser(userId, { status: nextStatus }, authToken);
+      if (res && (res._httpStatus === 401 || res._httpStatus === 403)) {
+        toast.warning('Phiên đăng nhập Admin đã cũ. Vui lòng Đăng xuất rồi Đăng nhập lại để khóa/mở khóa!', 'Yêu Cầu Đăng Nhập Lại');
+        return;
+      }
+    } catch (err) {
+      console.warn('Backend toggleUserStatus error:', err);
+    }
+
     const updated = users.map(u => u.id === userId ? { ...u, status: nextStatus } : u);
     setUsers(updated);
     broadcastSync('SYNC_USERS', updated, 'petcare_users');
+    await refreshUsersFromServer();
     if (target) {
       handleAddAuditLog('ACCOUNT', nextStatus === 'LOCKED' ? 'Khóa tài khoản' : 'Mở khóa tài khoản', `Tài khoản "${target.fullName}" (${target.email}) → ${nextStatus}.`);
       toast.info(
@@ -695,12 +780,12 @@ export default function App() {
       customerName: shippingInfo.recipientName || currentUser?.fullName || 'Phạm Minh Anh',
       phone: shippingInfo.recipientPhone || currentUser?.phone || '0901234567',
       address: shippingInfo.deliveryAddress || 'TP. Hồ Chí Minh',
-      paymentMethod: shippingInfo.paymentMethod === 'VIETQR' ? 'Chuyển Khoản VietQR' : shippingInfo.paymentMethod === 'MOMO' ? 'Ví MoMo' : 'Tiền Mặt COD',
+      paymentMethod: shippingInfo.paymentMethod === 'PAYOS' ? 'Thanh Toán Online (payOS)' : 'Tiền Mặt COD',
       shippingMethod: shippingInfo.shippingMethod === 'EXPRESS' ? 'Hỏa Tốc 2H' : 'Tiêu Chuẩn (1-2 ngày)',
       notes: shippingInfo.deliveryNotes || '',
       items: cartItems.map(i => `${i.name} x ${i.quantity}`).join(', '),
       total: total,
-      status: 'PENDING',
+      status: shippingInfo.status || 'PENDING',
       date: new Date().toLocaleString('vi-VN', { hour: '2-digit', minute: '2-digit', day: '2-digit', month: '2-digit', year: 'numeric' })
     };
     

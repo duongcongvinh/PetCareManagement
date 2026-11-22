@@ -59,6 +59,10 @@ services:
       DATABASE_URL: "mongodb://mongo:27017/petcare_db?replicaSet=rs0&directConnection=true"
       JWT_SECRET: "super_secret_petcare_jwt_key_2026"
       AI_SERVICE_URL: "http://ai-service:8000"
+      FRONTEND_URL: "${FRONTEND_URL:-http://localhost:3000}"
+      PAYOS_CLIENT_ID: "${PAYOS_CLIENT_ID:-}"
+      PAYOS_API_KEY: "${PAYOS_API_KEY:-}"
+      PAYOS_CHECKSUM_KEY: "${PAYOS_CHECKSUM_KEY:-}"
     ports:
       - "5000:5000"
     depends_on:
