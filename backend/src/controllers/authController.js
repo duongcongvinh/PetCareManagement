@@ -2,14 +2,22 @@ const authService = require('../services/authService');
 
 const register = async (req, res) => {
   try {
-    const { identifier, email, password, fullName, phone, role } = req.body;
+    const { identifier, email, password, fullName, phone } = req.body;
     const accountId = (identifier || email || phone || '').trim();
 
     if (!accountId || !password || !fullName) {
       return res.status(400).json({ message: 'Vui lòng điền đầy đủ Họ tên, Email hoặc Số điện thoại và Mật khẩu!' });
     }
 
-    const result = await authService.registerUser({ identifier: accountId, email, password, fullName, phone, role });
+    // Đăng ký công khai ngoài trang khách luôn ép vai trò CUSTOMER (ngăn leo thang đặc quyền)
+    const result = await authService.registerUser({
+      identifier: accountId,
+      email,
+      password,
+      fullName,
+      phone,
+      role: 'CUSTOMER',
+    });
     return res.status(201).json({
       message: 'Đăng ký tài khoản thành công!',
       token: result.token,
@@ -23,14 +31,14 @@ const register = async (req, res) => {
 
 const login = async (req, res) => {
   try {
-    const { identifier, email, phone, password } = req.body;
+    const { identifier, email, phone, password, portal } = req.body;
     const accountId = (identifier || email || phone || '').trim();
 
     if (!accountId || !password) {
       return res.status(400).json({ message: 'Vui lòng nhập Email hoặc Số điện thoại và Mật khẩu!' });
     }
 
-    const result = await authService.loginUser({ identifier: accountId, password });
+    const result = await authService.loginUser({ identifier: accountId, password, portal });
     return res.json({
       message: 'Đăng nhập thành công!',
       token: result.token,
@@ -38,7 +46,7 @@ const login = async (req, res) => {
     });
   } catch (error) {
     console.error('Login error:', error);
-    return res.status(401).json({ message: error.message || 'Lỗi server khi đăng nhập.' });
+    return res.status(error.statusCode || 401).json({ message: error.message || 'Lỗi server khi đăng nhập.' });
   }
 };
 

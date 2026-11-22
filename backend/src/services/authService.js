@@ -4,6 +4,24 @@ const prisma = require('../config/prisma');
 
 const EMAIL_REGEX = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 const PHONE_REGEX = /^(0|\+?84)[0-9]{8,10}$/;
+const STAFF_ROLES = ['ADMIN', 'CARE_STAFF', 'WAREHOUSE_STAFF'];
+
+const GENERIC_LOGIN_ERROR = 'Email/Số điện thoại hoặc mật khẩu không chính xác.';
+
+const validatePortalAccess = (role, portal) => {
+  if (!portal) return;
+  const normalizedPortal = String(portal).toUpperCase();
+  if (normalizedPortal === 'CUSTOMER' && role !== 'CUSTOMER') {
+    const err = new Error(GENERIC_LOGIN_ERROR);
+    err.statusCode = 401;
+    throw err;
+  }
+  if (normalizedPortal === 'STAFF' && !STAFF_ROLES.includes(role)) {
+    const err = new Error(GENERIC_LOGIN_ERROR);
+    err.statusCode = 401;
+    throw err;
+  }
+};
 
 const parseAccountIdentifier = (rawInput) => {
   const raw = (rawInput || '').trim();
@@ -83,7 +101,7 @@ const registerUser = async ({ identifier, email, password, fullName, phone, role
   return { token, user: newUser };
 };
 
-const loginUser = async ({ identifier, email, password }) => {
+const loginUser = async ({ identifier, email, password, portal }) => {
   const raw = (identifier || email || '').trim();
   const cleanedPhone = raw.replace(/[\s.-]/g, '');
   const normalizedPhone = cleanedPhone.startsWith('+84')
@@ -108,13 +126,18 @@ const loginUser = async ({ identifier, email, password }) => {
     throw new Error('Email/Số điện thoại hoặc mật khẩu không chính xác.');
   }
 
-  if (user.status === 'LOCKED') {
-    throw new Error('Tài khoản này đang bị khóa. Vui lòng liên hệ Admin.');
-  }
-
   const isMatch = await bcrypt.compare(password, user.password);
   if (!isMatch) {
     throw new Error('Email/Số điện thoại hoặc mật khẩu không chính xác.');
+  }
+
+  // Tách biệt chặt chẽ Cổng Khách Hàng (CUSTOMER) và Cổng Nội Bộ (STAFF/ADMIN) — không lộ role/trạng thái
+  validatePortalAccess(user.role, portal);
+
+  if (user.status === 'LOCKED') {
+    const err = new Error('Tài khoản này đang bị khóa. Vui lòng liên hệ Admin.');
+    err.statusCode = 403;
+    throw err;
   }
 
   const token = jwt.sign(
@@ -226,6 +249,7 @@ const deleteUserById = async (userId) => {
 };
 
 module.exports = {
+  validatePortalAccess,
   registerUser,
   loginUser,
   getUserProfile,

@@ -2,6 +2,7 @@ const test = require('node:test');
 const assert = require('node:assert/strict');
 const jwt = require('jsonwebtoken');
 const { authenticateToken, authorizeRoles } = require('../src/middleware/auth');
+const { validatePortalAccess } = require('../src/services/authService');
 
 const SECRET = process.env.JWT_SECRET || 'super_secret_petcare_jwt_key_2026';
 
@@ -73,4 +74,24 @@ test('RBAC: Cho phép WAREHOUSE_STAFF truy cập chức năng kho', () => {
   authorizeRoles('ADMIN', 'WAREHOUSE_STAFF')(req, res, () => { nextCalled = true; });
 
   assert.equal(nextCalled, true);
+});
+
+test('Portal Isolation: Chặn ADMIN và nhân viên đăng nhập tại Cổng Khách Hàng (401 chung, không lộ role)', () => {
+  for (const role of ['ADMIN', 'CARE_STAFF', 'WAREHOUSE_STAFF']) {
+    assert.throws(
+      () => validatePortalAccess(role, 'CUSTOMER'),
+      (err) => err && err.statusCode === 401 && err.message === 'Email/Số điện thoại hoặc mật khẩu không chính xác.'
+    );
+  }
+  assert.doesNotThrow(() => validatePortalAccess('CUSTOMER', 'CUSTOMER'));
+});
+
+test('Portal Isolation: Chặn CUSTOMER đăng nhập tại Cổng Nội Bộ (401 chung, không lộ thông tin)', () => {
+  assert.throws(
+    () => validatePortalAccess('CUSTOMER', 'STAFF'),
+    (err) => err && err.statusCode === 401 && err.message === 'Email/Số điện thoại hoặc mật khẩu không chính xác.'
+  );
+  for (const role of ['ADMIN', 'CARE_STAFF', 'WAREHOUSE_STAFF']) {
+    assert.doesNotThrow(() => validatePortalAccess(role, 'STAFF'));
+  }
 });

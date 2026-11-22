@@ -8,12 +8,12 @@ const getHeaders = (token) => ({
 });
 
 export const apiService = {
-  // Auth APIs (hỗ trợ cả Email và Số điện thoại)
-  login: async (identifier, password) => {
+  // Auth APIs (hỗ trợ cả Email và Số điện thoại, tách biệt cổng CUSTOMER / STAFF)
+  login: async (identifier, password, portal) => {
     const res = await fetch(`${API_BASE_URL}/auth/login`, {
       method: 'POST',
       headers: getHeaders(),
-      body: JSON.stringify({ identifier, email: identifier, password })
+      body: JSON.stringify({ identifier, email: identifier, password, ...(portal ? { portal } : {}) })
     });
     return res.json();
   },

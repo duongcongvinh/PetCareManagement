@@ -126,13 +126,17 @@ export default function LoginModal({ isOpen, onClose, onLoginSuccess, onAddUser,
       return;
     }
 
-    // ĐĂNG NHẬP (Hỗ trợ cả Email & SĐT)
+    // ĐĂNG NHẬP KHÁCH HÀNG (Chỉ chấp nhận vai trò CUSTOMER, chặn tài khoản nội bộ)
     try {
-      const res = await apiService.login(normalizedId, password);
+      const res = await apiService.login(normalizedId, password, 'CUSTOMER');
       if (res && res.user) {
+        if (res.user.role !== 'CUSTOMER') {
+          toast.error('Email/Số điện thoại hoặc mật khẩu không chính xác.', 'Đăng Nhập Thất Bại');
+          return;
+        }
         const userItem = {
           ...res.user,
-          status: 'ACTIVE',
+          status: res.user.status || 'ACTIVE',
           createdAt: res.user.createdAt ? res.user.createdAt.split('T')[0] : new Date().toISOString().split('T')[0]
         };
         onLoginSuccess(userItem, res.token);
@@ -147,7 +151,7 @@ export default function LoginModal({ isOpen, onClose, onLoginSuccess, onAddUser,
       console.warn('Backend login fallback:', err);
     }
 
-    // Offline / local fallback: tìm tài khoản khớp Email hoặc SĐT
+    // Offline / local fallback: chỉ khớp tài khoản CUSTOMER (tuyệt đối không cho đăng nhập Admin/Staff)
     const matchedUser = users.find(
       (u) =>
         (u.email && u.email.toLowerCase() === normalizedId.toLowerCase()) ||
@@ -155,26 +159,21 @@ export default function LoginModal({ isOpen, onClose, onLoginSuccess, onAddUser,
     );
 
     if (matchedUser) {
+      if (matchedUser.role !== 'CUSTOMER') {
+        toast.error('Email/Số điện thoại hoặc mật khẩu không chính xác.', 'Đăng Nhập Thất Bại');
+        return;
+      }
+      if (matchedUser.status === 'LOCKED') {
+        toast.error('Tài khoản này đang bị khóa. Vui lòng liên hệ Admin.', 'Tài Khoản Bị Khóa');
+        return;
+      }
       onLoginSuccess(matchedUser, 'customer-jwt-token-' + Date.now());
       toast.success(`Xin chào ${matchedUser.fullName}!`, 'Đăng Nhập Thành Công');
       onClose();
       return;
     }
 
-    const userObj = {
-      id: 'u-' + Date.now(),
-      email: normalizedId,
-      phone: isPhone ? normalizedId : '',
-      fullName: nameToUse,
-      role: 'CUSTOMER',
-      status: 'ACTIVE',
-      createdAt: new Date().toISOString().split('T')[0]
-    };
-
-    if (onAddUser) onAddUser(userObj);
-    onLoginSuccess(userObj, 'customer-jwt-token-' + Date.now());
-    toast.success(`Xin chào ${userObj.fullName}!`, 'Đăng Nhập Thành Công');
-    onClose();
+    toast.error('Không thể kết nối máy chủ xác thực hoặc tài khoản không tồn tại.', 'Đăng Nhập Thất Bại');
   };
 
   return (

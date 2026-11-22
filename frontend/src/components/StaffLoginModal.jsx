@@ -39,11 +39,11 @@ export default function StaffLoginModal({ isOpen = true, onClose, onLoginSuccess
 
     setLoading(true);
     try {
-      const res = await apiService.login(raw, password);
+      const res = await apiService.login(raw, password, 'STAFF');
 
       if (res && res.user && res.token) {
         if (!STAFF_ROLES.includes(res.user.role)) {
-          setErrorMessage('Tài khoản khách hàng không có quyền truy cập Cổng Nội Bộ.');
+          setErrorMessage('Email/Số điện thoại hoặc mật khẩu không chính xác.');
           return;
         }
 
