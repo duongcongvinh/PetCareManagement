@@ -4,7 +4,7 @@ import 'leaflet/dist/leaflet.css';
 import { MapPin, Navigation, Search, ExternalLink, Layers, Loader2, X } from 'lucide-react';
 import { toast } from './ToastNotification';
 
-const DEFAULT_CENTER = { lat: 10.776889, lng: 106.700806 }; // Quận 1, TP.HCM
+const DEFAULT_CENTER = { lat: 10.822159, lng: 106.687451 }; // Số 12 Nguyễn Văn Bảo, Phường Hạnh Thông, TP. Hồ Chí Minh
 
 const QUICK_CITIES = [
   { label: 'TP.HCM', lat: 10.776889, lng: 106.700806 },

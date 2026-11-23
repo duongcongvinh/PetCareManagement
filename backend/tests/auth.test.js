@@ -2,7 +2,7 @@ const test = require('node:test');
 const assert = require('node:assert/strict');
 const jwt = require('jsonwebtoken');
 const { authenticateToken, authorizeRoles } = require('../src/middleware/auth');
-const { validatePortalAccess } = require('../src/services/authService');
+const { validatePortalAccess, validateStrongPassword } = require('../src/services/authService');
 
 const SECRET = process.env.JWT_SECRET || 'super_secret_petcare_jwt_key_2026';
 
@@ -94,4 +94,14 @@ test('Portal Isolation: Chặn CUSTOMER đăng nhập tại Cổng Nội Bộ (4
   for (const role of ['ADMIN', 'CARE_STAFF', 'WAREHOUSE_STAFF']) {
     assert.doesNotThrow(() => validatePortalAccess(role, 'STAFF'));
   }
+});
+
+test('Password Strength: Chặn mật khẩu yếu khi đăng ký (dưới 8 ký tự, thiếu hoa/thường/số/ký tự đặc biệt)', () => {
+  assert.throws(() => validateStrongPassword('Ab1!567'), /ít nhất 8 ký tự/i);
+  assert.throws(() => validateStrongPassword('abcdef1!'), /chữ hoa/i);
+  assert.throws(() => validateStrongPassword('ABCDEF1!'), /chữ thường/i);
+  assert.throws(() => validateStrongPassword('Abcdefg!'), /chữ số/i);
+  assert.throws(() => validateStrongPassword('Abcdef12'), /ký tự đặc biệt/i);
+  assert.doesNotThrow(() => validateStrongPassword('Petzera@1'));
+  assert.doesNotThrow(() => validateStrongPassword('Abcd123!'));
 });

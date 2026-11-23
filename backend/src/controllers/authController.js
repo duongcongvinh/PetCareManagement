@@ -2,14 +2,18 @@ const authService = require('../services/authService');
 
 const register = async (req, res) => {
   try {
-    const { identifier, email, password, fullName, phone } = req.body;
+    const { identifier, email, password, confirmPassword, fullName, phone } = req.body;
     const accountId = (identifier || email || phone || '').trim();
 
     if (!accountId || !password || !fullName) {
       return res.status(400).json({ message: 'Vui lòng điền đầy đủ Họ tên, Email hoặc Số điện thoại và Mật khẩu!' });
     }
 
-    // Đăng ký công khai ngoài trang khách luôn ép vai trò CUSTOMER (ngăn leo thang đặc quyền)
+    if (confirmPassword !== undefined && password !== confirmPassword) {
+      return res.status(400).json({ message: 'Mật khẩu nhập lại không khớp!' });
+    }
+
+    // Đăng ký công khai ngoài trang khách luôn ép vai trò CUSTOMER và yêu cầu mật khẩu mạnh
     const result = await authService.registerUser({
       identifier: accountId,
       email,
@@ -17,6 +21,7 @@ const register = async (req, res) => {
       fullName,
       phone,
       role: 'CUSTOMER',
+      requireStrongPassword: true,
     });
     return res.status(201).json({
       message: 'Đăng ký tài khoản thành công!',

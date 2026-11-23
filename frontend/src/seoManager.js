@@ -2,6 +2,7 @@
 
 export const CUSTOMER_TAB_PATHS = {
   home: '/',
+  about: '/ve-chung-toi',
   reproduction: '/khoa-sinh-san',
   booking: '/dich-vu-spa',
   shop: '/cua-hang',
@@ -14,7 +15,7 @@ export const CUSTOMER_TAB_PATHS = {
 const PATH_TO_CUSTOMER_TAB = Object.entries(CUSTOMER_TAB_PATHS).reduce((acc, [tab, path]) => {
   acc[path] = tab;
   return acc;
-}, {});
+}, { '/gioi-thieu': 'about' });
 
 export function parseCustomerUrl(pathname = '/') {
   const normalized = (pathname || '/').replace(/\/+$/, '') || '/';
@@ -64,6 +65,15 @@ const CUSTOMER_SEO_META = {
       'Petzera, spa thú cưng, cắt tỉa lông chó mèo, khoa sinh sản thú cưng, khách sạn thú cưng, pet shop chính hãng, thức ăn Royal Canin',
     robots: 'index, follow',
     breadcrumbName: 'Trang Chủ',
+  },
+  about: {
+    title: 'Về Chúng Tôi — Petzera 24/7 & Địa Chỉ Số 12 Nguyễn Văn Bảo, P. Hạnh Thông, TP.HCM',
+    description:
+      'Tìm hiểu về hệ sinh thái chăm sóc thú cưng 24/7 Petzera và bản đồ chỉ đường tới cơ sở Số 12 Nguyễn Văn Bảo, Phường Hạnh Thông, TP. Hồ Chí Minh.',
+    keywords:
+      'về chúng tôi Petzera, địa chỉ Petzera, 12 Nguyễn Văn Bảo Phường Hạnh Thông, spa thú cưng 24/7 TP.HCM, thú y 24/7 Hạnh Thông',
+    robots: 'index, follow',
+    breadcrumbName: 'Về Chúng Tôi',
   },
   reproduction: {
     title: 'Khoa Sinh Sản Thú Cưng 24/7 — Siêu Âm Thai, Đỡ Đẻ & Triệt Sản Minilap | Petzera',
