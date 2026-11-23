@@ -47,7 +47,7 @@ const DEFAULT_SYSTEM_CONFIG = {
   storeName: 'Petzera Pet Care & Smart AI Platform',
   hotline: '0348 639 603',
   supportEmail: 'hello@petzera.vn',
-  openHours: '08:00 - 21:00 (Thứ 2 - Chủ Nhật)',
+  openHours: 'Mở cửa 24/7 (00:00 - 24:00 • Cả Lễ & Tết)',
   freeShipThreshold: 500000,
   expressShipFee: 30000,
   aiConfidenceLevel: '95', // 90 | 95 | 99

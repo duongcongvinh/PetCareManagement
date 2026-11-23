@@ -54,6 +54,9 @@ router.post('/payment/payos-webhook', paymentController.handlePayOSWebhook);
 // --- 6. AI Smart Forecasting & Reorder Proposal Routes ---
 router.get('/forecasting/proposals', authenticateToken, authorizeRoles('WAREHOUSE_STAFF', 'ADMIN'), forecastingController.getProposals);
 router.post('/forecasting/trigger', authenticateToken, authorizeRoles('WAREHOUSE_STAFF', 'ADMIN'), forecastingController.triggerAIForecast);
+router.post('/forecasting/seasonal', authenticateToken, authorizeRoles('WAREHOUSE_STAFF', 'ADMIN'), forecastingController.seasonalForecast);
+router.post('/forecasting/order-history', authenticateToken, authorizeRoles('WAREHOUSE_STAFF', 'ADMIN'), forecastingController.orderHistoryForecast);
+router.post('/forecasting/inventory-risk', authenticateToken, authorizeRoles('WAREHOUSE_STAFF', 'ADMIN'), forecastingController.inventoryRiskForecast);
 router.put('/forecasting/proposals/:id', authenticateToken, authorizeRoles('ADMIN'), forecastingController.updateProposalStatus);
 
 // --- 7. Cross-Browser Live Synchronization Engine (Chrome, Edge, Firefox, Mobile) ---

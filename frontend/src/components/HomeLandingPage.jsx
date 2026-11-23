@@ -5,6 +5,7 @@ import {
   Play, Pause, Volume2, VolumeX, Maximize2, Film, X
 } from 'lucide-react';
 import BrandLogo from './BrandLogo';
+import AboutUsSection from './AboutUsSection';
 import { CONTACT_INFO, openZaloQrModal } from '../contactConfig';
 import {
   HERO_IMAGES,
@@ -1254,6 +1255,14 @@ export default function HomeLandingPage({
             </div>
           </div>
         </section>
+
+        {/* SECTION 7.5: GIỚI THIỆU & ĐỊA CHỈ CỬA HÀNG FLAGSHIP + BẢN ĐỒ */}
+        <AboutUsSection
+          isFullPage={false}
+          onTabChange={onTabChange}
+          onOpenBooking={() => setShowBookingModal(true)}
+          onCopyText={handleCopyText}
+        />
 
         {/* SECTION 8: BOTTOM CONVERSION CTA BANNER */}
         <section className="home-bottom-cta reveal-on-scroll">

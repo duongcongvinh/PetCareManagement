@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import ReproductionClinic from './ReproductionClinic';
 import BrandLogo from './BrandLogo';
 import HomeLandingPage from './HomeLandingPage';
+import AboutUsSection from './AboutUsSection';
 import AddressMapPicker from './AddressMapPicker';
 import PayOSEmbeddedBox from './PayOSEmbeddedBox';
 import { apiService } from '../apiService';
@@ -455,13 +456,68 @@ export default function CustomerPortal({
   // New Pet State
   const [newPet, setNewPet] = useState({ name: '', species: 'Chó', breed: '', ageMonths: '', weightKg: '', medicalHistory: '' });
 
+  // Khung giờ hoạt động liên tục 24/7 (00:00 - 24:00) theo múi giờ địa phương
+  const getLocalTodayStr = () => {
+    const now = new Date();
+    const y = now.getFullYear();
+    const m = String(now.getMonth() + 1).padStart(2, '0');
+    const d = String(now.getDate()).padStart(2, '0');
+    return `${y}-${m}-${d}`;
+  };
+
+  const formatHourSlot = (hour) => {
+    const start = String(hour).padStart(2, '0');
+    const end = String((hour + 1) % 24).padStart(2, '0');
+    return `${start}:00 - ${end}:00`;
+  };
+
+  const BOOKING_TIME_SLOT_GROUPS = [
+    { label: '🌅 Ca Sáng (06:00 - 12:00)', hours: [6, 7, 8, 9, 10, 11] },
+    { label: '☀️ Ca Chiều (12:00 - 18:00)', hours: [12, 13, 14, 15, 16, 17] },
+    { label: '🌆 Ca Tối (18:00 - 22:00)', hours: [18, 19, 20, 21] },
+    { label: '🌙 Ca Đêm Trực 24/7 (22:00 - 06:00)', hours: [22, 23, 0, 1, 2, 3, 4, 5] }
+  ];
+
+  const getSlotStatus = (hour, dateStr) => {
+    const slotValue = formatHourSlot(hour);
+    const todayStr = getLocalTodayStr();
+    const isBooked = appointments.some(
+      (a) =>
+        a.appointmentDate === dateStr &&
+        a.timeSlot === slotValue &&
+        ['PENDING', 'CONFIRMED', 'IN_PROGRESS'].includes(a.status)
+    );
+    if (isBooked) return { value: slotValue, disabled: true, statusText: 'Đã có lịch - Khóa slot' };
+
+    if (dateStr === todayStr) {
+      const currH = new Date().getHours();
+      if (hour < currH) {
+        return { value: slotValue, disabled: true, statusText: 'Đã qua giờ' };
+      }
+    }
+    return { value: slotValue, disabled: false, statusText: 'Còn trống' };
+  };
+
+  const findNextAvailableSlot = (dateStr) => {
+    const orderedHours = Array.from({ length: 24 }, (_, h) => h);
+    for (const h of orderedHours) {
+      const st = getSlotStatus(h, dateStr);
+      if (!st.disabled) return st.value;
+    }
+    return '09:00 - 10:00';
+  };
+
   // Booking Form State
-  const [bookingForm, setBookingForm] = useState({
-    petId: '',
-    serviceId: services[0]?.id || '',
-    appointmentDate: new Date().toISOString().split('T')[0],
-    timeSlot: '09:00 - 10:00',
-    notes: ''
+  const [bookingForm, setBookingForm] = useState(() => {
+    const todayStr = getLocalTodayStr();
+    const currH = new Date().getHours();
+    return {
+      petId: '',
+      serviceId: services[0]?.id || '',
+      appointmentDate: todayStr,
+      timeSlot: formatHourSlot(currH),
+      notes: ''
+    };
   });
 
   const myPets = currentUser ? pets.filter(p => p.ownerId === currentUser.id) : [];
@@ -474,6 +530,22 @@ export default function CustomerPortal({
       setBookingForm(prev => ({ ...prev, petId: myPets[0].id }));
     }
   }, [myPets, bookingForm.petId]);
+
+  // Tự động chọn khung giờ trống gần nhất khi đổi ngày hoặc mở modal đặt lịch 24/7
+  useEffect(() => {
+    if (!showBookingModal) return;
+    const selectedHour = parseInt((bookingForm.timeSlot || '').slice(0, 2), 10);
+    const currentStatus = Number.isNaN(selectedHour)
+      ? { disabled: true }
+      : getSlotStatus(selectedHour, bookingForm.appointmentDate);
+    if (currentStatus.disabled) {
+      const nextSlot = findNextAvailableSlot(bookingForm.appointmentDate);
+      if (nextSlot && nextSlot !== bookingForm.timeSlot) {
+        setBookingForm(prev => ({ ...prev, timeSlot: nextSlot }));
+      }
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [showBookingModal, bookingForm.appointmentDate, appointments]);
 
   const handleCreatePetSubmit = (e) => {
     e.preventDefault();
@@ -1012,7 +1084,7 @@ export default function CustomerPortal({
 
   // Geo-fencing kiểm tra phạm vi Giao Hỏa Tốc 2H (chỉ áp dụng Nội Thành TP.HCM <= 20 km)
   const expressEligibility = (() => {
-    const STORE_HCMC = { lat: 10.776889, lng: 106.700806 }; // Petzera Flagship Quận 1, TP.HCM
+    const STORE_HCMC = { lat: 10.822159, lng: 106.687451 }; // Petzera Flagship - Số 12 Nguyễn Văn Bảo, Phường Hạnh Thông, TP.HCM
     const MAX_INNER_HCMC_KM = 20;
 
     const normalizeText = (str) =>
@@ -1085,7 +1157,7 @@ export default function CustomerPortal({
       'ho chi minh', 'tp.hcm', 'tphcm', 'tp hcm', 'sai gon', 'saigon',
       'quan 1', 'quan 3', 'quan 4', 'quan 5', 'quan 6', 'quan 7', 'quan 8',
       'quan 10', 'quan 11', 'quan 12', 'binh thanh', 'phu nhuan', 'tan binh',
-      'tan phu', 'go vap', 'binh tan', 'thu duc'
+      'tan phu', 'go vap', 'hanh thong', 'binh tan', 'thu duc'
     ];
     const isInnerHcmc = innerHcmcKeywords.some((kw) => normalizedAddr.includes(kw));
 
@@ -1138,6 +1210,16 @@ export default function CustomerPortal({
           setBookingForm={setBookingForm}
           setShowBookingModal={setShowBookingModal}
           getProductBrand={getProductBrand}
+        />
+      )}
+
+      {/* 1B. TRANG GIỚI THIỆU & ĐỊA CHỈ CỬA HÀNG (/gioi-thieu) */}
+      {activeTab === 'about' && (
+        <AboutUsSection
+          isFullPage={true}
+          onTabChange={onTabChange}
+          onOpenBooking={() => setShowBookingModal(true)}
+          onCopyText={handleCopyText}
         />
       )}
 
@@ -3773,19 +3855,33 @@ export default function CustomerPortal({
           <div>
             <h4 style={{ fontSize: '1rem', fontWeight: 700, marginBottom: '0.85rem' }}>Khám Phá</h4>
             <nav aria-label="Liên kết nhanh cuối trang" style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem', fontSize: '0.85rem', color: 'var(--text-muted)' }}>
-              <a href="/khoa-sinh-san" style={{ cursor: 'pointer', color: '#ea580c', fontWeight: 700, textDecoration: 'none' }} onClick={(e) => { e.preventDefault(); onTabChange('reproduction'); }}>🏥 Khoa Sinh Sản (VPet's)</a>
-              <a href="/dich-vu-spa" style={{ cursor: 'pointer', color: 'inherit', textDecoration: 'none' }} onClick={(e) => { e.preventDefault(); onTabChange('booking'); }}>Dịch Vụ Spa</a>
-              <a href="/cua-hang" style={{ cursor: 'pointer', color: 'inherit', textDecoration: 'none' }} onClick={(e) => { e.preventDefault(); onTabChange('shop'); }}>Cửa Hàng Vật Phẩm</a>
-              <a href="/thu-cung" style={{ cursor: 'pointer', color: 'inherit', textDecoration: 'none' }} onClick={(e) => { e.preventDefault(); onTabChange('pets'); }}>Quản Lý Thú Cưng</a>
+              <a href="/ve-chung-toi" style={{ cursor: 'pointer', color: '#0f172a', fontWeight: 700, textDecoration: 'none' }} onClick={(e) => { e.preventDefault(); onTabChange('about'); window.scrollTo({ top: 0, behavior: 'smooth' }); }}>ℹ️ Về Chúng Tôi &amp; Địa Chỉ</a>
+              <a href="/khoa-sinh-san" style={{ cursor: 'pointer', color: '#ea580c', fontWeight: 700, textDecoration: 'none' }} onClick={(e) => { e.preventDefault(); onTabChange('reproduction'); window.scrollTo({ top: 0, behavior: 'smooth' }); }}>🏥 Khoa Sinh Sản (VPet's)</a>
+              <a href="/dich-vu-spa" style={{ cursor: 'pointer', color: 'inherit', textDecoration: 'none' }} onClick={(e) => { e.preventDefault(); onTabChange('booking'); window.scrollTo({ top: 0, behavior: 'smooth' }); }}>Dịch Vụ Spa 24/7</a>
+              <a href="/cua-hang" style={{ cursor: 'pointer', color: 'inherit', textDecoration: 'none' }} onClick={(e) => { e.preventDefault(); onTabChange('shop'); window.scrollTo({ top: 0, behavior: 'smooth' }); }}>Cửa Hàng Vật Phẩm</a>
+              <a href="/thu-cung" style={{ cursor: 'pointer', color: 'inherit', textDecoration: 'none' }} onClick={(e) => { e.preventDefault(); onTabChange('pets'); window.scrollTo({ top: 0, behavior: 'smooth' }); }}>Quản Lý Thú Cưng</a>
             </nav>
           </div>
           <div>
-            <h4 style={{ fontSize: '1rem', fontWeight: 700, marginBottom: '0.85rem' }}>Liên Hệ Trực Tuyến</h4>
-            <div style={{ fontSize: '0.85rem', color: 'var(--text-muted)', display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
+            <h4 style={{ fontSize: '1rem', fontWeight: 700, marginBottom: '0.85rem' }}>Địa Chỉ &amp; Liên Hệ 24/7</h4>
+            <div style={{ fontSize: '0.84rem', color: 'var(--text-muted)', display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
+              <a
+                href={CONTACT_INFO.googleMapsUrl}
+                target="_blank"
+                rel="noopener noreferrer"
+                style={{ color: '#0f172a', textDecoration: 'none', fontWeight: 700, display: 'flex', alignItems: 'flex-start', gap: '6px', lineHeight: 1.45 }}
+                title="Xem vị trí trên Google Maps"
+              >
+                <MapPin size={15} color="#ea580c" style={{ flexShrink: 0, marginTop: '2px' }} />
+                <span>{CONTACT_INFO.address}</span>
+              </a>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '0.8rem', color: '#059669', fontWeight: 700 }}>
+                <Clock size={14} /> {CONTACT_INFO.openHours}
+              </div>
               <a href={`tel:${CONTACT_INFO.phoneRaw}`} style={{ color: '#ea580c', textDecoration: 'none', fontWeight: 800, display: 'flex', alignItems: 'center', gap: '6px' }}>
                 <PhoneCall size={14} /> Hotline 24/7: {CONTACT_INFO.phoneDisplay}
               </a>
-              <div style={{ display: 'flex', gap: '8px', marginTop: '4px' }}>
+              <div style={{ display: 'flex', gap: '8px', marginTop: '4px', flexWrap: 'wrap' }}>
                 <a
                   href={CONTACT_INFO.zaloLink}
                   onClick={openZaloQrModal}
@@ -3824,7 +3920,7 @@ export default function CustomerPortal({
                   📘 Facebook
                 </a>
               </div>
-              <span style={{ fontSize: '0.78rem', color: '#64748b', marginTop: '2px' }}>Email: hello@petzera.vn</span>
+              <span style={{ fontSize: '0.78rem', color: '#64748b', marginTop: '2px' }}>Email: {CONTACT_INFO.email}</span>
             </div>
           </div>
           <div>
@@ -3958,15 +4054,35 @@ export default function CustomerPortal({
                 <div className="grid-2">
                   <div className="form-group">
                     <label style={{ fontWeight: 700, color: '#334155' }}>Ngày Hẹn *</label>
-                    <input type="date" className="form-control" value={bookingForm.appointmentDate} onChange={e => setBookingForm({ ...bookingForm, appointmentDate: e.target.value })} required />
+                    <input
+                      type="date"
+                      className="form-control"
+                      min={getLocalTodayStr()}
+                      value={bookingForm.appointmentDate}
+                      onChange={e => setBookingForm({ ...bookingForm, appointmentDate: e.target.value })}
+                      required
+                    />
                   </div>
                   <div className="form-group">
-                    <label style={{ fontWeight: 700, color: '#334155' }}>Khung Giờ (Lock Slot) *</label>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '4px' }}>
+                      <label style={{ fontWeight: 700, color: '#334155', marginBottom: 0 }}>Khung Giờ (Lock Slot) *</label>
+                      <span style={{ fontSize: '0.68rem', fontWeight: 800, color: '#059669', background: '#ecfdf5', padding: '1px 7px', borderRadius: '999px', border: '1px solid #a7f3d0' }}>
+                        ● Mở cửa 24/7
+                      </span>
+                    </div>
                     <select className="form-control" value={bookingForm.timeSlot} onChange={e => setBookingForm({ ...bookingForm, timeSlot: e.target.value })}>
-                      <option value="09:00 - 10:00">09:00 - 10:00 (Còn trống)</option>
-                      <option value="10:00 - 11:00">10:00 - 11:00 (Còn trống)</option>
-                      <option value="14:00 - 15:00">14:00 - 15:00 (Còn trống)</option>
-                      <option value="15:00 - 16:00">15:00 - 16:00 (Còn trống)</option>
+                      {BOOKING_TIME_SLOT_GROUPS.map((group) => (
+                        <optgroup key={group.label} label={group.label}>
+                          {group.hours.map((h) => {
+                            const slot = getSlotStatus(h, bookingForm.appointmentDate);
+                            return (
+                              <option key={slot.value} value={slot.value} disabled={slot.disabled}>
+                                {slot.value} ({slot.statusText})
+                              </option>
+                            );
+                          })}
+                        </optgroup>
+                      ))}
                     </select>
                   </div>
                 </div>

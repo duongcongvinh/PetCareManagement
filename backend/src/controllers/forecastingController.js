@@ -21,6 +21,42 @@ const triggerAIForecast = async (req, res) => {
   }
 };
 
+const seasonalForecast = async (req, res) => {
+  try {
+    const result = await forecastingService.runSeasonalForecast(req.body);
+    return res.json(result);
+  } catch (error) {
+    console.error('Seasonal AI proxy error:', error.message);
+    return res
+      .status(error.statusCode || 502)
+      .json({ message: error.message || 'Không thể kết nối AI Forecasting Engine.' });
+  }
+};
+
+const orderHistoryForecast = async (req, res) => {
+  try {
+    const result = await forecastingService.runOrderHistoryForecast(req.body);
+    return res.json(result);
+  } catch (error) {
+    console.error('Order history AI proxy error:', error.message);
+    return res
+      .status(error.statusCode || 502)
+      .json({ message: error.message || 'Không thể phân tích lịch sử đơn hàng từ AI Engine.' });
+  }
+};
+
+const inventoryRiskForecast = async (req, res) => {
+  try {
+    const result = await forecastingService.runInventoryRiskForecast(req.body);
+    return res.json(result);
+  } catch (error) {
+    console.error('Inventory risk AI proxy error:', error.message);
+    return res
+      .status(error.statusCode || 502)
+      .json({ message: error.message || 'Không thể tính toán rủi ro tồn kho từ AI Engine.' });
+  }
+};
+
 const updateProposalStatus = async (req, res) => {
   try {
     const { id } = req.params;
@@ -44,5 +80,8 @@ const updateProposalStatus = async (req, res) => {
 module.exports = {
   getProposals,
   triggerAIForecast,
+  seasonalForecast,
+  orderHistoryForecast,
+  inventoryRiskForecast,
   updateProposalStatus,
 };

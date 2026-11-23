@@ -1161,95 +1161,162 @@ export const FIVE_YEAR_HISTORICAL_DATA = [
   { year: 2026, month: 8, label: 'T8/2026', revenue: 180000000, productsSold: 790, seasonType: 'HOT_SUMMER', avgTempC: 35, rainfallMm: 255, seasonLabel: '☀️ Mùa Nắng Nóng' }
 ];
 
-// GENERATE 5-YEAR ORDER HISTORY (MOCK)
-export const FIVE_YEAR_ORDER_HISTORY = (() => {
+// GENERATE DETERMINISTIC 5-YEAR ORDER HISTORY ALIGNED WITH FIVE_YEAR_HISTORICAL_DATA (T1/2022 - T8/2026)
+const createSeededRng = (seed) => {
+  let state = seed >>> 0;
+  return () => {
+    state = (state + 0x6D2B79F5) >>> 0;
+    let t = Math.imul(state ^ (state >>> 15), 1 | state);
+    t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t;
+    return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
+  };
+};
+
+const _FIVE_YEAR_BUNDLE = (() => {
+  const rng = createSeededRng(20260825);
   const history = [];
-  const startYear = 2022;
-  const endYear = 2026; // 5 full years
+  const monthlySummary = [];
+  const productSales = [];
   let orderId = 1000;
 
-  const productIds = INITIAL_PRODUCTS.map(p => p.id);
   const supplierIds = INITIAL_SUPPLIERS.map(s => s.id);
+  const seasonBoostProductIds = {
+    HOT_SUMMER: new Set(['prod-3', 'prod-4', 'prod-26', 'prod-27']),
+    RAINY_SEASON: new Set(['prod-2', 'prod-5', 'prod-17', 'prod-25', 'prod-32']),
+    HOLIDAY_TET: new Set(['prod-1', 'prod-6', 'prod-20', 'prod-28', 'prod-30']),
+    SPRING: new Set(['prod-1', 'prod-2', 'prod-16'])
+  };
 
-  for (let year = startYear; year <= endYear; year++) {
-    for (let month = 1; month <= 12; month++) {
-      const isHighSeason = [1, 2, 6, 7, 12].includes(month); // Tết & Hè
+  for (const monthMeta of FIVE_YEAR_HISTORICAL_DATA) {
+    const { year, month, revenue: targetRevenue, seasonType } = monthMeta;
+    const yearScale = Math.max(0.45, targetRevenue / 110000000);
+    const salesOrderCount = Math.max(70, Math.round((seasonType === 'HOLIDAY_TET' ? 148 : seasonType === 'HOT_SUMMER' ? 132 : 108) * yearScale));
+    const boostedIds = seasonBoostProductIds[seasonType] || new Set();
 
-      // Số lượng đơn bán hàng mỗi tháng (120 - 220 đơn) - ĐỒNG BỘ DOANH THU
-      const salesOrderCount = isHighSeason ? Math.floor(Math.random() * 50) + 180 : Math.floor(Math.random() * 50) + 120;
-      let monthlyRevenue = 0;
-      let monthlyProductsSold = 0;
+    let monthSalesRev = 0;
+    let monthImportCost = 0;
+    let monthProductsSold = 0;
+    const monthSkuQty = new Map();
+    const monthSkuRev = new Map();
+    const monthSkuName = new Map();
 
-      for (let i = 0; i < salesOrderCount; i++) {
-        const numItems = Math.floor(Math.random() * 3) + 1; // 1-3 items per sale
-        const items = [];
-        let totalAmount = 0;
+    // Phân bổ đơn bán hàng có trọng số mùa vụ & tăng trưởng theo năm
+    for (let i = 0; i < salesOrderCount; i++) {
+      const numItems = 1 + Math.floor(rng() * 3);
+      const items = [];
+      let totalAmount = 0;
 
-        for (let j = 0; j < numItems; j++) {
-          const prod = INITIAL_PRODUCTS[Math.floor(Math.random() * INITIAL_PRODUCTS.length)];
-          const qty = Math.floor(Math.random() * 3) + 1;
-          const price = prod.unitPrice;
-          items.push({
-            productId: prod.id,
-            productName: prod.name,
-            quantity: qty,
-            unitPrice: price,
-            total: qty * price
-          });
-          totalAmount += qty * price;
-          monthlyProductsSold += qty;
+      for (let j = 0; j < numItems; j++) {
+        // 40% ưu tiên nhóm sản phẩm đặc trưng của mùa để AI học đúng mùa vụ theo SKU
+        let prod;
+        if (rng() < 0.4 && boostedIds.size > 0) {
+          const candidates = INITIAL_PRODUCTS.filter(p => boostedIds.has(p.id));
+          prod = candidates.length > 0
+            ? candidates[Math.floor(rng() * candidates.length)]
+            : INITIAL_PRODUCTS[Math.floor(rng() * INITIAL_PRODUCTS.length)];
+        } else {
+          prod = INITIAL_PRODUCTS[Math.floor(rng() * INITIAL_PRODUCTS.length)];
         }
-        monthlyRevenue += totalAmount;
-
-        history.push({
-          id: `SAL-${year}-${String(month).padStart(2, '0')}-${orderId++}`,
-          type: 'SALES', // Bán hàng
-          date: `${year}-${String(month).padStart(2, '0')}-${String(Math.floor(Math.random() * 28) + 1).padStart(2, '0')}`,
-          customerId: 'Walk-in Customer',
-          items,
-          totalAmount,
-          status: 'COMPLETED'
+        const qty = 1 + Math.floor(rng() * (yearScale > 1.3 ? 3 : 2));
+        const price = prod.unitPrice;
+        const lineTotal = qty * price;
+        items.push({
+          productId: prod.id,
+          productName: prod.name,
+          quantity: qty,
+          unitPrice: price,
+          total: lineTotal
         });
+        totalAmount += lineTotal;
+        monthProductsSold += qty;
+        monthSkuQty.set(prod.id, (monthSkuQty.get(prod.id) || 0) + qty);
+        monthSkuRev.set(prod.id, (monthSkuRev.get(prod.id) || 0) + lineTotal);
+        monthSkuName.set(prod.id, prod.name);
       }
 
-      // Nhập hàng dựa trên khối lượng bán ra (để duy trì tỷ lệ COGS ~45-55%)
-      // Ta cần nhập số lượng hàng ~ bằng số hàng bán ra + một chút tồn kho
-      const importOrderCount = isHighSeason ? Math.floor(Math.random() * 3) + 4 : Math.floor(Math.random() * 2) + 2;
-      let remainingQtyToImport = Math.floor(monthlyProductsSold * (Math.random() * 0.2 + 0.9)); // Nhập 90-110% lượng bán ra
+      monthSalesRev += totalAmount;
+      const day = 1 + Math.floor(rng() * 28);
+      history.push({
+        id: `SAL-${year}-${String(month).padStart(2, '0')}-${orderId++}`,
+        type: 'SALES',
+        date: `${year}-${String(month).padStart(2, '0')}-${String(day).padStart(2, '0')}`,
+        customerId: 'Walk-in Customer',
+        items,
+        totalAmount,
+        status: 'COMPLETED'
+      });
+    }
 
-      for (let i = 0; i < importOrderCount; i++) {
-        const numItems = Math.floor(Math.random() * 5) + 4; // 4-8 items per import
-        const items = [];
-        let totalAmount = 0;
+    // Nhập hàng đồng bộ theo lượng bán thực tế trong tháng (COGS ~60-64% -> biên gộp ~36-40%)
+    const importOrderCount = seasonType === 'HOLIDAY_TET' || seasonType === 'HOT_SUMMER' ? 4 : 3;
+    const skuEntries = Array.from(monthSkuQty.entries());
+    for (let i = 0; i < importOrderCount; i++) {
+      const slice = skuEntries.filter((_, idx) => idx % importOrderCount === i);
+      const items = [];
+      let totalAmount = 0;
 
-        for (let j = 0; j < numItems; j++) {
-          const prod = INITIAL_PRODUCTS[Math.floor(Math.random() * INITIAL_PRODUCTS.length)];
-          // Chia nhỏ lượng cần nhập
-          const qty = Math.max(10, Math.floor(remainingQtyToImport / (importOrderCount * numItems)));
-          const price = prod.costPrice;
-          items.push({
-            productId: prod.id,
-            productName: prod.name,
-            quantity: qty,
-            unitPrice: price,
-            total: qty * price
-          });
-          totalAmount += qty * price;
-        }
+      for (const [pid, soldQty] of slice) {
+        const prod = INITIAL_PRODUCTS.find(p => p.id === pid);
+        if (!prod) continue;
+        const importQty = Math.max(5, Math.round(soldQty * (0.92 + rng() * 0.12)));
+        const cost = prod.costPrice || Math.round(prod.unitPrice * 0.62);
+        const lineTotal = importQty * cost;
+        items.push({
+          productId: prod.id,
+          productName: prod.name,
+          quantity: importQty,
+          unitPrice: cost,
+          total: lineTotal
+        });
+        totalAmount += lineTotal;
+      }
 
+      if (items.length > 0) {
+        monthImportCost += totalAmount;
+        const day = Math.min(28, 3 + i * 7);
         history.push({
           id: `IMP-${year}-${String(month).padStart(2, '0')}-${orderId++}`,
-          type: 'IMPORT', // Nhập hàng
-          date: `${year}-${String(month).padStart(2, '0')}-${String(Math.floor(Math.random() * 28) + 1).padStart(2, '0')}`,
-          supplierId: supplierIds[Math.floor(Math.random() * supplierIds.length)],
+          type: 'IMPORT',
+          date: `${year}-${String(month).padStart(2, '0')}-${String(day).padStart(2, '0')}`,
+          supplierId: supplierIds[i % supplierIds.length],
           items,
           totalAmount,
           status: 'COMPLETED'
         });
       }
     }
+
+    monthlySummary.push({
+      year,
+      month,
+      salesRevenue: monthSalesRev,
+      importCost: monthImportCost,
+      salesOrderCount,
+      importOrderCount,
+      productsSold: monthProductsSold
+    });
+
+    for (const [pid, qty] of monthSkuQty.entries()) {
+      productSales.push({
+        productId: pid,
+        productName: monthSkuName.get(pid) || pid,
+        year,
+        month,
+        quantity: qty,
+        revenue: monthSkuRev.get(pid) || 0
+      });
+    }
   }
 
-  // Sắp xếp theo ngày
-  return history.sort((a, b) => new Date(a.date) - new Date(b.date));
+  return {
+    history,
+    summary: {
+      totalOrdersCount: history.length,
+      monthlySummary,
+      productSales
+    }
+  };
 })();
+
+export const FIVE_YEAR_ORDER_HISTORY = _FIVE_YEAR_BUNDLE.history;
+export const FIVE_YEAR_ORDER_SUMMARY = _FIVE_YEAR_BUNDLE.summary;

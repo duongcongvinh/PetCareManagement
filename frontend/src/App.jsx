@@ -129,7 +129,7 @@ export default function App() {
     ADMIN: ['overview', 'accounts-admin', 'roles-admin', 'approve-proposals', 'suppliers-admin', 'system-settings'],
     CARE_STAFF: ['queue', 'services', 'promotions', 'pets-logs', 'reports', 'warehouse-view'],
     WAREHOUSE_STAFF: ['inventory', 'demand-forecast', 'reorder-proposals'],
-    CUSTOMER: ['home', 'booking', 'service-detail', 'shop', 'product-detail', 'cart', 'checkout', 'pets', 'history', 'profile', 'reproduction'],
+    CUSTOMER: ['home', 'about', 'booking', 'service-detail', 'shop', 'product-detail', 'cart', 'checkout', 'pets', 'history', 'profile', 'reproduction'],
   };
 
   const getDefaultTabForRole = (role) => {
@@ -1303,7 +1303,9 @@ export default function App() {
                 <WarehouseDashboard 
                   activeTab={activeTab}
                   onTabChange={setActiveTab}
+                  authToken={authToken}
                   products={products}
+                  orders={orders}
                   reorderProposals={reorderProposals}
                   suppliers={suppliers}
                   onAddSupplier={handleAddSupplier}

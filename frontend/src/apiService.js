@@ -235,22 +235,43 @@ export const apiService = {
     return res.json();
   },
 
-  triggerSeasonalForecast: async (historicalMonths) => {
-    const res = await fetch('http://localhost:8000/api/forecast/multi-year-seasonal', {
+  triggerSeasonalForecast: async (historicalMonths, options = {}, token = null) => {
+    const res = await fetch(`${API_BASE_URL}/forecasting/seasonal`, {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ historical_months: historicalMonths, target_months_ahead: 6 })
+      headers: getHeaders(token),
+      body: JSON.stringify({
+        historical_months: historicalMonths,
+        target_months_ahead: options.targetMonthsAhead || 6,
+        temp_delta_c: options.tempDeltaC || 0,
+        rainfall_pct_change: options.rainfallPctChange || 0,
+        promo_boost_pct: options.promoBoostPct || 0
+      })
     });
-    return res.json();
+    const data = await res.json();
+    return { ...data, _ok: res.ok };
   },
 
-  triggerOrderHistoryForecast: async (orderHistory) => {
-    const res = await fetch('http://localhost:8000/api/forecast/order-history-predict', {
+  triggerOrderHistoryForecast: async (payload, token = null) => {
+    const body = Array.isArray(payload)
+      ? { order_history: payload, target_months_ahead: 3 }
+      : { target_months_ahead: 3, ...payload };
+    const res = await fetch(`${API_BASE_URL}/forecasting/order-history`, {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ order_history: orderHistory, target_months_ahead: 3 })
+      headers: getHeaders(token),
+      body: JSON.stringify(body)
     });
-    return res.json();
+    const data = await res.json();
+    return { ...data, _ok: res.ok };
+  },
+
+  predictInventoryRisk: async (products, token = null, includeAll = true) => {
+    const res = await fetch(`${API_BASE_URL}/forecasting/inventory-risk`, {
+      method: 'POST',
+      headers: getHeaders(token),
+      body: JSON.stringify({ products, include_all: includeAll })
+    });
+    const data = await res.json();
+    return { data, _ok: res.ok };
   },
 
   // Cross-Browser Live Sync Engine APIs

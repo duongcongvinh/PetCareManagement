@@ -1,31 +1,18 @@
 import React, { useState } from 'react';
 import {
   Package, AlertTriangle, Plus, Brain, CheckCircle, Building2, Phone, Mail, MapPin,
-  Search, Sparkles, Sun, CloudRain, Gift, CloudSun, Check, X, ArrowRight, FileText, Clock
+  Search, X, FileText, Clock
 } from 'lucide-react';
-import {
-  INITIAL_SUPPLIERS,
-  FIVE_YEAR_HISTORICAL_DATA,
-  PRODUCT_SEASONAL_FORECASTS,
-  FIVE_YEAR_ORDER_HISTORY
-} from '../mockData';
-import { apiService } from '../apiService';
+import { INITIAL_SUPPLIERS } from '../mockData';
 import { getProductImage, FALLBACK_IMAGES } from '../mediaAssets';
-import { toast } from './ToastNotification';
-
-const DEFAULT_ML_FORECASTS = [
-  { year: 2026, month: 9, predicted_revenue: 195000000, predicted_spa_demand: 520, predicted_product_demand: 830, season_type: 'RAINY_SEASON', weather_factor_notes: 'Mùa Mưa (>300mm): Dự báo nhu cầu Tiêm phòng, Khám da liễu & Cát Tofu tăng +35%.' },
-  { year: 2026, month: 10, predicted_revenue: 188000000, predicted_spa_demand: 500, predicted_product_demand: 810, season_type: 'RAINY_SEASON', weather_factor_notes: 'Mùa Mưa (>300mm): Dự báo nhu cầu thuốc trị ve rận & sữa tắm kháng nấm tăng +35%.' },
-  { year: 2026, month: 11, predicted_revenue: 182000000, predicted_spa_demand: 485, predicted_product_demand: 790, season_type: 'RAINY_SEASON', weather_factor_notes: 'Mùa Mưa: Tiêu thụ Cát đậu nành Tofu hút ẩm dự báo tăng +40%.' },
-  { year: 2026, month: 12, predicted_revenue: 260000000, predicted_spa_demand: 720, predicted_product_demand: 1150, season_type: 'HOLIDAY_TET', weather_factor_notes: 'Dịp Lễ Tết: Nhu cầu lưu trú, hạt Royal Canin & nệm ấm tăng vọt +80%.' },
-  { year: 2027, month: 1, predicted_revenue: 285000000, predicted_spa_demand: 790, predicted_product_demand: 1260, season_type: 'HOLIDAY_TET', weather_factor_notes: 'Đỉnh doanh thu năm: Cần tích trữ trước thức ăn hạt & phụ kiện từ đầu tháng 12.' },
-  { year: 2027, month: 2, predicted_revenue: 240000000, predicted_spa_demand: 660, predicted_product_demand: 1050, season_type: 'HOLIDAY_TET', weather_factor_notes: 'Đầu Xuân: Nhu cầu mỹ phẩm Spa, bánh thưởng và thức ăn dinh dưỡng tăng +65%.' }
-];
+import DemandForecastPanel from './DemandForecastPanel';
 
 export default function WarehouseDashboard({
   activeTab = 'inventory',
   onTabChange,
+  authToken = null,
   products = [],
+  orders = [],
   reorderProposals = [],
   suppliers = INITIAL_SUPPLIERS,
   onUpdateStock,
@@ -84,14 +71,6 @@ export default function WarehouseDashboard({
     reason: 'Chủ động bổ sung tồn kho trước đợt cao điểm.'
   });
 
-  // AI Demand Forecasting state
-  const [selectedYearFilter, setSelectedYearFilter] = useState('ALL');
-  const [selectedSeasonFilter, setSelectedSeasonFilter] = useState('ALL');
-  const [seasonalAIResult, setSeasonalAIResult] = useState(null);
-  const [isProcessingSeasonalAI, setIsProcessingSeasonalAI] = useState(false);
-  const [orderHistoryForecast, setOrderHistoryForecast] = useState(null);
-  const [isProcessingOrderHistory, setIsProcessingOrderHistory] = useState(false);
-
   const validTabs = ['inventory', 'demand-forecast', 'reorder-proposals'];
   const currentTab = validTabs.includes(activeTab) ? activeTab : 'inventory';
 
@@ -107,8 +86,6 @@ export default function WarehouseDashboard({
     const matchFilter = stockFilter === 'ALL' ? true : stockFilter === 'LOW' ? p.currentStock <= p.minStockLevel : p.category === stockFilter;
     return matchQ && matchFilter;
   });
-
-  const displayForecasts = seasonalAIResult ? seasonalAIResult.seasonal_forecasts : DEFAULT_ML_FORECASTS;
 
   // Handlers
   const handleStockSubmit = (e) => {
@@ -174,89 +151,6 @@ export default function WarehouseDashboard({
       });
     }
     setShowManualProposalModal(false);
-  };
-
-  const handleCreateProposalFromForecast = (pf) => {
-    const matched = products.find(p => p.id === pf.productId || p.sku === pf.sku);
-    if (onCreateProposal) {
-      onCreateProposal({
-        productId: matched?.id || pf.productId,
-        productName: pf.productName,
-        sku: pf.sku,
-        currentStock: matched?.currentStock ?? 10,
-        minStockLevel: matched?.minStockLevel ?? 15,
-        suggestedQuantity: pf.suggestedReorderQty,
-        suggestedSupplier: pf.suggestedSupplier,
-        suggestedOrderDate: pf.suggestedOrderDate,
-        reason: `[AI Dự báo mùa vụ - ${pf.peakSeasonLabel}]: ${pf.aiAdviceForOwner}`
-      });
-    }
-    if (onTabChange) onTabChange('reorder-proposals');
-  };
-
-  const handleRunOrderHistoryAI = async () => {
-    setIsProcessingOrderHistory(true);
-    try {
-      const res = await apiService.triggerOrderHistoryForecast(FIVE_YEAR_ORDER_HISTORY);
-      if (res && res.status === 'success') {
-        setOrderHistoryForecast(res);
-        toast.success(`AI đã phân tích xong ${res.totalOrdersAnalyzed} đơn hàng 5 năm!`, 'Dự Báo Nhu Cầu AI');
-        setIsProcessingOrderHistory(false);
-        return;
-      }
-    } catch (err) {
-      console.warn('AI service fallback computation:', err);
-    }
-
-    // Client-side accurate computation fallback if FastAPI container is offline
-    const salesOrders = FIVE_YEAR_ORDER_HISTORY.filter(o => o.type === 'SALES');
-    const importOrders = FIVE_YEAR_ORDER_HISTORY.filter(o => o.type === 'IMPORT');
-    const totalRevenue = salesOrders.reduce((s, o) => s + o.totalAmount, 0);
-    const totalImportCost = importOrders.reduce((s, o) => s + o.totalAmount, 0);
-    const avgMonthlyRev = Math.round(totalRevenue / 60);
-
-    setOrderHistoryForecast({
-      status: 'success',
-      totalOrdersAnalyzed: FIVE_YEAR_ORDER_HISTORY.length,
-      totalRevenue,
-      totalImportCost,
-      predictedRevenueNextMonth: Math.round(avgMonthlyRev * 1.18),
-      strategicAdvice: [
-        'Nhu cầu nhóm Thức ăn hạt & Cát vệ sinh tăng trung bình +28% vào các tháng cao điểm.',
-        'Đề xuất đặt hàng trước 10–15 ngày với các sản phẩm có Lead-time > 3 ngày để tránh đứt hàng.',
-        'Ưu tiên tối ưu lượng nhập cho nhóm sản phẩm tồn kho chạm ngưỡng an toàn (minStock).'
-      ],
-      recommendations: PRODUCT_SEASONAL_FORECASTS.slice(0, 4).map(pf => ({
-        productName: pf.productName,
-        historicalAvgMonthly: parseInt(pf.historicalAvgSales5Year, 10) || 120,
-        predictedNextMonthDemand: parseInt(pf.predictedMonthlyDemand, 10) || 180,
-        suggestedImportQty: pf.suggestedReorderQty,
-        reason: pf.aiAdviceForOwner
-      }))
-    });
-    toast.success(`Đã hoàn tất phân tích ${FIVE_YEAR_ORDER_HISTORY.length} giao dịch 5 năm!`, 'Dự Báo Nhu Cầu AI');
-    setIsProcessingOrderHistory(false);
-  };
-
-  const handleRunSeasonalAI = async () => {
-    setIsProcessingSeasonalAI(true);
-    try {
-      const res = await apiService.triggerSeasonalForecast(FIVE_YEAR_HISTORICAL_DATA);
-      if (res && res.seasonal_forecasts) {
-        setSeasonalAIResult(res);
-        toast.success('Đã cập nhật dự báo 6 tháng tới từ Scikit-Learn ML!', 'Mô Hình ML');
-        setIsProcessingSeasonalAI(false);
-        return;
-      }
-    } catch (err) {
-      console.warn('Seasonal AI fallback:', err);
-    }
-    setSeasonalAIResult({
-      summary: 'Dự báo 6 tháng tới từ mô hình RandomForest huấn luyện trên 60 tháng lịch sử kết hợp nhiệt độ & lượng mưa.',
-      seasonal_forecasts: DEFAULT_ML_FORECASTS
-    });
-    toast.success('Đã hoàn tất chạy mô hình dự báo mùa vụ 6 tháng tới!', 'Dự Báo Nhu Cầu AI');
-    setIsProcessingSeasonalAI(false);
   };
 
   return (
@@ -541,213 +435,14 @@ export default function WarehouseDashboard({
 
         {/* ==================== 2. DỰ BÁO NHU CẦU (AI FORECASTING) ==================== */}
         {currentTab === 'demand-forecast' && (
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '1rem' }}>
-              <div>
-                <h2 style={{ fontSize: '1.45rem', fontWeight: 800, color: '#0f172a', display: 'flex', alignItems: 'center', gap: '8px' }}>
-                  <Brain size={23} color="#059669" /> Dự Báo Nhu Cầu Thông Minh (AI Demand Forecasting)
-                </h2>
-                <p style={{ fontSize: '0.85rem', color: 'var(--text-muted)' }}>
-                  Phân tích chuỗi thời gian 5 năm ({FIVE_YEAR_ORDER_HISTORY.length} giao dịch) kết hợp mùa vụ & thời tiết để dự báo lượng tiêu thụ
-                </p>
-              </div>
-              <div style={{ display: 'flex', gap: '0.65rem', flexWrap: 'wrap' }}>
-                <button type="button" className="btn btn-emerald" onClick={handleRunOrderHistoryAI} disabled={isProcessingOrderHistory}>
-                  <Sparkles size={16} /> {isProcessingOrderHistory ? 'Đang phân tích...' : 'Phân Tích 5 Năm Đơn Hàng'}
-                </button>
-                <button type="button" className="btn btn-primary" onClick={handleRunSeasonalAI} disabled={isProcessingSeasonalAI}>
-                  <Brain size={16} /> {isProcessingSeasonalAI ? 'Đang chạy ML...' : 'Chạy Dự Báo ML 6 Tháng'}
-                </button>
-              </div>
-            </div>
-
-            {/* RESULT OF 5-YEAR ORDER HISTORY AI */}
-            {orderHistoryForecast && (
-              <div className="glass-panel animate-fade-in" style={{ padding: '1.5rem', border: '1.5px solid #a7f3d0', background: 'linear-gradient(135deg, #ffffff 0%, #ecfdf5 100%)' }}>
-                <h3 style={{ fontSize: '1.15rem', fontWeight: 800, color: '#047857', marginBottom: '1rem' }}>
-                  Kết Quả Phân Tích {orderHistoryForecast.totalOrdersAnalyzed} Giao Dịch Lịch Sử
-                </h3>
-                <div className="grid-3" style={{ marginBottom: '1.25rem' }}>
-                  <div style={{ background: '#ffffff', padding: '1rem', borderRadius: '12px', border: '1px solid #d1fae5' }}>
-                    <div style={{ fontSize: '0.78rem', color: '#64748b' }}>Tổng Doanh Thu 5 Năm</div>
-                    <strong style={{ fontSize: '1.4rem', color: '#0284c7' }}>{orderHistoryForecast.totalRevenue.toLocaleString('vi-VN')} đ</strong>
-                  </div>
-                  <div style={{ background: '#ffffff', padding: '1rem', borderRadius: '12px', border: '1px solid #d1fae5' }}>
-                    <div style={{ fontSize: '0.78rem', color: '#64748b' }}>Tổng Chi Phí Nhập Hàng</div>
-                    <strong style={{ fontSize: '1.4rem', color: '#dc2626' }}>{orderHistoryForecast.totalImportCost.toLocaleString('vi-VN')} đ</strong>
-                  </div>
-                  <div style={{ background: '#ffffff', padding: '1rem', borderRadius: '12px', border: '1px solid #6ee7b7' }}>
-                    <div style={{ fontSize: '0.78rem', color: '#047857', fontWeight: 700 }}>Dự Báo Doanh Thu Tháng Tới</div>
-                    <strong style={{ fontSize: '1.4rem', color: '#059669' }}>{orderHistoryForecast.predictedRevenueNextMonth.toLocaleString('vi-VN')} đ</strong>
-                  </div>
-                </div>
-                <div style={{ background: '#fffbeb', border: '1px solid #fde68a', borderRadius: '12px', padding: '1rem' }}>
-                  <div style={{ fontWeight: 800, color: '#b45309', fontSize: '0.88rem', marginBottom: '6px' }}>Khuyến Nghị Chiến Lược Kho:</div>
-                  <ul style={{ paddingLeft: '1.2rem', color: '#78350f', fontSize: '0.84rem', display: 'flex', flexDirection: 'column', gap: '4px' }}>
-                    {orderHistoryForecast.strategicAdvice.map((adv, i) => <li key={i}>{adv}</li>)}
-                  </ul>
-                </div>
-              </div>
-            )}
-
-            {/* 5-YEAR SEASONAL BAR CHART (CLEAN LIGHT THEME) */}
-            <div className="glass-panel" style={{ padding: '1.5rem' }}>
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem', flexWrap: 'wrap', gap: '0.75rem' }}>
-                <div>
-                  <h3 style={{ fontSize: '1.15rem', fontWeight: 800, color: '#0f172a', display: 'flex', alignItems: 'center', gap: '8px' }}>
-                    <CloudSun size={20} color="#ea580c" /> Biểu Đồ Xu Hướng Nhu Cầu Theo Mùa Vụ (2022 - 2026)
-                  </h3>
-                  <p style={{ fontSize: '0.8rem', color: 'var(--text-muted)' }}>
-                    Dữ liệu 60 tháng lịch sử kết hợp yếu tố thời tiết (☀️ Nắng Nóng • 🌧️ Mùa Mưa • 🧧 Lễ Tết)
-                  </p>
-                </div>
-                <div style={{ display: 'flex', gap: '0.4rem', flexWrap: 'wrap' }}>
-                  {['ALL', '2022', '2023', '2024', '2025', '2026'].map(y => (
-                    <button
-                      key={y}
-                      type="button"
-                      onClick={() => setSelectedYearFilter(y)}
-                      style={{
-                        padding: '0.32rem 0.7rem',
-                        borderRadius: '10px',
-                        fontSize: '0.76rem',
-                        fontWeight: 700,
-                        border: selectedYearFilter === y ? '1.5px solid #0284c7' : '1px solid #cbd5e1',
-                        background: selectedYearFilter === y ? '#e0f2fe' : '#ffffff',
-                        color: selectedYearFilter === y ? '#0369a1' : '#475569',
-                        cursor: 'pointer'
-                      }}
-                    >
-                      {y === 'ALL' ? '24 tháng gần nhất' : y}
-                    </button>
-                  ))}
-                </div>
-              </div>
-
-              <div style={{ background: '#f8fafc', padding: '1.15rem', borderRadius: '14px', border: '1px solid #e2e8f0' }}>
-                <div style={{ height: 195, display: 'flex', alignItems: 'flex-end', gap: '6px', overflowX: 'auto', paddingBottom: '4px' }}>
-                  {FIVE_YEAR_HISTORICAL_DATA
-                    .filter(d => selectedYearFilter === 'ALL' || d.year.toString() === selectedYearFilter)
-                    .slice(-24)
-                    .map((d, idx) => {
-                      const heightPercent = Math.min(100, Math.max(18, (d.revenue / 200000000) * 100));
-                      const barBg = d.seasonType === 'HOT_SUMMER'
-                        ? 'linear-gradient(180deg, #ff6b35 0%, #fb923c 100%)'
-                        : d.seasonType === 'RAINY_SEASON'
-                          ? 'linear-gradient(180deg, #0284c7 0%, #38bdf8 100%)'
-                          : 'linear-gradient(180deg, #f59e0b 0%, #fbbf24 100%)';
-                      return (
-                        <div
-                          key={idx}
-                          title={`${d.label}: ${d.revenue.toLocaleString('vi-VN')}đ | ${d.productsSold} sp | ${d.avgTempC}°C`}
-                          style={{ flex: 1, minWidth: 28, display: 'flex', flexDirection: 'column', alignItems: 'center', height: '100%', justifyContent: 'flex-end' }}
-                        >
-                          <div style={{ width: '80%', height: `${heightPercent}%`, background: barBg, borderRadius: '5px 5px 0 0' }} />
-                          <span style={{ fontSize: '0.64rem', color: '#64748b', marginTop: '5px', whiteSpace: 'nowrap', fontWeight: 600 }}>{d.label}</span>
-                        </div>
-                      );
-                    })}
-                </div>
-              </div>
-            </div>
-
-            {/* 6-MONTH ML PREDICTION CARDS */}
-            <div className="glass-panel" style={{ padding: '1.5rem' }}>
-              <h3 style={{ fontSize: '1.15rem', fontWeight: 800, color: '#0f172a', marginBottom: '0.35rem', display: 'flex', alignItems: 'center', gap: '8px' }}>
-                <Sparkles size={19} color="#0284c7" /> Dự Báo Nhu Cầu 6 Tháng Tới (Scikit-Learn RandomForest)
-              </h3>
-              <p style={{ fontSize: '0.82rem', color: 'var(--text-muted)', marginBottom: '1.15rem' }}>
-                {seasonalAIResult ? seasonalAIResult.summary : 'Dự báo doanh thu, lượng ca Spa và số lượng sản phẩm tiêu thụ từng tháng'}
-              </p>
-
-              <div className="grid-3">
-                {displayForecasts.map((f, idx) => {
-                  const isSummer = f.season_type === 'HOT_SUMMER';
-                  const isRainy = f.season_type === 'RAINY_SEASON';
-                  const accent = isSummer ? '#ea580c' : isRainy ? '#0284c7' : '#d97706';
-                  return (
-                    <div key={idx} className="glass-card" style={{ borderTop: `4px solid ${accent}`, padding: '1.15rem' }}>
-                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.85rem' }}>
-                        <strong style={{ fontSize: '1.05rem', color: '#0f172a' }}>Tháng {f.month}/{f.year}</strong>
-                        <span className={`badge ${isSummer ? 'badge-coral' : isRainy ? 'badge-info' : 'badge-pending'}`}>
-                          {isSummer ? <><Sun size={12} /> Nắng Nóng</> : isRainy ? <><CloudRain size={12} /> Mùa Mưa</> : <><Gift size={12} /> Lễ Tết</>}
-                        </span>
-                      </div>
-                      <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.84rem', marginBottom: '6px' }}>
-                        <span style={{ color: '#64748b' }}>Doanh thu dự báo:</span>
-                        <strong style={{ color: '#059669' }}>{f.predicted_revenue.toLocaleString('vi-VN')} đ</strong>
-                      </div>
-                      <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.84rem', marginBottom: '10px' }}>
-                        <span style={{ color: '#64748b' }}>Sản phẩm tiêu thụ:</span>
-                        <strong style={{ color: '#0284c7' }}>{f.predicted_product_demand} sp</strong>
-                      </div>
-                      <div style={{ background: '#f8fafc', padding: '0.65rem', borderRadius: '10px', fontSize: '0.78rem', color: '#475569', border: '1px solid #e2e8f0' }}>
-                        {f.weather_factor_notes}
-                      </div>
-                    </div>
-                  );
-                })}
-              </div>
-            </div>
-
-            {/* PRODUCT-LEVEL SEASONAL FORECAST + 1-CLICK CREATE PROPOSAL */}
-            <div className="glass-panel" style={{ padding: '1.5rem' }}>
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem', flexWrap: 'wrap', gap: '0.75rem' }}>
-                <div>
-                  <h3 style={{ fontSize: '1.15rem', fontWeight: 800, color: '#0f172a' }}>
-                    Dự Báo Nhu Cầu Chi Tiết Từng Mặt Hàng Mùa Cao Điểm
-                  </h3>
-                  <p style={{ fontSize: '0.82rem', color: 'var(--text-muted)' }}>
-                    Chuyển trực tiếp kết quả dự báo thành phiếu đề xuất nhập hàng chỉ với 1 bấm
-                  </p>
-                </div>
-                <select
-                  className="form-control"
-                  value={selectedSeasonFilter}
-                  onChange={e => setSelectedSeasonFilter(e.target.value)}
-                  style={{ width: 'auto', padding: '0.45rem 0.9rem', fontSize: '0.82rem' }}
-                >
-                  <option value="ALL">Tất cả các mùa</option>
-                  <option value="HOT_SUMMER">☀️ Mùa Nắng Nóng (T4 - T8)</option>
-                  <option value="RAINY_SEASON">🌧️ Mùa Mưa (T9 - T11)</option>
-                  <option value="HOLIDAY_TET">🧧 Mùa Lễ Tết (T12 - T2)</option>
-                </select>
-              </div>
-
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '0.85rem' }}>
-                {PRODUCT_SEASONAL_FORECASTS
-                  .filter(pf => selectedSeasonFilter === 'ALL' || pf.peakSeasonType === selectedSeasonFilter)
-                  .map((pf, idx) => (
-                    <div key={idx} className="glass-card" style={{ padding: '1.1rem', display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '1rem' }}>
-                      <div style={{ flex: 1, minWidth: 260 }}>
-                        <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap', marginBottom: '4px' }}>
-                          <strong style={{ fontSize: '1rem', color: '#0f172a' }}>{pf.productName}</strong>
-                          <span className="badge badge-coral">{pf.peakSeasonLabel}</span>
-                        </div>
-                        <div style={{ fontSize: '0.78rem', color: '#64748b', marginBottom: '6px' }}>
-                          SKU: <strong>{pf.sku}</strong> • TB 5 năm: <strong>{pf.historicalAvgSales5Year}</strong> • Dự báo cao điểm: <strong style={{ color: '#059669' }}>{pf.predictedMonthlyDemand}</strong>
-                        </div>
-                        <div style={{ fontSize: '0.8rem', color: '#475569' }}>{pf.aiAdviceForOwner}</div>
-                      </div>
-                      <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
-                        <div style={{ textAlign: 'right' }}>
-                          <div style={{ fontSize: '0.72rem', color: '#64748b' }}>AI Gợi ý nhập</div>
-                          <strong style={{ fontSize: '1.25rem', color: '#ea580c' }}>+{pf.suggestedReorderQty} sp</strong>
-                        </div>
-                        <button
-                          type="button"
-                          className="btn btn-coral"
-                          style={{ padding: '0.5rem 0.95rem', fontSize: '0.8rem', whiteSpace: 'nowrap' }}
-                          onClick={() => handleCreateProposalFromForecast(pf)}
-                        >
-                          Lập Đề Xuất <ArrowRight size={14} />
-                        </button>
-                      </div>
-                    </div>
-                  ))}
-              </div>
-            </div>
-          </div>
+          <DemandForecastPanel
+            authToken={authToken}
+            products={products}
+            orders={orders}
+            reorderProposals={reorderProposals}
+            onCreateProposal={onCreateProposal}
+            onTabChange={onTabChange}
+          />
         )}
 
         {/* ==================== 3. LẬP ĐỀ XUẤT NHẬP HÀNG ==================== */}

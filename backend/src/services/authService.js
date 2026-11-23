@@ -41,13 +41,28 @@ const parseAccountIdentifier = (rawInput) => {
   return { type: 'invalid', value: raw };
 };
 
-const registerUser = async ({ identifier, email, password, fullName, phone, role }) => {
+const validateStrongPassword = (password) => {
+  const pwd = String(password || '');
+  if (pwd.length < 8) {
+    throw new Error('Mật khẩu đăng ký phải có ít nhất 8 ký tự.');
+  }
+  if (!/[A-Z]/.test(pwd) || !/[a-z]/.test(pwd) || !/[0-9]/.test(pwd)) {
+    throw new Error('Mật khẩu phải có ít nhất 1 chữ hoa, 1 chữ thường và 1 chữ số.');
+  }
+  if (!/[^A-Za-z0-9\s]/.test(pwd)) {
+    throw new Error('Mật khẩu phải có ít nhất 1 ký tự đặc biệt (!@#$%...).');
+  }
+};
+
+const registerUser = async ({ identifier, email, password, fullName, phone, role, requireStrongPassword = false }) => {
   const parsed = parseAccountIdentifier(identifier || email || phone);
   if (parsed.type === 'invalid') {
     throw new Error('Vui lòng nhập đúng định dạng Email hoặc Số điện thoại (VD: 0901234567).');
   }
 
-  if (!password || String(password).length < 8) {
+  if (requireStrongPassword) {
+    validateStrongPassword(password);
+  } else if (!password || String(password).length < 8) {
     throw new Error('Mật khẩu đăng ký phải có ít nhất 8 ký tự.');
   }
 
@@ -250,6 +265,7 @@ const deleteUserById = async (userId) => {
 
 module.exports = {
   validatePortalAccess,
+  validateStrongPassword,
   registerUser,
   loginUser,
   getUserProfile,

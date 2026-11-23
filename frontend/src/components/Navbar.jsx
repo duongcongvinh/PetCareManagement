@@ -1,5 +1,5 @@
 import React from 'react';
-import { User, LogOut, Shield, ShoppingBag, PhoneCall, Home, Calendar, Heart, Clock, UserCheck, Activity } from 'lucide-react';
+import { User, LogOut, Shield, ShoppingBag, PhoneCall, Home, Calendar, Heart, Clock, UserCheck, Activity, Info } from 'lucide-react';
 import { CONTACT_INFO } from '../contactConfig';
 import BrandLogo from './BrandLogo';
 
@@ -85,11 +85,12 @@ export default function Navbar({
           <nav className="customer-nav-tabs" aria-label="Điều hướng chính">
             {[
               { id: 'home', path: '/', label: 'Trang Chủ', icon: Home },
+              { id: 'about', path: '/ve-chung-toi', label: 'Về Chúng Tôi', icon: Info },
               { id: 'reproduction', path: '/khoa-sinh-san', label: 'Khoa Sinh Sản', icon: Activity, isSpecial: true },
               { id: 'booking', path: '/dich-vu-spa', label: 'Dịch Vụ Spa', icon: Calendar },
               { id: 'shop', path: '/cua-hang', label: 'Cửa Hàng', icon: ShoppingBag },
               { id: 'pets', path: '/thu-cung', label: 'Thú Cưng', icon: Heart },
-              { id: 'history', path: '/lich-hen', label: 'Tiến Độ & Lịch Hẹn', icon: Clock }
+              { id: 'history', path: '/lich-hen', label: 'Lịch Hẹn', icon: Clock }
             ].map(tab => {
               const IconComp = tab.icon;
               const isActive =
@@ -104,14 +105,15 @@ export default function Navbar({
                   onClick={(e) => {
                     e.preventDefault();
                     onTabChange(tab.id);
+                    window.scrollTo({ top: 0, behavior: 'smooth' });
                   }}
                   style={{
                     display: 'flex',
                     alignItems: 'center',
-                    gap: '6px',
-                    padding: '0.5rem 1rem',
+                    gap: '5px',
+                    padding: '0.48rem 0.85rem',
                     borderRadius: '20px',
-                    fontSize: '0.82rem',
+                    fontSize: '0.81rem',
                     fontWeight: 700,
                     border: 'none',
                     textDecoration: 'none',

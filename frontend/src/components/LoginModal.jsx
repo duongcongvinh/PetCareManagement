@@ -1,10 +1,24 @@
 import React, { useState } from 'react';
+import { Eye, EyeOff, Check, X } from 'lucide-react';
 import { apiService } from '../apiService';
 import { toast } from './ToastNotification';
 import BrandLogo from './BrandLogo';
 
 const EMAIL_REGEX = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 const PHONE_REGEX = /^(0|\+?84)[0-9]{8,10}$/;
+
+const evaluatePasswordRules = (pwd) => {
+  const value = String(pwd || '');
+  const hasMinLength = value.length >= 8;
+  const hasUpperLowerDigit = /[A-Z]/.test(value) && /[a-z]/.test(value) && /[0-9]/.test(value);
+  const hasSpecialChar = /[^A-Za-z0-9\s]/.test(value);
+  return {
+    hasMinLength,
+    hasUpperLowerDigit,
+    hasSpecialChar,
+    isStrong: hasMinLength && hasUpperLowerDigit && hasSpecialChar,
+  };
+};
 
 const parseAccountInput = (rawInput) => {
   const raw = (rawInput || '').trim();
@@ -28,11 +42,24 @@ export default function LoginModal({ isOpen, onClose, onLoginSuccess, onAddUser,
   const [isRegister, setIsRegister] = useState(false);
   const [accountInput, setAccountInput] = useState('');
   const [password, setPassword] = useState('');
+  const [confirmPassword, setConfirmPassword] = useState('');
+  const [showPassword, setShowPassword] = useState(false);
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [fullName, setFullName] = useState('');
 
   if (!isOpen) return null;
 
   const detectedAccount = accountInput.trim() ? parseAccountInput(accountInput) : null;
+  const pwdRules = evaluatePasswordRules(password);
+  const hasConfirmInput = confirmPassword.length > 0;
+  const isConfirmMatched = hasConfirmInput && confirmPassword === password;
+
+  const handleToggleMode = () => {
+    setIsRegister((prev) => !prev);
+    setConfirmPassword('');
+    setShowPassword(false);
+    setShowConfirmPassword(false);
+  };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -57,9 +84,27 @@ export default function LoginModal({ isOpen, onClose, onLoginSuccess, onAddUser,
       return;
     }
 
-    if (isRegister && password.length < 8) {
-      toast.warning('Mật khẩu đăng ký phải có ít nhất 8 ký tự!', 'Mật Khẩu Quá Ngắn');
-      return;
+    if (isRegister) {
+      if (!pwdRules.hasMinLength) {
+        toast.warning('Mật khẩu đăng ký phải có ít nhất 8 ký tự!', 'Mật Khẩu Chưa Đạt Yêu Cầu');
+        return;
+      }
+      if (!pwdRules.hasUpperLowerDigit) {
+        toast.warning('Mật khẩu phải có ít nhất 1 chữ hoa, 1 chữ thường và 1 chữ số!', 'Mật Khẩu Chưa Đạt Yêu Cầu');
+        return;
+      }
+      if (!pwdRules.hasSpecialChar) {
+        toast.warning('Mật khẩu phải có ít nhất 1 ký tự đặc biệt (!@#$%...)!', 'Mật Khẩu Chưa Đạt Yêu Cầu');
+        return;
+      }
+      if (!confirmPassword) {
+        toast.warning('Vui lòng nhập lại mật khẩu để xác nhận!', 'Thiếu Thông Tin');
+        return;
+      }
+      if (password !== confirmPassword) {
+        toast.warning('Mật khẩu nhập lại chưa khớp. Vui lòng kiểm tra lại!', 'Mật Khẩu Không Khớp');
+        return;
+      }
     }
 
     const normalizedId = parsed.value;
@@ -73,6 +118,7 @@ export default function LoginModal({ isOpen, onClose, onLoginSuccess, onAddUser,
           email: normalizedId,
           phone: isPhone ? normalizedId : undefined,
           password,
+          confirmPassword,
           fullName: nameToUse,
           role: 'CUSTOMER'
         });
@@ -176,23 +222,46 @@ export default function LoginModal({ isOpen, onClose, onLoginSuccess, onAddUser,
     toast.error('Không thể kết nối máy chủ xác thực hoặc tài khoản không tồn tại.', 'Đăng Nhập Thất Bại');
   };
 
+  const passwordChecklist = [
+    { id: 'len', label: 'Ít nhất 8 ký tự', ok: pwdRules.hasMinLength },
+    { id: 'mix', label: 'Ít nhất 1 chữ hoa, 1 chữ thường và 1 chữ số', ok: pwdRules.hasUpperLowerDigit },
+    { id: 'spec', label: 'Ít nhất 1 ký tự đặc biệt (!@#$%...)', ok: pwdRules.hasSpecialChar },
+  ];
+
+  const hasPasswordInput = password.length > 0;
+  const passwordBorderColor = isRegister
+    ? hasPasswordInput
+      ? pwdRules.isStrong
+        ? '#10b981'
+        : '#cbd5e1'
+      : '#cbd5e1'
+    : '#cbd5e1';
+
+  const confirmBorderColor = hasConfirmInput
+    ? isConfirmMatched
+      ? '#10b981'
+      : '#ef4444'
+    : '#cbd5e1';
+
   return (
     <div className="modal-overlay" onClick={(e) => { if (e.target === e.currentTarget) onClose(); }}>
-      <div className="modal-content animate-fade-in" style={{ maxWidth: 440, borderRadius: '22px' }}>
-        <div style={{ display: 'flex', justifyContent: 'center', marginBottom: '0.85rem' }}>
+      <div className="modal-content animate-fade-in" style={{ maxWidth: 450, borderRadius: '22px', maxHeight: '92vh', overflowY: 'auto' }}>
+        <div style={{ display: 'flex', justifyContent: 'center', marginBottom: '0.75rem' }}>
           <BrandLogo variant="stacked" size="sm" subtitle="CHĂM SÓC THÚ CƯNG & PET SHOP" />
         </div>
         <h3 style={{ fontSize: '1.28rem', fontWeight: 800, marginBottom: '0.2rem', textAlign: 'center', color: '#0f172a' }}>
           {isRegister ? 'Đăng Ký Tài Khoản Khách Hàng' : 'Đăng Nhập Khách Hàng'}
         </h3>
-        <p style={{ fontSize: '0.82rem', color: '#64748b', textAlign: 'center', marginBottom: '1.25rem' }}>
+        <p style={{ fontSize: '0.82rem', color: '#64748b', textAlign: 'center', marginBottom: '1.15rem' }}>
           Tài khoản mua sắm phụ kiện & đặt lịch chăm sóc thú cưng
         </p>
 
         <form onSubmit={handleSubmit}>
           {isRegister && (
             <div className="form-group" style={{ marginBottom: '0.85rem' }}>
-              <label style={{ fontSize: '0.82rem', fontWeight: 700, color: '#334155' }}>Họ và Tên *</label>
+              <label style={{ fontSize: '0.82rem', fontWeight: 700, color: '#334155' }}>
+                Họ và Tên <span style={{ color: '#ef4444' }}>*</span>
+              </label>
               <input 
                 className="form-control" 
                 value={fullName} 
@@ -203,10 +272,10 @@ export default function LoginModal({ isOpen, onClose, onLoginSuccess, onAddUser,
             </div>
           )}
 
-          <div className="form-group" style={{ marginBottom: '0.85rem' }}>
+          <div className="form-group" style={{ marginBottom: isRegister ? '1.15rem' : '1.05rem' }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
               <label style={{ fontSize: '0.82rem', fontWeight: 700, color: '#334155' }}>
-                Email hoặc Số Điện Thoại *
+                Email hoặc Số Điện Thoại <span style={{ color: '#ef4444' }}>*</span>
               </label>
               {detectedAccount && detectedAccount.type !== 'invalid' && (
                 <span style={{
@@ -233,56 +302,199 @@ export default function LoginModal({ isOpen, onClose, onLoginSuccess, onAddUser,
             />
           </div>
 
-          <div className="form-group" style={{ marginBottom: '1rem' }}>
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-              <label style={{ fontSize: '0.82rem', fontWeight: 700, color: '#334155' }}>Mật Khẩu *</label>
-              {isRegister && (
-                password.length === 0 ? (
-                  <span style={{ fontSize: '0.7rem', fontWeight: 600, color: '#64748b' }}>
-                    Tối thiểu 8 ký tự
-                  </span>
-                ) : password.length < 8 ? (
-                  <span style={{
-                    fontSize: '0.7rem',
-                    fontWeight: 800,
-                    color: '#dc2626',
-                    background: '#fef2f2',
-                    padding: '1px 8px',
+          {/* MẬT KHẨU (Notched Label + Nút hiện/ẩn mật khẩu) */}
+          <div style={{ position: 'relative', marginBottom: isRegister ? '0.65rem' : '1rem' }}>
+            <label
+              htmlFor="petzera-auth-password"
+              style={{
+                position: 'absolute',
+                top: '-9px',
+                left: '12px',
+                background: '#ffffff',
+                padding: '0 6px',
+                fontSize: '0.78rem',
+                fontWeight: 600,
+                color: '#334155',
+                zIndex: 1,
+                lineHeight: 1.2,
+              }}
+            >
+              Mật khẩu <span style={{ color: '#ef4444' }}>*</span>
+            </label>
+            <div
+              style={{
+                display: 'flex',
+                alignItems: 'center',
+                borderRadius: '10px',
+                border: `${isRegister && pwdRules.isStrong ? '1.5px' : '1.5px'} solid ${passwordBorderColor}`,
+                background: '#ffffff',
+                transition: 'border-color 0.2s ease, box-shadow 0.2s ease',
+              }}
+            >
+              <input
+                id="petzera-auth-password"
+                type={showPassword ? 'text' : 'password'}
+                value={password}
+                onChange={e => setPassword(e.target.value)}
+                placeholder={isRegister ? 'Nhập mật khẩu' : 'Nhập mật khẩu'}
+                autoComplete={isRegister ? 'new-password' : 'current-password'}
+                required
+                style={{
+                  flex: 1,
+                  width: '100%',
+                  border: 'none',
+                  outline: 'none',
+                  background: 'transparent',
+                  padding: '0.78rem 0.5rem 0.72rem 0.9rem',
+                  fontSize: '0.92rem',
+                  color: '#0f172a',
+                  letterSpacing: !showPassword && password.length > 0 ? '1.5px' : 'normal',
+                }}
+              />
+              <button
+                type="button"
+                onClick={() => setShowPassword((prev) => !prev)}
+                aria-label={showPassword ? 'Ẩn mật khẩu' : 'Hiện mật khẩu'}
+                style={{
+                  background: 'none',
+                  border: 'none',
+                  cursor: 'pointer',
+                  padding: '0 12px',
+                  display: 'flex',
+                  alignItems: 'center',
+                  color: '#64748b',
+                }}
+              >
+                {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
+              </button>
+            </div>
+          </div>
+
+          {/* CHECKLIST 3 TIÊU CHÍ MẬT KHẨU (KHI ĐĂNG KÝ) */}
+          {isRegister && (
+            <div
+              style={{
+                display: 'flex',
+                flexDirection: 'column',
+                gap: '6px',
+                margin: '0.5rem 0 1.15rem 2px',
+              }}
+            >
+              {passwordChecklist.map((item) => {
+                const isError = hasPasswordInput && !item.ok;
+                const textColor = item.ok ? '#15803d' : isError ? '#dc2626' : '#64748b';
+                return (
+                  <div
+                    key={item.id}
+                    style={{
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '7px',
+                      fontSize: '0.81rem',
+                      fontWeight: item.ok ? 600 : 500,
+                      color: textColor,
+                      transition: 'color 0.15s ease',
+                    }}
+                  >
+                    {item.ok ? (
+                      <Check size={15} color="#16a34a" strokeWidth={3} style={{ flexShrink: 0 }} />
+                    ) : isError ? (
+                      <X size={14} color="#dc2626" strokeWidth={2.75} style={{ flexShrink: 0 }} />
+                    ) : (
+                      <Check size={15} color="#94a3b8" strokeWidth={2.5} style={{ flexShrink: 0 }} />
+                    )}
+                    <span>{item.label}</span>
+                  </div>
+                );
+              })}
+            </div>
+          )}
+
+          {/* NHẬP LẠI MẬT KHẨU (KHI ĐĂNG KÝ) */}
+          {isRegister && (
+            <div style={{ marginBottom: '1rem' }}>
+              <div style={{ position: 'relative' }}>
+                <label
+                  htmlFor="petzera-auth-confirm-password"
+                  style={{
+                    position: 'absolute',
+                    top: '-9px',
+                    left: '12px',
+                    background: '#ffffff',
+                    padding: '0 6px',
+                    fontSize: '0.78rem',
+                    fontWeight: 600,
+                    color: hasConfirmInput
+                      ? isConfirmMatched
+                        ? '#15803d'
+                        : '#dc2626'
+                      : '#334155',
+                    zIndex: 1,
+                    lineHeight: 1.2,
+                  }}
+                >
+                  Nhập lại mật khẩu <span style={{ color: '#ef4444' }}>*</span>
+                </label>
+                <div
+                  style={{
+                    display: 'flex',
+                    alignItems: 'center',
                     borderRadius: '10px',
-                    border: '1px solid #fecaca'
-                  }}>
-                    Thiếu {8 - password.length} ký tự ({password.length}/8)
-                  </span>
-                ) : (
-                  <span style={{
-                    fontSize: '0.7rem',
-                    fontWeight: 800,
-                    color: '#059669',
-                    background: '#ecfdf5',
-                    padding: '1px 8px',
-                    borderRadius: '10px',
-                    border: '1px solid #a7f3d0'
-                  }}>
-                    ✓ Đủ độ dài (≥ 8 ký tự)
-                  </span>
-                )
+                    border: `${isConfirmMatched ? '2px' : '1.5px'} solid ${confirmBorderColor}`,
+                    background: '#ffffff',
+                    transition: 'border-color 0.2s ease',
+                  }}
+                >
+                  <input
+                    id="petzera-auth-confirm-password"
+                    type={showConfirmPassword ? 'text' : 'password'}
+                    value={confirmPassword}
+                    onChange={e => setConfirmPassword(e.target.value)}
+                    placeholder="Nhập lại mật khẩu"
+                    autoComplete="new-password"
+                    required
+                    style={{
+                      flex: 1,
+                      width: '100%',
+                      border: 'none',
+                      outline: 'none',
+                      background: 'transparent',
+                      padding: '0.78rem 0.5rem 0.72rem 0.9rem',
+                      fontSize: '0.92rem',
+                      color: '#0f172a',
+                      letterSpacing: !showConfirmPassword && confirmPassword.length > 0 ? '1.5px' : 'normal',
+                    }}
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setShowConfirmPassword((prev) => !prev)}
+                    aria-label={showConfirmPassword ? 'Ẩn mật khẩu nhập lại' : 'Hiện mật khẩu nhập lại'}
+                    style={{
+                      background: 'none',
+                      border: 'none',
+                      cursor: 'pointer',
+                      padding: '0 12px',
+                      display: 'flex',
+                      alignItems: 'center',
+                      color: '#64748b',
+                    }}
+                  >
+                    {showConfirmPassword ? <EyeOff size={18} /> : <Eye size={18} />}
+                  </button>
+                </div>
+              </div>
+              {hasConfirmInput && !isConfirmMatched && (
+                <div style={{ fontSize: '0.76rem', color: '#dc2626', fontWeight: 600, marginTop: '5px', marginLeft: '4px' }}>
+                  Mật khẩu nhập lại chưa khớp.
+                </div>
               )}
             </div>
-            <input 
-              type="password" 
-              className="form-control" 
-              value={password} 
-              onChange={e => setPassword(e.target.value)} 
-              placeholder={isRegister ? 'Nhập mật khẩu (ít nhất 8 ký tự)' : 'Nhập mật khẩu'}
-              minLength={isRegister ? 8 : undefined}
-              required 
-            />
-          </div>
+          )}
 
           <button 
             type="submit" 
             className="btn btn-coral" 
-            style={{ width: '100%', marginTop: '0.5rem', padding: '0.78rem', borderRadius: '12px', fontWeight: 800, justifyContent: 'center' }}
+            style={{ width: '100%', marginTop: '0.35rem', padding: '0.78rem', borderRadius: '12px', fontWeight: 800, justifyContent: 'center' }}
           >
             {isRegister ? 'Tạo Tài Khoản Khách Hàng' : 'Đăng Nhập Khách Hàng'}
           </button>
@@ -293,7 +505,7 @@ export default function LoginModal({ isOpen, onClose, onLoginSuccess, onAddUser,
           <button 
             type="button"
             style={{ background: 'none', border: 'none', color: '#ff6b35', cursor: 'pointer', fontWeight: 800 }} 
-            onClick={() => setIsRegister(!isRegister)}
+            onClick={handleToggleMode}
           >
             {isRegister ? 'Đăng nhập ngay' : 'Tạo tài khoản mới'}
           </button>
