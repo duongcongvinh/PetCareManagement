@@ -65,24 +65,6 @@ export const INITIAL_SERVICES = [
     status: 'ACTIVE'
   },
   {
-    id: 's9',
-    name: 'Khách Sạn Thú Cưng VIP (Phòng Điều Hòa 24/7 & Camera Trực Tuyến)',
-    description: 'Phòng suite riêng biệt có máy lạnh, đệm ngủ êm ái, lọc không khí ion âm, camera riêng cấp tài khoản cho chủ theo dõi bé 24/7, kèm 2 bữa ăn cao cấp.',
-    durationMinutes: 1440,
-    price: 200000,
-    category: 'Khách Sạn & Lưu Trú',
-    status: 'ACTIVE'
-  },
-  {
-    id: 's10',
-    name: 'Dịch Vụ Trông Giữ Trong Ngày (Pet Daycare & Sân Chơi Vận Động)',
-    description: 'Gửi bé vui chơi giao lưu tại công viên cát nhân tạo, tương tác cùng huấn luyện viên, thích hợp khi chủ đi làm hoặc bận rộn cả ngày.',
-    durationMinutes: 480,
-    price: 120000,
-    category: 'Khách Sạn & Lưu Trú',
-    status: 'ACTIVE'
-  },
-  {
     id: 's2',
     name: 'Tiêm Vắc Xin 5 Trong 1 Cho Chó (Vanguard Plus 5/CV-L)',
     description: 'Vắc xin nhập khẩu chính hãng Vanguard Plus, bảo vệ chó cưng khỏi 5 bệnh truyền nhiễm nguy hiểm nhất kèm cấp sổ tiêm chủng.',
@@ -142,7 +124,7 @@ export const INITIAL_SERVICES = [
     description: 'Chẩn đoán thai sớm từ ngày thứ 21. Đếm túi thai, đo nhịp tim thai bằng máy Doppler chuyên dụng và dự đoán ngày sinh chính xác.',
     durationMinutes: 25,
     price: 150000,
-    category: 'Khoa Sinh Sản',
+    category: 'Khám Bệnh & Trị Liệu',
     status: 'ACTIVE'
   },
   {
@@ -151,7 +133,7 @@ export const INITIAL_SERVICES = [
     description: 'Bác sĩ thú y trực tiếp theo dõi gò tử cung, hỗ trợ thế thai khó sinh, cắt rốn tiệt trùng và kích thở lồng ấp sơ sinh.',
     durationMinutes: 120,
     price: 350000,
-    category: 'Khoa Sinh Sản',
+    category: 'Khám Bệnh & Trị Liệu',
     status: 'ACTIVE'
   },
   {
@@ -160,7 +142,7 @@ export const INITIAL_SERVICES = [
     description: 'Mổ lấy thai cấp cứu vô trùng khi khó sinh, suy thai hoặc kẹt xương chậu. Gây mê bay hơi Isoflurane an toàn tuyệt đối cho mẹ & con.',
     durationMinutes: 60,
     price: 850000,
-    category: 'Khoa Sinh Sản',
+    category: 'Khám Bệnh & Trị Liệu',
     status: 'ACTIVE'
   },
   {
@@ -169,7 +151,7 @@ export const INITIAL_SERVICES = [
     description: 'Cắt tử cung buồng trứng đường rạch vi phẫu siêu nhỏ 1-1.5cm, khâu chỉ tự tiêu nội bì, không sẹo lồi, hồi phục nhanh sau 24h.',
     durationMinutes: 45,
     price: 450000,
-    category: 'Khoa Sinh Sản',
+    category: 'Khám Bệnh & Trị Liệu',
     status: 'ACTIVE'
   },
   {
@@ -178,7 +160,7 @@ export const INITIAL_SERVICES = [
     description: 'Tiểu phẫu thiến 15 phút an toàn nhẹ nhàng, loại trừ nguy cơ ung thư tinh hoàn và kiểm soát triệt để hành vi xịt nước tiểu hôi đánh dấu.',
     durationMinutes: 25,
     price: 280000,
-    category: 'Khoa Sinh Sản',
+    category: 'Khám Bệnh & Trị Liệu',
     status: 'ACTIVE'
   },
   {
@@ -187,7 +169,7 @@ export const INITIAL_SERVICES = [
     description: 'Giải phóng ổ mủ trong tử cung cho thú cưng bị biến chứng do tiêm thuốc tránh thai dạo hoặc rối loạn nội tiết tố, cứu sống nhiễm trùng máu.',
     durationMinutes: 75,
     price: 900000,
-    category: 'Khoa Sinh Sản',
+    category: 'Khám Bệnh & Trị Liệu',
     status: 'ACTIVE'
   }
 ].map((s) => ({ ...s, image: SERVICE_IMAGES[s.id] }));
@@ -1320,3 +1302,71 @@ const _FIVE_YEAR_BUNDLE = (() => {
 
 export const FIVE_YEAR_ORDER_HISTORY = _FIVE_YEAR_BUNDLE.history;
 export const FIVE_YEAR_ORDER_SUMMARY = _FIVE_YEAR_BUNDLE.summary;
+
+export const INITIAL_REVIEWS = [
+  {
+    id: 'rev-1',
+    targetType: 'SERVICE',
+    targetId: 's1',
+    targetName: 'Spa Grooming Trọn Gói (Cắt tỉa & Tắm mượt 7 bước)',
+    customerId: 'u-4',
+    customerName: 'Phạm Minh Anh',
+    petName: 'Bé LuLu • Toy Poodle 2 tuổi',
+    rating: 5,
+    comment: 'Đặt lịch online chọn đúng khung giờ nên đưa bé tới không phải chờ. Các bạn Groomer tỉa form Teddy cực xinh, bé thơm mềm cả tuần mà giá niêm yết rõ ràng!',
+    staffReply: 'Cảm ơn chị Minh Anh và bé LuLu đã tin yêu Petzera! Hẹn gặp bé ở lịch spa tháng tới ạ 🐾',
+    createdAt: '2026-08-18T10:15:00.000Z'
+  },
+  {
+    id: 'rev-2',
+    targetType: 'SERVICE',
+    targetId: 's15',
+    targetName: 'Siêu Âm Thai Kỹ Thuật Số Doppler & Dự Sinh Chuẩn Xác',
+    customerId: 'u-5',
+    customerName: 'Hoàng Thị Yến',
+    petName: 'Bé Miu Miu • Mèo Anh Lông Ngắn',
+    rating: 5,
+    comment: 'Cảm ơn đội ngũ bác sĩ Petzera đã siêu âm chuẩn xác và trực hộ sinh lúc nửa đêm cho bé Miu mẹ tròn con vuông 4 bé mèo con khỏe mạnh. Bác sĩ hướng dẫn chăm sau sinh siêu tận tâm.',
+    staffReply: 'Chúc mừng gia đình bé Miu Miu đón 4 thiên thần nhỏ khỏe mạnh! Petzera luôn trực 24/7 đồng hành cùng mẹ con bé ạ.',
+    createdAt: '2026-08-20T14:30:00.000Z'
+  },
+  {
+    id: 'rev-3',
+    targetType: 'PRODUCT',
+    targetId: 'vp-1',
+    targetName: 'Thức ăn cho chó trưởng thành Mini Adult | Royal Canin (2kg) + TẶNG 1 Pate',
+    customerId: 'u-4',
+    customerName: 'Nguyễn Quốc Bảo',
+    petName: 'Bé Max • Golden Retriever',
+    rating: 5,
+    comment: 'Đặt thức ăn hạt Royal Canin trên Pet Shop chỉ chưa tới 2 tiếng shipper đã giao tận cửa, còn được tặng thêm gói pate và áp mã giảm giá. Hàng chính hãng date mới, sẽ ủng hộ dài lâu!',
+    staffReply: 'Cảm ơn anh Bảo đã ủng hộ Petzera Super Shop! Chúc bé Max luôn ăn ngon khỏe mạnh ạ.',
+    createdAt: '2026-08-22T09:40:00.000Z'
+  },
+  {
+    id: 'rev-4',
+    targetType: 'SERVICE',
+    targetId: 's2',
+    targetName: 'Tiêm Vắc Xin 5 Trong 1 Cho Chó (Vanguard Plus 5/CV-L)',
+    customerId: 'u-5',
+    customerName: 'Lê Ngọc Hân',
+    petName: 'Bé Bông • Phốc Sóc',
+    rating: 5,
+    comment: 'Bác sĩ kiểm tra tem nhãn vắc xin ngay trước mặt chủ nuôi, tiêm rất nhẹ tay nên bé Bông không khóc chút nào. Sổ tiêm và lịch nhắc mũi được lưu gọn gàng.',
+    staffReply: null,
+    createdAt: '2026-08-23T16:10:00.000Z'
+  },
+  {
+    id: 'rev-5',
+    targetType: 'PRODUCT',
+    targetId: 'prod-2',
+    targetName: 'Cát Vệ Sinh Mèo Đậu Nành Tofu 6L',
+    customerId: 'u-4',
+    customerName: 'Trần Gia Huy',
+    petName: 'Bé Mochi • Mèo Munchkin',
+    rating: 4,
+    comment: 'Cát đậu nành vón cục nhanh, gần như không bụi và mùi dễ chịu. Giao hàng nhanh đóng gói chắc chắn, rất hài lòng.',
+    staffReply: null,
+    createdAt: '2026-08-24T11:25:00.000Z'
+  }
+];

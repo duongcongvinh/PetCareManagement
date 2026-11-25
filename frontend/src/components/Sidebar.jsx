@@ -49,19 +49,19 @@ export default function Sidebar({ activeRole, activeTab, onTabChange, pendingPro
           { id: 'history', label: 'Tiến Độ & Lịch Hẹn', icon: LayoutDashboard },
         ];
       case 'CARE_STAFF':
-        // 6 Use Case của Actor Nhân viên
+        // 5 Use Case khớp 1-1 sơ đồ Use Case tổng quát của Actor Nhân viên
         return [
           { id: 'queue', label: 'Quản Lý Lịch Hẹn', icon: Calendar },
           { id: 'services', label: 'Quản Lý Dịch Vụ', icon: FileText },
           { id: 'promotions', label: 'Chương Trình Khuyến Mãi', icon: Tag },
           { id: 'pets-logs', label: 'Quản Lý Hồ Sơ Thú Cưng', icon: PawPrint },
           { id: 'reports', label: 'Báo Cáo & Thống Kê', icon: TrendingUp },
-          { id: 'warehouse-view', label: 'Quản Lý Kho', icon: Package },
         ];
       case 'WAREHOUSE_STAFF':
-        // 3 Use Case của Actor Quản lý kho
+        // 4 Use Case khớp 1-1 sơ đồ Use Case tổng quát của Actor Quản lý kho
         return [
           { id: 'inventory', label: 'Quản Lý Kho (Nhập/Xuất/Tồn)', icon: Package },
+          { id: 'products-mgmt', label: 'Quản Lý Sản Phẩm', icon: ShoppingBag },
           { id: 'demand-forecast', label: 'Dự Báo Nhu Cầu (AI)', icon: Brain },
           { id: 'reorder-proposals', label: 'Lập Đề Xuất Nhập Hàng', icon: CheckSquare, badgeCount: pendingProposalsCount },
         ];

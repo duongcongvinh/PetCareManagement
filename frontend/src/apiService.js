@@ -27,6 +27,26 @@ export const apiService = {
     return res.json();
   },
 
+  forgotPassword: async (identifier, portal = 'CUSTOMER') => {
+    const res = await fetch(`${API_BASE_URL}/auth/forgot-password`, {
+      method: 'POST',
+      headers: getHeaders(),
+      body: JSON.stringify({ identifier, email: identifier, portal })
+    });
+    const data = await res.json();
+    return { ...data, _ok: res.ok };
+  },
+
+  resetPassword: async ({ identifier, otp, newPassword, confirmPassword, portal = 'CUSTOMER' }) => {
+    const res = await fetch(`${API_BASE_URL}/auth/reset-password`, {
+      method: 'POST',
+      headers: getHeaders(),
+      body: JSON.stringify({ identifier, email: identifier, otp, newPassword, confirmPassword, portal })
+    });
+    const data = await res.json();
+    return { ...data, _ok: res.ok };
+  },
+
   getProfile: async (token) => {
     const res = await fetch(`${API_BASE_URL}/auth/me`, {
       headers: getHeaders(token)
@@ -91,6 +111,23 @@ export const apiService = {
     return res.json();
   },
 
+  updatePet: async (id, petData, token) => {
+    const res = await fetch(`${API_BASE_URL}/pets/${id}`, {
+      method: 'PUT',
+      headers: getHeaders(token),
+      body: JSON.stringify(petData)
+    });
+    return res.json();
+  },
+
+  deletePet: async (id, token) => {
+    const res = await fetch(`${API_BASE_URL}/pets/${id}`, {
+      method: 'DELETE',
+      headers: getHeaders(token)
+    });
+    return res.json();
+  },
+
   // Service & Appointment APIs
   getServices: async () => {
     const res = await fetch(`${API_BASE_URL}/services`);
@@ -100,6 +137,15 @@ export const apiService = {
   createService: async (serviceData, token) => {
     const res = await fetch(`${API_BASE_URL}/services`, {
       method: 'POST',
+      headers: getHeaders(token),
+      body: JSON.stringify(serviceData)
+    });
+    return res.json();
+  },
+
+  updateService: async (id, serviceData, token) => {
+    const res = await fetch(`${API_BASE_URL}/services/${id}`, {
+      method: 'PUT',
       headers: getHeaders(token),
       body: JSON.stringify(serviceData)
     });
@@ -137,6 +183,15 @@ export const apiService = {
     return res.json();
   },
 
+  rescheduleAppointment: async (id, payload, token) => {
+    const res = await fetch(`${API_BASE_URL}/appointments/${id}`, {
+      method: 'PUT',
+      headers: getHeaders(token),
+      body: JSON.stringify(payload)
+    });
+    return res.json();
+  },
+
   cancelAppointment: async (id, token) => {
     const res = await fetch(`${API_BASE_URL}/appointments/${id}/cancel`, {
       method: 'PUT',
@@ -151,11 +206,37 @@ export const apiService = {
     return res.json();
   },
 
-  updateStock: async (id, type, quantity, note, token) => {
+  createProduct: async (productData, token) => {
+    const res = await fetch(`${API_BASE_URL}/products`, {
+      method: 'POST',
+      headers: getHeaders(token),
+      body: JSON.stringify(productData)
+    });
+    return res.json();
+  },
+
+  updateProduct: async (id, productData, token) => {
+    const res = await fetch(`${API_BASE_URL}/products/${id}`, {
+      method: 'PUT',
+      headers: getHeaders(token),
+      body: JSON.stringify(productData)
+    });
+    return res.json();
+  },
+
+  updateStock: async (id, type, quantity, note, token, thresholds = {}) => {
     const res = await fetch(`${API_BASE_URL}/products/${id}/stock`, {
       method: 'PUT',
       headers: getHeaders(token),
-      body: JSON.stringify({ type, quantity, note })
+      body: JSON.stringify({ type, quantity, note, ...thresholds })
+    });
+    return res.json();
+  },
+
+  deleteProduct: async (id, token) => {
+    const res = await fetch(`${API_BASE_URL}/products/${id}`, {
+      method: 'DELETE',
+      headers: getHeaders(token)
     });
     return res.json();
   },
@@ -272,6 +353,45 @@ export const apiService = {
     });
     const data = await res.json();
     return { data, _ok: res.ok };
+  },
+
+  // Customer Reviews & Ratings APIs
+  getReviews: async (params = {}) => {
+    const qs = new URLSearchParams();
+    if (params.targetType) qs.set('targetType', params.targetType);
+    if (params.targetId) qs.set('targetId', params.targetId);
+    const query = qs.toString() ? `?${qs.toString()}` : '';
+    const res = await fetch(`${API_BASE_URL}/reviews${query}`, { cache: 'no-store' });
+    return res.json();
+  },
+
+  createReview: async (payload, token) => {
+    const res = await fetch(`${API_BASE_URL}/reviews`, {
+      method: 'POST',
+      headers: getHeaders(token),
+      body: JSON.stringify(payload)
+    });
+    const data = await res.json();
+    return { ...data, _ok: res.ok };
+  },
+
+  replyReview: async (id, staffReply, token) => {
+    const res = await fetch(`${API_BASE_URL}/reviews/${id}/reply`, {
+      method: 'PUT',
+      headers: getHeaders(token),
+      body: JSON.stringify({ staffReply })
+    });
+    const data = await res.json();
+    return { ...data, _ok: res.ok };
+  },
+
+  deleteReview: async (id, token) => {
+    const res = await fetch(`${API_BASE_URL}/reviews/${id}`, {
+      method: 'DELETE',
+      headers: getHeaders(token)
+    });
+    const data = await res.json();
+    return { ...data, _ok: res.ok };
   },
 
   // Cross-Browser Live Sync Engine APIs

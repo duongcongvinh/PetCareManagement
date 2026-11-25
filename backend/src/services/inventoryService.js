@@ -46,29 +46,45 @@ const createNewProduct = async ({
   return product;
 };
 
-const updateProductStock = async (id, { type, quantity, note }) => {
+const updateProductStock = async (id, { type, quantity, note, minStockLevel, maxStockLevel }) => {
   const product = await prisma.product.findUnique({ where: { id } });
   if (!product) {
     throw new Error('Sản phẩm không tồn tại.');
   }
 
   let newStock = product.currentStock;
-  const changeQty = parseInt(quantity);
+  const changeQty = parseInt(quantity, 10);
+
+  if (Number.isNaN(changeQty) || changeQty < 0) {
+    throw new Error('Số lượng tồn kho không hợp lệ (không được âm).');
+  }
 
   if (type === 'IN') {
+    if (changeQty <= 0) throw new Error('Số lượng nhập kho phải lớn hơn 0!');
     newStock += changeQty;
   } else if (type === 'OUT') {
+    if (changeQty <= 0) throw new Error('Số lượng xuất kho phải lớn hơn 0!');
     if (product.currentStock < changeQty) {
       throw new Error('Số lượng xuất vượt quá tồn kho hiện tại!');
     }
     newStock -= changeQty;
   } else if (type === 'ADJUSTMENT') {
     newStock = changeQty;
+  } else {
+    throw new Error('Loại giao dịch kho không hợp lệ (chỉ hỗ trợ IN, OUT, ADJUSTMENT).');
+  }
+
+  const updateData = { currentStock: newStock };
+  if (minStockLevel !== undefined && minStockLevel !== '' && !Number.isNaN(parseInt(minStockLevel, 10))) {
+    updateData.minStockLevel = Math.max(0, parseInt(minStockLevel, 10));
+  }
+  if (maxStockLevel !== undefined && maxStockLevel !== '' && !Number.isNaN(parseInt(maxStockLevel, 10))) {
+    updateData.maxStockLevel = Math.max(1, parseInt(maxStockLevel, 10));
   }
 
   const updatedProduct = await prisma.product.update({
     where: { id },
-    data: { currentStock: newStock },
+    data: updateData,
   });
 
   await prisma.stockTransaction.create({
@@ -76,11 +92,58 @@ const updateProductStock = async (id, { type, quantity, note }) => {
       productId: id,
       type,
       quantity: changeQty,
-      note: note || 'Cập nhật kho thủ công',
+      note:
+        note ||
+        (type === 'ADJUSTMENT'
+          ? `Điều chỉnh tồn kho: ${product.currentStock} → ${newStock}`
+          : 'Cập nhật kho thủ công'),
     },
   });
 
   return updatedProduct;
+};
+
+const updateProduct = async (
+  id,
+  { name, category, sku, unitPrice, costPrice, currentStock, minStockLevel, maxStockLevel, supplierId }
+) => {
+  if (!/^[0-9a-fA-F]{24}$/.test(String(id || ''))) {
+    throw new Error('Mã sản phẩm không hợp lệ trong cơ sở dữ liệu.');
+  }
+  const existing = await prisma.product.findUnique({ where: { id } });
+  if (!existing) {
+    throw new Error('Sản phẩm không tồn tại.');
+  }
+
+  const data = {};
+  if (name !== undefined && String(name).trim()) data.name = String(name).trim();
+  if (category !== undefined && String(category).trim()) data.category = String(category).trim();
+  if (sku !== undefined && String(sku).trim()) data.sku = String(sku).trim().toUpperCase();
+  if (unitPrice !== undefined && !Number.isNaN(parseFloat(unitPrice))) data.unitPrice = Math.max(0, parseFloat(unitPrice));
+  if (costPrice !== undefined && !Number.isNaN(parseFloat(costPrice))) data.costPrice = Math.max(0, parseFloat(costPrice));
+  if (currentStock !== undefined && !Number.isNaN(parseInt(currentStock, 10))) data.currentStock = Math.max(0, parseInt(currentStock, 10));
+  if (minStockLevel !== undefined && !Number.isNaN(parseInt(minStockLevel, 10))) data.minStockLevel = Math.max(0, parseInt(minStockLevel, 10));
+  if (maxStockLevel !== undefined && !Number.isNaN(parseInt(maxStockLevel, 10))) data.maxStockLevel = Math.max(1, parseInt(maxStockLevel, 10));
+  if (supplierId !== undefined) data.supplierId = supplierId || null;
+
+  return await prisma.product.update({
+    where: { id },
+    data,
+    include: { supplier: true },
+  });
+};
+
+const deleteProduct = async (id) => {
+  if (!/^[0-9a-fA-F]{24}$/.test(String(id || ''))) {
+    throw new Error('Mã sản phẩm không hợp lệ trong cơ sở dữ liệu.');
+  }
+  const existing = await prisma.product.findUnique({ where: { id } });
+  if (!existing) {
+    throw new Error('Sản phẩm không tồn tại hoặc đã bị xóa.');
+  }
+
+  await prisma.orderItem.deleteMany({ where: { productId: id } });
+  return await prisma.product.delete({ where: { id } });
 };
 
 const getLowStockProducts = async () => {
@@ -107,7 +170,9 @@ const createNewSupplier = async ({ name, contactPerson, phone, email, address })
 module.exports = {
   getAllProducts,
   createNewProduct,
+  updateProduct,
   updateProductStock,
+  deleteProduct,
   getLowStockProducts,
   getAllSuppliers,
   createNewSupplier,

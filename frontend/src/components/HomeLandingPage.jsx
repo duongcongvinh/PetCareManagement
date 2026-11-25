@@ -6,6 +6,7 @@ import {
 } from 'lucide-react';
 import BrandLogo from './BrandLogo';
 import AboutUsSection from './AboutUsSection';
+import CustomerReviewSection from './CustomerReviewSection';
 import { CONTACT_INFO, openZaloQrModal } from '../contactConfig';
 import {
   HERO_IMAGES,
@@ -151,6 +152,9 @@ function VideoReelCard({ reel, onOpenLightbox }) {
 export default function HomeLandingPage({
   services = [],
   products = [],
+  reviews = [],
+  currentUser = null,
+  myPets = [],
   onTabChange,
   setSelectedServiceCategory,
   setSelectedCategory,
@@ -161,7 +165,10 @@ export default function HomeLandingPage({
   handleCopyText,
   setBookingForm,
   setShowBookingModal,
-  getProductBrand
+  getProductBrand,
+  onAddReview,
+  onDeleteReview,
+  onOpenLogin
 }) {
   // Cinematic Splash Intro (shows once per browser session, skippable immediately, replayable)
   const [showSplash, setShowSplash] = useState(() => {
@@ -248,10 +255,38 @@ export default function HomeLandingPage({
     setShowSplash(true);
   };
 
-  // Curated Featured Services (Spa, Hotel, Reproduction, Checkup)
+  // Curated Featured Services (Spa, Tiêm Phòng, Khám Tổng Quát, Siêu Âm Thai — tương thích cả mock ID lẫn MongoDB ObjectId)
   const featuredServices = (() => {
-    const preferredIds = ['s1', 's9', 's15', 's3'];
-    const picked = preferredIds.map(id => services.find(s => s.id === id)).filter(Boolean);
+    const pickFirst = (predicates) => {
+      for (const pred of predicates) {
+        const found = services.find(pred);
+        if (found) return found;
+      }
+      return null;
+    };
+    const picked = [
+      pickFirst([
+        s => s.id === 's1',
+        s => s.category === 'Spa & Grooming' && (s.name || '').toLowerCase().includes('trọn gói'),
+        s => s.category === 'Spa & Grooming'
+      ]),
+      pickFirst([
+        s => s.id === 's2',
+        s => s.category === 'Y Tế & Tiêm Phòng' && (s.name || '').toLowerCase().includes('5 trong 1'),
+        s => s.category === 'Y Tế & Tiêm Phòng'
+      ]),
+      pickFirst([
+        s => s.id === 's3',
+        s => s.category === 'Khám Bệnh & Trị Liệu' && (s.name || '').toLowerCase().includes('tổng quát'),
+        s => s.category === 'Khám Bệnh & Trị Liệu'
+      ]),
+      pickFirst([
+        s => s.id === 's15',
+        s => (s.name || '').toLowerCase().includes('siêu âm thai'),
+        s => (s.name || '').toLowerCase().includes('triệt sản'),
+        s => s.category === 'Khám Bệnh & Trị Liệu'
+      ]),
+    ].filter((item, idx, arr) => item && arr.findIndex(x => x && x.id === item.id) === idx);
     const rest = services.filter(s => !picked.some(p => p.id === s.id));
     return [...picked, ...rest].slice(0, 4);
   })();
@@ -277,16 +312,16 @@ export default function HomeLandingPage({
       action: () => { onTabChange('reproduction'); window.scrollTo({ top: 0, behavior: 'smooth' }); }
     },
     {
-      title: 'Khách Sạn VIP',
-      sub: 'Điều hòa • Camera 24/7',
-      emoji: '🏨',
+      title: 'Khám Bệnh & Trị Liệu',
+      sub: 'Siêu âm • Điều trị • Sinh sản',
+      emoji: '🩺',
       bg: 'linear-gradient(135deg, #fefce8 0%, #fef08a 100%)',
       border: '#fde047',
-      action: () => { setSelectedServiceCategory('Khách Sạn & Lưu Trú'); onTabChange('booking'); window.scrollTo({ top: 0, behavior: 'smooth' }); }
+      action: () => { setSelectedServiceCategory('Khám Bệnh & Trị Liệu'); onTabChange('booking'); window.scrollTo({ top: 0, behavior: 'smooth' }); }
     },
     {
-      title: 'Tiêm Phòng & Thú Y',
-      sub: 'Vắc xin • Khám bệnh',
+      title: 'Tiêm Phòng & Vắc Xin',
+      sub: '5in1 • 4 Bệnh • Phòng dại',
       emoji: '💉',
       bg: 'linear-gradient(135deg, #f0f9ff 0%, #e0f2fe 100%)',
       border: '#bae6fd',
@@ -348,7 +383,7 @@ export default function HomeLandingPage({
     '⚡ GIAO HỎA TỐC 2 GIỜ • FREESHIP TỪ 500K',
     '🎁 NHẬP MÃ PETLOVER20 GIẢM NGAY 20%',
     '🛡️ 100% CHÍNH HÃNG ROYAL CANIN • ANF • DR. KYAN',
-    '🏨 KHÁCH SẠN VIP CAMERA TRỰC TUYẾN 24/7'
+    '🩺 KHÁM BỆNH, TIÊM PHÒNG & SIÊU ÂM THAI 24/7'
   ];
 
   return (
@@ -817,7 +852,7 @@ export default function HomeLandingPage({
                 DỊCH VỤ ĐƯỢC ĐẶT NHIỀU NHẤT
               </span>
               <h2 style={{ fontSize: '1.5rem', fontWeight: 900, display: 'flex', alignItems: 'center', gap: '8px', marginTop: '3px', color: '#0f172a' }}>
-                <Sparkles color="#ff6b35" size={22} /> Spa Grooming, Khách Sạn VIP &amp; Thú Y 5★
+                <Sparkles color="#ff6b35" size={22} /> Spa Grooming, Tiêm Phòng &amp; Thú Y 5★
               </h2>
               <p style={{ fontSize: '0.85rem', color: 'var(--text-muted)', marginTop: '3px' }}>
                 Niêm yết giá minh bạch, đặt lịch khóa slot real-time, không lo chờ đợi
@@ -857,7 +892,7 @@ export default function HomeLandingPage({
                       {s.category}
                     </span>
                     <span style={{ position: 'absolute', bottom: 10, right: 10, fontSize: '0.72rem', fontWeight: 700, color: '#0f172a', background: 'rgba(255,255,255,0.94)', padding: '3px 9px', borderRadius: '12px', display: 'flex', alignItems: 'center', gap: '4px' }}>
-                      <Clock size={12} color="#ea580c" /> {s.durationMinutes >= 60 ? `${Math.floor(s.durationMinutes / 60)}h${s.durationMinutes % 60 ? ` ${s.durationMinutes % 60}p` : ''}` : `${s.durationMinutes}p`}
+                      <Clock size={12} color="#ea580c" /> {s.durationMinutes || 45} phút
                     </span>
                   </div>
 
@@ -899,7 +934,9 @@ export default function HomeLandingPage({
                 <div style={{ padding: '0.85rem 1.15rem 1.15rem 1.15rem', borderTop: '1px solid #f1f5f9', display: 'flex', flexDirection: 'column', gap: '0.65rem' }}>
                   <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline' }}>
                     <span style={{ fontSize: '0.72rem', color: '#64748b', fontWeight: 600 }}>Giá niêm yết</span>
-                    <strong style={{ fontSize: '1.15rem', fontWeight: 900, color: '#ea580c' }}>{s.price.toLocaleString('vi-VN')} đ</strong>
+                    <strong style={{ fontSize: '1.15rem', fontWeight: 900, color: '#ea580c' }}>
+                      {s.price.toLocaleString('vi-VN')} đ
+                    </strong>
                   </div>
                   <div style={{ display: 'flex', gap: '0.5rem' }}>
                     <button type="button" className="btn btn-secondary" style={{ flex: 1, padding: '0.48rem 0.6rem', fontSize: '0.78rem', borderRadius: '10px' }} onClick={() => openServiceDetail(s)}>
@@ -1200,60 +1237,21 @@ export default function HomeLandingPage({
             </div>
           </div>
 
-          {/* Authentic Customer Testimonials (Using Cute Pet Photos Only) */}
-          <div>
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.15rem', flexWrap: 'wrap', gap: '0.5rem' }}>
-              <div>
-                <span style={{ fontSize: '0.74rem', fontWeight: 800, color: '#059669', letterSpacing: '0.08em', textTransform: 'uppercase' }}>
-                  CẢM NHẬN TỪ KHÁCH HÀNG
-                </span>
-                <h2 style={{ fontSize: '1.45rem', fontWeight: 900, color: '#0f172a', marginTop: '2px' }}>
-                  Hàng Nghìn Bé Cưng Hạnh Phúc Mỗi Tháng
-                </h2>
-              </div>
-              <div style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', background: '#fefce8', border: '1px solid #fde047', padding: '0.4rem 0.9rem', borderRadius: '999px', fontSize: '0.8rem', fontWeight: 800, color: '#a16207' }}>
-                <Award size={15} color="#ca8a04" /> 4.9 / 5.0 Điểm Hài Lòng Thực Tế
-              </div>
-            </div>
-
-            <div className="grid-3">
-              {customerReviews.map((rev, idx) => (
-                <div key={idx} className="home-review-card">
-                  <div>
-                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '0.75rem' }}>
-                      <div style={{ display: 'flex', gap: '2px', color: '#f59e0b' }}>
-                        <Star size={14} fill="#f59e0b" />
-                        <Star size={14} fill="#f59e0b" />
-                        <Star size={14} fill="#f59e0b" />
-                        <Star size={14} fill="#f59e0b" />
-                        <Star size={14} fill="#f59e0b" />
-                      </div>
-                      <span style={{ fontSize: '0.7rem', fontWeight: 700, color: '#059669', background: '#ecfdf5', padding: '2px 8px', borderRadius: '999px' }}>
-                        ✓ Đã trải nghiệm
-                      </span>
-                    </div>
-                    <p style={{ fontSize: '0.88rem', color: '#334155', lineHeight: 1.65, fontStyle: 'italic', margin: 0 }}>
-                      &ldquo;{rev.quote}&rdquo;
-                    </p>
-                  </div>
-
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', paddingTop: '0.9rem', borderTop: '1px solid #f1f5f9' }}>
-                    <img
-                      src={rev.photo}
-                      alt={rev.petName}
-                      loading="lazy"
-                      onError={(e) => { e.currentTarget.src = FALLBACK_IMAGES.pet; }}
-                      style={{ width: 46, height: 46, borderRadius: '14px', objectFit: 'cover', border: '2px solid #fed7aa', flexShrink: 0 }}
-                    />
-                    <div>
-                      <div style={{ fontSize: '0.88rem', fontWeight: 800, color: '#0f172a' }}>{rev.petName}</div>
-                      <div style={{ fontSize: '0.74rem', color: '#ea580c', fontWeight: 700 }}>{rev.serviceTag}</div>
-                    </div>
-                  </div>
-                </div>
-              ))}
-            </div>
-          </div>
+          {/* Interactive Customer Reviews & Ratings (Live MongoDB + Viết Đánh Giá Trực Tiếp) */}
+          <CustomerReviewSection
+            reviews={reviews}
+            targetType="GENERAL"
+            targetName="Trải nghiệm tổng thể tại Petzera"
+            currentUser={currentUser}
+            myPets={myPets}
+            services={services}
+            products={products}
+            onAddReview={onAddReview}
+            onDeleteReview={onDeleteReview}
+            onOpenLogin={onOpenLogin}
+            title="Hàng Nghìn Bé Cưng Hạnh Phúc Mỗi Tháng"
+            subtitle="Đánh giá xác thực từ khách hàng đã trải nghiệm dịch vụ Spa, Thú y và Pet Shop tại Petzera"
+          />
         </section>
 
         {/* SECTION 7.5: GIỚI THIỆU & ĐỊA CHỈ CỬA HÀNG FLAGSHIP + BẢN ĐỒ */}

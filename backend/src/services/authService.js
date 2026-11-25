@@ -1,3 +1,4 @@
+const crypto = require('crypto');
 const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
 const prisma = require('../config/prisma');
@@ -5,6 +6,61 @@ const prisma = require('../config/prisma');
 const EMAIL_REGEX = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 const PHONE_REGEX = /^(0|\+?84)[0-9]{8,10}$/;
 const STAFF_ROLES = ['ADMIN', 'CARE_STAFF', 'WAREHOUSE_STAFF'];
+
+const OTP_TTL_MS = 5 * 60 * 1000; // 5 phút
+const OTP_MAX_ATTEMPTS = 5;
+const passwordResetStore = new Map();
+
+const maskIdentifier = (parsed) => {
+  if (!parsed || !parsed.value) return '';
+  const val = parsed.value;
+  if (parsed.type === 'email') {
+    const [local, domain] = val.split('@');
+    if (!domain) return val;
+    const prefix = local.slice(0, Math.min(2, local.length));
+    return `${prefix}***@${domain}`;
+  }
+  if (val.length >= 7) {
+    return `${val.slice(0, 3)}****${val.slice(-3)}`;
+  }
+  return val;
+};
+
+const createOtpEntry = (key, userId, now = Date.now()) => {
+  const otp = String(crypto.randomInt(100000, 1000000));
+  const entry = {
+    otp,
+    userId,
+    expiresAt: now + OTP_TTL_MS,
+    attempts: 0,
+    createdAt: now,
+  };
+  passwordResetStore.set(key, entry);
+  return entry;
+};
+
+const verifyAndConsumeOtp = (key, inputOtp, now = Date.now()) => {
+  const entry = passwordResetStore.get(key);
+  if (!entry) {
+    throw new Error('Mã OTP không tồn tại hoặc đã được sử dụng. Vui lòng yêu cầu gửi lại mã mới.');
+  }
+  if (now > entry.expiresAt) {
+    passwordResetStore.delete(key);
+    throw new Error('Mã OTP đã hết hạn (quá 5 phút). Vui lòng yêu cầu gửi lại mã mới.');
+  }
+  const normalizedInput = String(inputOtp || '').trim();
+  if (!normalizedInput || normalizedInput !== entry.otp) {
+    entry.attempts += 1;
+    if (entry.attempts >= OTP_MAX_ATTEMPTS) {
+      passwordResetStore.delete(key);
+      throw new Error('Bạn đã nhập sai mã OTP quá 5 lần. Vui lòng yêu cầu mã OTP mới.');
+    }
+    const remaining = OTP_MAX_ATTEMPTS - entry.attempts;
+    throw new Error(`Mã OTP không chính xác. Bạn còn ${remaining} lần thử.`);
+  }
+  passwordResetStore.delete(key);
+  return entry;
+};
 
 const GENERIC_LOGIN_ERROR = 'Email/Số điện thoại hoặc mật khẩu không chính xác.';
 
@@ -54,17 +110,24 @@ const validateStrongPassword = (password) => {
   }
 };
 
+const validatePasswordForRegistration = (password, requireStrongPassword = false) => {
+  const pwd = String(password || '');
+  if (requireStrongPassword) {
+    validateStrongPassword(pwd);
+    return;
+  }
+  if (!pwd.trim()) {
+    throw new Error('Vui lòng nhập mật khẩu cho tài khoản mới.');
+  }
+};
+
 const registerUser = async ({ identifier, email, password, fullName, phone, role, requireStrongPassword = false }) => {
   const parsed = parseAccountIdentifier(identifier || email || phone);
   if (parsed.type === 'invalid') {
     throw new Error('Vui lòng nhập đúng định dạng Email hoặc Số điện thoại (VD: 0901234567).');
   }
 
-  if (requireStrongPassword) {
-    validateStrongPassword(password);
-  } else if (!password || String(password).length < 8) {
-    throw new Error('Mật khẩu đăng ký phải có ít nhất 8 ký tự.');
-  }
+  validatePasswordForRegistration(password, requireStrongPassword);
 
   const storedEmail = parsed.value;
   const storedPhone = parsed.type === 'phone' ? parsed.value : (phone ? phone.trim() : null);
@@ -173,6 +236,7 @@ const getUserProfile = async (userId) => {
       email: true,
       fullName: true,
       phone: true,
+      address: true,
       role: true,
       status: true,
       createdAt: true,
@@ -188,6 +252,7 @@ const getAllUsers = async () => {
       email: true,
       fullName: true,
       phone: true,
+      address: true,
       role: true,
       status: true,
       createdAt: true,
@@ -201,11 +266,12 @@ const getAllUsers = async () => {
   }));
 };
 
-const updateUserProfile = async (userId, { fullName, phone, password }) => {
+const updateUserProfile = async (userId, { fullName, phone, address, password }) => {
   const data = {};
-  if (fullName) data.fullName = fullName;
-  if (phone) data.phone = phone;
-  if (password) data.password = await bcrypt.hash(password, 10);
+  if (fullName !== undefined && fullName.trim()) data.fullName = fullName.trim();
+  if (phone !== undefined) data.phone = phone ? phone.trim() : null;
+  if (address !== undefined) data.address = address ? address.trim() : null;
+  if (password && password.trim()) data.password = await bcrypt.hash(password.trim(), 10);
 
   return await prisma.user.update({
     where: { id: userId },
@@ -215,6 +281,7 @@ const updateUserProfile = async (userId, { fullName, phone, password }) => {
       email: true,
       fullName: true,
       phone: true,
+      address: true,
       role: true,
       status: true,
       createdAt: true,
@@ -263,9 +330,111 @@ const deleteUserById = async (userId) => {
   });
 };
 
+const findUserByIdentifier = async (rawInput) => {
+  const raw = (rawInput || '').trim();
+  const cleanedPhone = raw.replace(/[\s.-]/g, '');
+  const normalizedPhone = cleanedPhone.startsWith('+84')
+    ? '0' + cleanedPhone.slice(3)
+    : cleanedPhone.startsWith('84') && cleanedPhone.length >= 10
+      ? '0' + cleanedPhone.slice(2)
+      : cleanedPhone;
+
+  return await prisma.user.findFirst({
+    where: {
+      OR: [
+        { email: raw.toLowerCase() },
+        { email: raw },
+        { email: normalizedPhone },
+        { phone: raw },
+        { phone: normalizedPhone },
+      ],
+    },
+  });
+};
+
+const requestPasswordReset = async ({ identifier, email, phone, portal = 'CUSTOMER' }) => {
+  const rawInput = (identifier || email || phone || '').trim();
+  const parsed = parseAccountIdentifier(rawInput);
+  if (parsed.type === 'invalid') {
+    throw new Error('Vui lòng nhập đúng định dạng Email hoặc Số điện thoại đã đăng ký!');
+  }
+
+  const user = await findUserByIdentifier(parsed.value);
+  if (!user) {
+    throw new Error('Không tìm thấy tài khoản tương ứng với Email hoặc Số điện thoại này.');
+  }
+
+  if (String(portal).toUpperCase() === 'CUSTOMER' && user.role !== 'CUSTOMER') {
+    throw new Error('Không tìm thấy tài khoản khách hàng tương ứng với Email hoặc Số điện thoại này.');
+  }
+
+  if (user.status === 'LOCKED') {
+    throw new Error('Tài khoản này đang bị khóa. Vui lòng liên hệ quản trị viên để được hỗ trợ.');
+  }
+
+  const storeKey = `${String(portal).toUpperCase()}:${user.id}`;
+  const entry = createOtpEntry(storeKey, user.id);
+
+  console.log(`🔐 [Password Reset OTP] User=${user.email} | OTP=${entry.otp} (hết hạn sau 5 phút)`);
+
+  return {
+    message: `Mã xác thực OTP 6 chữ số đã được tạo cho ${maskIdentifier(parsed)} (hiệu lực 5 phút).`,
+    maskedTarget: maskIdentifier(parsed),
+    expiresInSeconds: Math.floor(OTP_TTL_MS / 1000),
+    // Trả về mã OTP để trải nghiệm trực tiếp khi chưa tích hợp cổng SMTP/SMS bên thứ ba
+    demoOtp: entry.otp,
+  };
+};
+
+const resetPasswordWithOtp = async ({ identifier, email, phone, otp, newPassword, confirmPassword, portal = 'CUSTOMER' }) => {
+  const rawInput = (identifier || email || phone || '').trim();
+  const parsed = parseAccountIdentifier(rawInput);
+  if (parsed.type === 'invalid') {
+    throw new Error('Vui lòng nhập đúng định dạng Email hoặc Số điện thoại đã đăng ký!');
+  }
+
+  if (!otp || !String(otp).trim()) {
+    throw new Error('Vui lòng nhập mã xác thực OTP gồm 6 chữ số.');
+  }
+
+  if (confirmPassword !== undefined && newPassword !== confirmPassword) {
+    throw new Error('Mật khẩu nhập lại không khớp!');
+  }
+
+  validateStrongPassword(newPassword);
+
+  const user = await findUserByIdentifier(parsed.value);
+  if (!user || (String(portal).toUpperCase() === 'CUSTOMER' && user.role !== 'CUSTOMER')) {
+    throw new Error('Không tìm thấy tài khoản hợp lệ để đặt lại mật khẩu.');
+  }
+
+  if (user.status === 'LOCKED') {
+    throw new Error('Tài khoản này đang bị khóa. Vui lòng liên hệ quản trị viên.');
+  }
+
+  const storeKey = `${String(portal).toUpperCase()}:${user.id}`;
+  verifyAndConsumeOtp(storeKey, otp);
+
+  const hashedPassword = await bcrypt.hash(String(newPassword), 10);
+  await prisma.user.update({
+    where: { id: user.id },
+    data: { password: hashedPassword },
+  });
+
+  return {
+    message: 'Đặt lại mật khẩu thành công! Bạn có thể đăng nhập ngay bằng mật khẩu mới.',
+  };
+};
+
 module.exports = {
   validatePortalAccess,
   validateStrongPassword,
+  validatePasswordForRegistration,
+  maskIdentifier,
+  createOtpEntry,
+  verifyAndConsumeOtp,
+  requestPasswordReset,
+  resetPasswordWithOtp,
   registerUser,
   loginUser,
   getUserProfile,

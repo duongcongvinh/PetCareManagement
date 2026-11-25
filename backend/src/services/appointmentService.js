@@ -20,10 +20,14 @@ const getAppointmentsByUser = async (user) => {
   });
 };
 
-const createNewAppointment = async ({ petId, serviceId, appointmentDate, timeSlot, notes }, customerId) => {
+const createNewAppointment = async (
+  { petId, serviceId, appointmentDate, totalPrice, timeSlot, notes },
+  customerId
+) => {
   const targetDate = new Date(appointmentDate);
+  const service = await prisma.serviceCatalog.findUnique({ where: { id: serviceId } });
 
-  // Kiểm tra trùng slot giờ của cùng dịch vụ trong ngày
+  // Kiểm tra trùng khung giờ (Slot Lock) trong cùng ngày
   const startOfDay = new Date(targetDate);
   startOfDay.setHours(0, 0, 0, 0);
 
@@ -52,7 +56,8 @@ const createNewAppointment = async ({ petId, serviceId, appointmentDate, timeSlo
       petId,
       customerId,
       serviceId,
-      appointmentDate: new Date(appointmentDate),
+      appointmentDate: targetDate,
+      totalPrice: totalPrice !== undefined && totalPrice !== null ? parseFloat(totalPrice) : service?.price || 0,
       timeSlot,
       notes,
       status: 'PENDING',
@@ -77,6 +82,63 @@ const updateAppointmentStatus = async (id, { status, careSummary, staffId }, use
   });
 };
 
+const rescheduleAppointment = async (
+  id,
+  { appointmentDate, totalPrice, timeSlot, notes },
+  user
+) => {
+  const existing = await prisma.appointment.findUnique({
+    where: { id },
+    include: { service: true },
+  });
+  if (!existing) {
+    throw new Error('Lịch hẹn không tồn tại.');
+  }
+  if (user.role === 'CUSTOMER' && existing.customerId !== user.id) {
+    throw new Error('Bạn không có quyền chỉnh sửa lịch hẹn này.');
+  }
+  const editableStatuses = user.role === 'CUSTOMER' ? ['PENDING'] : ['PENDING', 'CONFIRMED'];
+  if (!editableStatuses.includes(existing.status)) {
+    throw new Error('Chỉ có thể đổi lịch khi ca hẹn chưa bắt đầu thực hiện.');
+  }
+
+  const nextDate = appointmentDate ? new Date(appointmentDate) : existing.appointmentDate;
+  const nextSlot = timeSlot || existing.timeSlot;
+
+  const startOfDay = new Date(nextDate);
+  startOfDay.setHours(0, 0, 0, 0);
+  const endOfDay = new Date(nextDate);
+  endOfDay.setHours(23, 59, 59, 999);
+
+  const conflict = await prisma.appointment.findFirst({
+    where: {
+      id: { not: id },
+      appointmentDate: { gte: startOfDay, lte: endOfDay },
+      timeSlot: nextSlot,
+      status: { in: ['PENDING', 'CONFIRMED', 'IN_PROGRESS'] },
+    },
+  });
+
+  if (conflict) {
+    throw new Error(
+      `Khung giờ ${nextSlot} ngày ${nextDate.toLocaleDateString('vi-VN')} đã có khách đặt. Vui lòng chọn giờ khác!`
+    );
+  }
+
+  const dataToUpdate = {
+    appointmentDate: nextDate,
+    timeSlot: nextSlot,
+  };
+  if (notes !== undefined) dataToUpdate.notes = notes;
+  if (totalPrice !== undefined && totalPrice !== null) dataToUpdate.totalPrice = parseFloat(totalPrice);
+
+  return await prisma.appointment.update({
+    where: { id },
+    data: dataToUpdate,
+    include: { pet: true, service: true, customer: true, staff: true },
+  });
+};
+
 const cancelAppointment = async (id, user) => {
   const app = await prisma.appointment.findUnique({ where: { id } });
   if (!app) {
@@ -85,8 +147,9 @@ const cancelAppointment = async (id, user) => {
   if (user.role === 'CUSTOMER' && app.customerId !== user.id) {
     throw new Error('Bạn không có quyền hủy lịch hẹn này.');
   }
-  if (app.status !== 'PENDING') {
-    throw new Error('Chỉ có thể hủy ca hẹn khi đang ở trạng thái chờ tiếp nhận (PENDING).');
+  const cancellableStatuses = user.role === 'CUSTOMER' ? ['PENDING'] : ['PENDING', 'CONFIRMED'];
+  if (!cancellableStatuses.includes(app.status)) {
+    throw new Error('Chỉ có thể hủy ca hẹn khi đang chờ tiếp nhận (PENDING / CONFIRMED).');
   }
   return await prisma.appointment.update({
     where: { id },
@@ -97,7 +160,7 @@ const cancelAppointment = async (id, user) => {
 
 const getAllServices = async () => {
   return await prisma.serviceCatalog.findMany({
-    orderBy: { createdAt: 'desc' },
+    orderBy: { createdAt: 'asc' },
   });
 };
 
@@ -106,10 +169,24 @@ const createNewService = async ({ name, description, durationMinutes, price, cat
     data: {
       name,
       description,
-      durationMinutes: parseInt(durationMinutes || 45),
+      durationMinutes: parseInt(durationMinutes || 45, 10),
       price: parseFloat(price),
-      category: category || 'Spa',
+      category: category || 'Spa & Grooming',
     },
+  });
+};
+
+const updateService = async (id, { name, description, durationMinutes, price, category }) => {
+  const data = {};
+  if (name !== undefined) data.name = name;
+  if (description !== undefined) data.description = description;
+  if (durationMinutes !== undefined) data.durationMinutes = parseInt(durationMinutes, 10);
+  if (price !== undefined) data.price = parseFloat(price);
+  if (category !== undefined) data.category = category;
+
+  return await prisma.serviceCatalog.update({
+    where: { id },
+    data,
   });
 };
 
@@ -121,8 +198,10 @@ module.exports = {
   getAppointmentsByUser,
   createNewAppointment,
   updateAppointmentStatus,
+  rescheduleAppointment,
   cancelAppointment,
   getAllServices,
   createNewService,
+  updateService,
   deleteService,
 };

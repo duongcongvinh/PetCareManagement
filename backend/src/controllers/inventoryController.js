@@ -19,18 +19,47 @@ const createProduct = async (req, res) => {
   }
 };
 
+const updateProduct = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const product = await inventoryService.updateProduct(id, req.body);
+    return res.json({
+      message: 'Cập nhật thông tin sản phẩm thành công!',
+      product,
+    });
+  } catch (error) {
+    return res.status(400).json({ message: error.message || 'Lỗi khi cập nhật sản phẩm.' });
+  }
+};
+
 const updateStock = async (req, res) => {
   try {
     const { id } = req.params;
-    const { type, quantity, note } = req.body; // type: 'IN' | 'OUT' | 'ADJUSTMENT'
+    const { type, quantity, note, minStockLevel, maxStockLevel } = req.body; // type: 'IN' | 'OUT' | 'ADJUSTMENT'
 
-    const updatedProduct = await inventoryService.updateProductStock(id, { type, quantity, note });
+    const updatedProduct = await inventoryService.updateProductStock(id, {
+      type,
+      quantity,
+      note,
+      minStockLevel,
+      maxStockLevel,
+    });
     return res.json({
       message: 'Cập nhật tồn kho thành công!',
       product: updatedProduct,
     });
   } catch (error) {
     return res.status(400).json({ message: error.message || 'Lỗi khi cập nhật tồn kho.' });
+  }
+};
+
+const deleteProduct = async (req, res) => {
+  try {
+    const { id } = req.params;
+    await inventoryService.deleteProduct(id);
+    return res.json({ message: 'Xóa sản phẩm khỏi kho thành công!' });
+  } catch (error) {
+    return res.status(400).json({ message: error.message || 'Lỗi khi xóa sản phẩm.' });
   }
 };
 
@@ -67,7 +96,9 @@ const createSupplier = async (req, res) => {
 module.exports = {
   getProducts,
   createProduct,
+  updateProduct,
   updateStock,
+  deleteProduct,
   getLowStockAlerts,
   getSuppliers,
   createSupplier,

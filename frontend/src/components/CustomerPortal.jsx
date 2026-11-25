@@ -5,6 +5,7 @@ import HomeLandingPage from './HomeLandingPage';
 import AboutUsSection from './AboutUsSection';
 import AddressMapPicker from './AddressMapPicker';
 import PayOSEmbeddedBox from './PayOSEmbeddedBox';
+import CustomerReviewSection from './CustomerReviewSection';
 import { apiService } from '../apiService';
 import { 
   PawPrint, Calendar, ShoppingBag, Plus, Minus, Trash2, Clock, ShieldCheck, HeartHandshake, 
@@ -244,12 +245,32 @@ const getProductRichDetails = (p) => {
   };
 };
 
+const isReproductiveService = (s) => {
+  if (!s) return false;
+  const cat = (s.category || '').toLowerCase();
+  const n = (s.name || '').toLowerCase();
+  return (
+    cat.includes('sinh sản') ||
+    n.includes('siêu âm thai') ||
+    n.includes('doppler') ||
+    n.includes('đỡ đẻ') ||
+    n.includes('hộ sinh') ||
+    n.includes('mổ đẻ') ||
+    n.includes('c-section') ||
+    n.includes('triệt sản') ||
+    n.includes('minilap') ||
+    n.includes('thiến') ||
+    n.includes('viêm tử cung') ||
+    n.includes('pyometra')
+  );
+};
+
 const getServiceRichDetails = (s) => {
   if (!s) return { steps: [], prepNote: '', targetPet: 'Chó & Mèo', standard: 'Chuẩn Petzera 5★' };
   const cat = (s.category || '').toLowerCase();
   const n = (s.name || '').toLowerCase();
 
-  if (cat.includes('sinh sản')) {
+  if (isReproductiveService(s)) {
     return {
       targetPet: n.includes('đực') ? 'Chó đực / Mèo đực từ 6 tháng tuổi trở lên' : 'Chó cái / Mèo cái cần khám thai, hộ sinh hoặc triệt sản',
       standard: 'Phòng phẫu thuật vô trùng áp lực dương • Gây mê bay hơi Isoflurane',
@@ -262,19 +283,6 @@ const getServiceRichDetails = (s) => {
       prepNote: n.includes('phẫu thuật') || n.includes('triệt sản') || n.includes('thiến') || n.includes('mổ đẻ')
         ? 'Nên cho bé nhịn ăn 6–8 tiếng trước giờ phẫu thuật (vẫn có thể uống ít nước). Đưa bé trong lồng vận chuyển kín gió và báo bác sĩ nếu bé có tiền sử dị ứng thuốc.'
         : 'Đem theo sổ tiêm phòng / ngày phối giống gần nhất để bác sĩ chẩn đoán và dự sinh chuẩn xác nhất.'
-    };
-  }
-  if (cat.includes('khách sạn')) {
-    return {
-      targetPet: 'Chó & Mèo đã tiêm phòng cơ bản, khỏe mạnh',
-      standard: 'Phòng điều hòa 24/7 • Camera trực tuyến theo dõi qua điện thoại',
-      steps: [
-        { title: 'Check-in & kiểm tra sức khỏe đầu vào', desc: 'Cân đo, kiểm tra da lông, ve rận và ghi nhận thói quen ăn uống, lịch sinh hoạt riêng của bé.' },
-        { title: 'Bố trí phòng Suite & cấp quyền xem Camera', desc: 'Sắp xếp phòng riêng sạch sẽ, khử khuẩn bằng ion âm và cấp tài khoản để chủ theo dõi bé 24/7.' },
-        { title: 'Chăm sóc ăn uống & vận động mỗi ngày', desc: 'Phục vụ 2 bữa ăn dinh dưỡng chuẩn giờ, dắt đi dạo / vui chơi sân vận động và cập nhật ảnh video hằng ngày.' },
-        { title: 'Kiểm tra bàn giao & xuất phòng', desc: 'Vệ sinh thơm tho trước khi trao trả bé kèm báo cáo ăn ngủ chi tiết trong suốt thời gian lưu trú.' }
-      ],
-      prepNote: 'Vui lòng mang theo sổ tiêm phòng (hoặc ảnh chụp), thức ăn riêng nếu bé có chế độ ăn đặc biệt và món đồ chơi quen thuộc giúp bé đỡ lạ nhà.'
     };
   }
   if (cat.includes('tiêm') || cat.includes('y tế') || cat.includes('khám')) {
@@ -317,20 +325,38 @@ export default function CustomerPortal({
   products, 
   promotions = [],
   orders = [],
+  reviews = [],
   cart: propsCart,
   setCart: propsSetCart,
   onAddPet, 
+  onUpdatePet,
+  onDeletePet,
   onBookAppointment, 
+  onRescheduleAppointment,
   onCancelAppointment,
+  onAddReview,
+  onDeleteReview,
   onUpdateProfile,
+  profileModalSignal = 0,
   onCheckoutOrder,
   onOpenLogin,
   onQuickLogin
 }) {
   const [showAddPet, setShowAddPet] = useState(false);
+  const [editingPet, setEditingPet] = useState(null);
   const [showBookingModal, setShowBookingModal] = useState(false);
+  const [editingAppointment, setEditingAppointment] = useState(null);
+  const [rescheduleForm, setRescheduleForm] = useState({ appointmentDate: '', timeSlot: '09:00 - 10:00', notes: '' });
+  const [reviewingAppointment, setReviewingAppointment] = useState(null);
+  const [appReviewForm, setAppReviewForm] = useState({ rating: 5, comment: '' });
   const [detailQuantity, setDetailQuantity] = useState(1);
   const [showProfileModal, setShowProfileModal] = useState(false);
+
+  useEffect(() => {
+    if (profileModalSignal > 0 && currentUser) {
+      setShowProfileModal(true);
+    }
+  }, [profileModalSignal, currentUser]);
 
   const openCartPage = () => {
     if (onTabChange) onTabChange('cart');
@@ -362,7 +388,7 @@ export default function CustomerPortal({
   const [profileForm, setProfileForm] = useState({
     fullName: currentUser?.fullName || '',
     phone: currentUser?.phone || '',
-    password: ''
+    address: currentUser?.address || ''
   });
 
   useEffect(() => {
@@ -370,7 +396,7 @@ export default function CustomerPortal({
       setProfileForm({
         fullName: currentUser.fullName || '',
         phone: currentUser.phone || '',
-        password: ''
+        address: currentUser.address || ''
       });
     }
   }, [currentUser]);
@@ -378,6 +404,7 @@ export default function CustomerPortal({
   // Shop & Service Filters
   const [selectedCategory, setSelectedCategory] = useState('ALL');
   const [selectedServiceCategory, setSelectedServiceCategory] = useState('ALL');
+  const [serviceSearchQuery, setServiceSearchQuery] = useState('');
   const [searchQuery, setSearchQuery] = useState('');
   const [sortBy, setSortBy] = useState('DEFAULT');
   const [promoCode, setPromoCode] = useState('');
@@ -448,7 +475,8 @@ export default function CustomerPortal({
       setCheckoutForm(prev => ({
         ...prev,
         recipientName: prev.recipientName || currentUser.fullName || '',
-        recipientPhone: prev.recipientPhone || currentUser.phone || ''
+        recipientPhone: prev.recipientPhone || currentUser.phone || '',
+        deliveryAddress: prev.deliveryAddress || currentUser.address || ''
       }));
     }
   }, [currentUser]);
@@ -481,13 +509,6 @@ export default function CustomerPortal({
   const getSlotStatus = (hour, dateStr) => {
     const slotValue = formatHourSlot(hour);
     const todayStr = getLocalTodayStr();
-    const isBooked = appointments.some(
-      (a) =>
-        a.appointmentDate === dateStr &&
-        a.timeSlot === slotValue &&
-        ['PENDING', 'CONFIRMED', 'IN_PROGRESS'].includes(a.status)
-    );
-    if (isBooked) return { value: slotValue, disabled: true, statusText: 'Đã có lịch - Khóa slot' };
 
     if (dateStr === todayStr) {
       const currH = new Date().getHours();
@@ -495,6 +516,14 @@ export default function CustomerPortal({
         return { value: slotValue, disabled: true, statusText: 'Đã qua giờ' };
       }
     }
+
+    const isBooked = appointments.some((a) =>
+      a.appointmentDate === dateStr &&
+      a.timeSlot === slotValue &&
+      ['PENDING', 'CONFIRMED', 'IN_PROGRESS'].includes(a.status)
+    );
+    if (isBooked) return { value: slotValue, disabled: true, statusText: 'Đã có lịch - Khóa slot' };
+
     return { value: slotValue, disabled: false, statusText: 'Còn trống' };
   };
 
@@ -547,30 +576,108 @@ export default function CustomerPortal({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [showBookingModal, bookingForm.appointmentDate, appointments]);
 
+  const openCreatePetModal = () => {
+    setEditingPet(null);
+    setNewPet({ name: '', species: 'Chó', breed: '', ageMonths: '', weightKg: '', medicalHistory: '' });
+    setShowAddPet(true);
+  };
+
+  const openEditPetModal = (pet) => {
+    setEditingPet(pet);
+    setNewPet({
+      name: pet.name || '',
+      species: pet.species || 'Chó',
+      breed: pet.breed || '',
+      ageMonths: pet.ageMonths ?? '',
+      weightKg: pet.weightKg ?? '',
+      medicalHistory: pet.medicalHistory || ''
+    });
+    setShowAddPet(true);
+  };
+
+  const handleDeletePetClick = async (pet) => {
+    const ok = await confirmModal(
+      `Bạn có chắc chắn muốn xóa hồ sơ thú cưng "${pet.name}" (${pet.species}${pet.breed ? ` - ${pet.breed}` : ''})?`,
+      'Xác Nhận Xóa Hồ Sơ Thú Cưng',
+      { type: 'danger', confirmText: 'Xóa Hồ Sơ', cancelText: 'Hủy' }
+    );
+    if (ok && onDeletePet) {
+      onDeletePet(pet.id);
+    }
+  };
+
   const handleCreatePetSubmit = (e) => {
     e.preventDefault();
-    if (!newPet.name) {
+    if (!newPet.name.trim()) {
       toast.warning('Vui lòng nhập tên thú cưng của bạn!', 'Thiếu Thông Tin');
       return;
     }
-    onAddPet(newPet);
+    const payload = {
+      ...newPet,
+      name: newPet.name.trim(),
+      breed: (newPet.breed || '').trim(),
+      ageMonths: newPet.ageMonths !== '' ? parseInt(newPet.ageMonths, 10) : null,
+      weightKg: newPet.weightKg !== '' ? parseFloat(newPet.weightKg) : null,
+      medicalHistory: (newPet.medicalHistory || '').trim()
+    };
+    if (editingPet) {
+      if (onUpdatePet) onUpdatePet(editingPet.id, payload);
+      toast.success(`Đã cập nhật hồ sơ thú cưng "${payload.name}"!`, 'Hồ Sơ Thú Cưng');
+    } else {
+      onAddPet(payload);
+      toast.success('Hồ sơ thú cưng đã được tạo thành công!', 'Thú Cưng Petzera');
+    }
+    setEditingPet(null);
     setNewPet({ name: '', species: 'Chó', breed: '', ageMonths: '', weightKg: '', medicalHistory: '' });
     setShowAddPet(false);
-    toast.success('Hồ sơ thú cưng đã được tạo thành công!', 'Thú Cưng Petzera');
+  };
+
+  const openRescheduleModal = (app) => {
+    setEditingAppointment(app);
+    setRescheduleForm({
+      appointmentDate: String(app.appointmentDate || getLocalTodayStr()).slice(0, 10),
+      timeSlot: app.timeSlot || '09:00 - 10:00',
+      notes: app.notes || ''
+    });
+  };
+
+  const handleRescheduleSubmit = async (e) => {
+    e.preventDefault();
+    if (!editingAppointment || !onRescheduleAppointment) return;
+    const payload = {
+      appointmentDate: rescheduleForm.appointmentDate,
+      timeSlot: rescheduleForm.timeSlot,
+      notes: rescheduleForm.notes
+    };
+    const res = await onRescheduleAppointment(editingAppointment.id, payload);
+    if (res && res.error) {
+      toast.error(res.error, 'Không Thể Đổi Lịch');
+    } else {
+      setEditingAppointment(null);
+    }
   };
 
   const handleBookingSubmit = async (e) => {
     e.preventDefault();
+    const resolvedPetId = bookingForm.petId || (myPets[0] ? myPets[0].id : (pets[0] ? pets[0].id : 'p1'));
+    const resolvedServiceId = bookingForm.serviceId || (services[0] ? services[0].id : 's1');
+
     const finalForm = {
-      ...bookingForm,
-      petId: bookingForm.petId || (myPets[0] ? myPets[0].id : (pets[0] ? pets[0].id : 'p1')),
-      serviceId: bookingForm.serviceId || (services[0] ? services[0].id : 's1')
+      petId: resolvedPetId,
+      serviceId: resolvedServiceId,
+      appointmentDate: bookingForm.appointmentDate,
+      timeSlot: bookingForm.timeSlot,
+      notes: bookingForm.notes || '',
     };
+
     const result = await onBookAppointment(finalForm);
     if (result && result.error) {
       toast.error(result.error, 'Không Thể Đặt Lịch');
     } else {
-      toast.success('Đặt lịch hẹn thành công! Đã gửi xác nhận tới hệ thống chăm sóc thú cưng.', '🎉 Đặt Lịch Thành Công');
+      toast.success(
+        'Đặt lịch hẹn thành công! Đã gửi xác nhận tới hệ thống chăm sóc thú cưng.',
+        '🎉 Đặt Lịch Thành Công'
+      );
       setShowBookingModal(false);
     }
   };
@@ -723,6 +830,20 @@ export default function CustomerPortal({
 
   const applyPromoCode = (codeOverride) => {
     const code = (codeOverride || promoCode).toUpperCase().trim();
+    const matchedPromo = promotions.find(
+      (p) => String(p.code || '').toUpperCase().trim() === code
+    );
+    if (matchedPromo) {
+      if (matchedPromo.status !== 'ACTIVE') {
+        toast.warning(`Mã ${matchedPromo.code} hiện đang tạm dừng áp dụng.`, 'Mã Khuyến Mãi');
+        return;
+      }
+      const pct = Number(matchedPromo.discountPercent) || 10;
+      setDiscountPercent(pct);
+      setPromoCode(matchedPromo.code.toUpperCase());
+      toast.success(`Áp dụng mã ${matchedPromo.code} thành công! Giảm ${pct}% tổng hóa đơn.`, '🎁 Mã Khuyến Mãi');
+      return;
+    }
     if (code === 'SPA10OFF') {
       setDiscountPercent(10);
       setPromoCode('SPA10OFF');
@@ -1077,9 +1198,16 @@ export default function CustomerPortal({
     return 0;
   });
 
-  // Filter Services by Category
+  // Filter Services by Category & Search Keyword
   const filteredServices = services.filter(s => {
-    return selectedServiceCategory === 'ALL' || s.category === selectedServiceCategory;
+    const matchCat = selectedServiceCategory === 'ALL' || s.category === selectedServiceCategory;
+    const q = serviceSearchQuery.trim().toLowerCase();
+    const matchQ =
+      !q ||
+      (s.name || '').toLowerCase().includes(q) ||
+      (s.description || '').toLowerCase().includes(q) ||
+      (s.category || '').toLowerCase().includes(q);
+    return matchCat && matchQ;
   });
 
   // Geo-fencing kiểm tra phạm vi Giao Hỏa Tốc 2H (chỉ áp dụng Nội Thành TP.HCM <= 20 km)
@@ -1199,6 +1327,9 @@ export default function CustomerPortal({
         <HomeLandingPage
           services={services}
           products={products}
+          reviews={reviews}
+          currentUser={currentUser}
+          myPets={myPets}
           onTabChange={onTabChange}
           setSelectedServiceCategory={setSelectedServiceCategory}
           setSelectedCategory={setSelectedCategory}
@@ -1210,6 +1341,9 @@ export default function CustomerPortal({
           setBookingForm={setBookingForm}
           setShowBookingModal={setShowBookingModal}
           getProductBrand={getProductBrand}
+          onAddReview={onAddReview}
+          onDeleteReview={onDeleteReview}
+          onOpenLogin={onOpenLogin}
         />
       )}
 
@@ -1232,7 +1366,7 @@ export default function CustomerPortal({
               <p style={{ fontSize: '0.85rem', color: 'var(--text-muted)' }}>Theo dõi giống, tuổi, cân nặng và tiền sử y tế của bé</p>
             </div>
             {currentUser && (
-              <button className="btn btn-coral" onClick={() => setShowAddPet(true)}>
+              <button className="btn btn-coral" onClick={openCreatePetModal}>
                 <Plus size={16} /> Thêm Thú Cưng Mới
               </button>
             )}
@@ -1276,12 +1410,33 @@ export default function CustomerPortal({
                     </div>
                   </div>
 
-                  <button className="btn btn-emerald" style={{ width: '100%' }} onClick={() => {
-                    setBookingForm(prev => ({ ...prev, petId: pet.id }));
-                    setShowBookingModal(true);
-                  }}>
-                    <Calendar size={16} /> Đặt Lịch Cho {pet.name}
-                  </button>
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '0.55rem' }}>
+                    <button className="btn btn-emerald" style={{ width: '100%' }} onClick={() => {
+                      setBookingForm(prev => ({ ...prev, petId: pet.id }));
+                      setShowBookingModal(true);
+                    }}>
+                      <Calendar size={16} /> Đặt Lịch Cho {pet.name}
+                    </button>
+                    <div style={{ display: 'flex', gap: '0.5rem' }}>
+                      <button
+                        type="button"
+                        className="btn btn-secondary"
+                        style={{ flex: 1, padding: '0.45rem 0.7rem', fontSize: '0.8rem' }}
+                        onClick={() => openEditPetModal(pet)}
+                      >
+                        <Edit3 size={14} /> Sửa Hồ Sơ
+                      </button>
+                      <button
+                        type="button"
+                        className="btn btn-danger"
+                        style={{ padding: '0.45rem 0.75rem', fontSize: '0.8rem' }}
+                        onClick={() => handleDeletePetClick(pet)}
+                        title="Xóa hồ sơ thú cưng"
+                      >
+                        <Trash2 size={14} /> Xóa
+                      </button>
+                    </div>
+                  </div>
                 </div>
               ))}
             </div>
@@ -1305,7 +1460,7 @@ export default function CustomerPortal({
         <div>
           <div style={{ marginBottom: '1.5rem', display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end', flexWrap: 'wrap', gap: '1rem' }}>
             <div>
-              <h1 style={{ fontSize: '1.5rem', fontWeight: 800 }}>Dịch Vụ Spa, Lưu Trú &amp; Khám Thú Y Petzera</h1>
+              <h1 style={{ fontSize: '1.5rem', fontWeight: 800 }}>Dịch Vụ Spa, Tiêm Phòng &amp; Khám Thú Y Petzera</h1>
               <p style={{ fontSize: '0.85rem', color: 'var(--text-muted)' }}>Xem bảng giá công khai, chọn khung giờ và đặt lịch hẹn giữ chỗ không trùng slot</p>
             </div>
             <span style={{ fontSize: '0.85rem', color: '#ff6b35', fontWeight: 700, background: '#fff7ed', padding: '4px 12px', borderRadius: '14px', border: '1px solid #ffedd5' }}>
@@ -1313,101 +1468,130 @@ export default function CustomerPortal({
             </span>
           </div>
 
-          {/* Service Category Filter Pills */}
-          <div style={{ display: 'flex', gap: '0.6rem', flexWrap: 'wrap', marginBottom: '1.75rem', background: '#ffffff', padding: '0.85rem 1.1rem', borderRadius: '16px', border: '1px solid var(--border-light)', boxShadow: '0 2px 10px rgba(0,0,0,0.03)' }}>
-            {[
-              { id: 'ALL', label: '🌟 Tất Cả Dịch Vụ' },
-              { id: 'Khoa Sinh Sản', label: '🏥 Khoa Sinh Sản (VPet\'s)' },
-              { id: 'Spa & Grooming', label: '✂️ Spa & Grooming' },
-              { id: 'Khách Sạn & Lưu Trú', label: '🏨 Khách Sạn & Lưu Trú' },
-              { id: 'Y Tế & Tiêm Phòng', label: '💉 Tiêm Phòng & Vắc Xin' },
-              { id: 'Khám Bệnh & Trị Liệu', label: '🩺 Khám Bệnh & Trị Liệu' }
-            ].map(cat => (
-              <button
-                key={cat.id}
-                type="button"
-                onClick={() => setSelectedServiceCategory(cat.id)}
-                style={{
-                  padding: '0.5rem 1.1rem',
-                  borderRadius: '20px',
-                  fontSize: '0.85rem',
-                  fontWeight: 700,
-                  border: selectedServiceCategory === cat.id ? '1px solid #ff6b35' : '1px solid var(--border-light)',
-                  background: selectedServiceCategory === cat.id ? '#fff7ed' : 'transparent',
-                  color: selectedServiceCategory === cat.id ? '#ff6b35' : '#475569',
-                  cursor: 'pointer',
-                  boxShadow: selectedServiceCategory === cat.id ? '0 2px 8px rgba(255, 107, 53, 0.2)' : 'none',
-                  transition: 'all 0.2s ease'
-                }}
-              >
-                {cat.label}
-              </button>
-            ))}
+          {/* Service Category Filter Pills + Keyword Search Bar */}
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '0.85rem', marginBottom: '1.75rem', background: '#ffffff', padding: '1rem 1.15rem', borderRadius: '16px', border: '1px solid var(--border-light)', boxShadow: '0 2px 10px rgba(0,0,0,0.03)' }}>
+            <div style={{ display: 'flex', alignItems: 'center', background: '#f8fafc', borderRadius: '12px', padding: '0.55rem 0.95rem', border: '1.5px solid #e2e8f0', maxWidth: 460 }}>
+              <Search size={17} color="#ea580c" style={{ marginRight: '8px', flexShrink: 0 }} />
+              <input
+                type="text"
+                value={serviceSearchQuery}
+                onChange={e => setServiceSearchQuery(e.target.value)}
+                placeholder="Tìm dịch vụ Spa, tiêm phòng, khám bệnh, siêu âm, triệt sản..."
+                style={{ background: 'transparent', border: 'none', color: '#0f172a', fontSize: '0.88rem', outline: 'none', width: '100%', fontWeight: 500 }}
+              />
+              {serviceSearchQuery && (
+                <button type="button" onClick={() => setServiceSearchQuery('')} style={{ background: 'none', border: 'none', color: '#94a3b8', cursor: 'pointer', padding: 0 }}>
+                  <X size={15} />
+                </button>
+              )}
+            </div>
+            <div style={{ display: 'flex', gap: '0.6rem', flexWrap: 'wrap' }}>
+              {[
+                { id: 'ALL', label: '🌟 Tất Cả Dịch Vụ' },
+                { id: 'Spa & Grooming', label: '✂️ Spa & Grooming' },
+                { id: 'Y Tế & Tiêm Phòng', label: '💉 Tiêm Phòng & Vắc Xin' },
+                { id: 'Khám Bệnh & Trị Liệu', label: '🩺 Khám Bệnh, Trị Liệu & Sinh Sản' }
+              ].map(cat => (
+                <button
+                  key={cat.id}
+                  type="button"
+                  onClick={() => setSelectedServiceCategory(cat.id)}
+                  style={{
+                    padding: '0.5rem 1.1rem',
+                    borderRadius: '20px',
+                    fontSize: '0.85rem',
+                    fontWeight: 700,
+                    border: selectedServiceCategory === cat.id ? '1px solid #ff6b35' : '1px solid var(--border-light)',
+                    background: selectedServiceCategory === cat.id ? '#fff7ed' : 'transparent',
+                    color: selectedServiceCategory === cat.id ? '#ff6b35' : '#475569',
+                    cursor: 'pointer',
+                    boxShadow: selectedServiceCategory === cat.id ? '0 2px 8px rgba(255, 107, 53, 0.2)' : 'none',
+                    transition: 'all 0.2s ease'
+                  }}
+                >
+                  {cat.label}
+                </button>
+              ))}
+            </div>
           </div>
 
-          <div className="grid-2">
-            {filteredServices.map((s) => (
-              <div key={s.id} className="glass-panel glass-card" style={{ padding: 0, display: 'flex', flexDirection: 'column', justifyContent: 'space-between', borderRadius: '18px', overflow: 'hidden', border: '1px solid var(--border-light)' }}>
-                <div>
-                  <div
-                    onClick={() => openServiceDetail(s)}
-                    title="Bấm để xem chi tiết dịch vụ"
-                    style={{ position: 'relative', height: 195, overflow: 'hidden', background: '#f1f5f9', cursor: 'pointer' }}
-                  >
-                    <img
-                      src={getServiceImage(s)}
-                      alt={s.name}
-                      className="media-card-img"
-                      loading="lazy"
-                      onError={(e) => { e.currentTarget.src = FALLBACK_IMAGES.service; }}
-                    />
-                    <span className="badge" style={{ position: 'absolute', top: 12, left: 12, background: 'rgba(255,255,255,0.94)', backdropFilter: 'blur(4px)', color: '#0f172a', fontWeight: 800, fontSize: '0.75rem', padding: '4px 11px', borderRadius: '20px', boxShadow: '0 2px 8px rgba(0,0,0,0.1)' }}>
-                      {s.category === 'Khoa Sinh Sản' ? '🏥 Khoa Sinh Sản' :
-                       s.category === 'Spa & Grooming' ? '✂️ Spa & Grooming' :
-                       s.category === 'Khách Sạn & Lưu Trú' ? '🏨 Khách Sạn' :
-                       s.category === 'Y Tế & Tiêm Phòng' ? '💉 Tiêm Phòng' : '🩺 Thú Y & Trị Liệu'}
-                    </span>
-                    <span style={{ position: 'absolute', bottom: 12, right: 12, background: 'rgba(15,23,42,0.82)', color: '#ffffff', fontSize: '0.95rem', fontWeight: 800, padding: '4px 12px', borderRadius: '12px', backdropFilter: 'blur(4px)' }}>
-                      {s.price.toLocaleString('vi-VN')} đ
-                    </span>
-                  </div>
-                  <div style={{ padding: '1.35rem 1.5rem 0 1.5rem' }}>
-                    <h3
+          {filteredServices.length === 0 ? (
+            <div className="glass-panel" style={{ padding: '3rem 2rem', textAlign: 'center', borderRadius: '20px' }}>
+              <div style={{ fontSize: '2.5rem', marginBottom: '0.5rem' }}>🐾</div>
+              <h3 style={{ fontSize: '1.15rem', fontWeight: 800, color: '#0f172a', marginBottom: '0.4rem' }}>
+                Hiện chưa có dịch vụ phù hợp
+              </h3>
+              <p style={{ fontSize: '0.86rem', color: '#64748b', marginBottom: '1.15rem' }}>
+                Bạn có thể xem toàn bộ danh mục dịch vụ của Petzera hoặc liên hệ Hotline 24/7 để được tư vấn ngay.
+              </p>
+              <button type="button" className="btn btn-coral" onClick={() => { setSelectedServiceCategory('ALL'); setServiceSearchQuery(''); }}>
+                Xem Tất Cả Dịch Vụ
+              </button>
+            </div>
+          ) : (
+            <div className="grid-2">
+              {filteredServices.map((s) => (
+                <div key={s.id} className="glass-panel glass-card" style={{ padding: 0, display: 'flex', flexDirection: 'column', justifyContent: 'space-between', borderRadius: '18px', overflow: 'hidden', border: '1px solid var(--border-light)' }}>
+                  <div>
+                    <div
                       onClick={() => openServiceDetail(s)}
-                      style={{ fontSize: '1.18rem', fontWeight: 800, marginBottom: '0.55rem', color: '#0f172a', lineHeight: 1.4, cursor: 'pointer' }}
+                      title="Bấm để xem chi tiết dịch vụ"
+                      style={{ position: 'relative', height: 195, overflow: 'hidden', background: '#f1f5f9', cursor: 'pointer' }}
                     >
-                      {s.name}
-                    </h3>
-                    <p style={{ fontSize: '0.86rem', color: 'var(--text-secondary)', marginBottom: '1.1rem', lineHeight: '1.55' }}>{s.description}</p>
+                      <img
+                        src={getServiceImage(s)}
+                        alt={s.name}
+                        className="media-card-img"
+                        loading="lazy"
+                        onError={(e) => { e.currentTarget.src = FALLBACK_IMAGES.service; }}
+                      />
+                      <span className="badge" style={{ position: 'absolute', top: 12, left: 12, background: 'rgba(255,255,255,0.94)', backdropFilter: 'blur(4px)', color: '#0f172a', fontWeight: 800, fontSize: '0.75rem', padding: '4px 11px', borderRadius: '20px', boxShadow: '0 2px 8px rgba(0,0,0,0.1)' }}>
+                        {s.category === 'Spa & Grooming' ? '✂️ Spa & Grooming' :
+                         s.category === 'Y Tế & Tiêm Phòng' ? '💉 Tiêm Phòng' :
+                         isReproductiveService(s) ? '🩺 Khám & Sinh Sản' : '🩺 Khám Bệnh & Trị Liệu'}
+                      </span>
+                      <span style={{ position: 'absolute', bottom: 12, right: 12, background: 'rgba(15,23,42,0.82)', color: '#ffffff', fontSize: '0.95rem', fontWeight: 800, padding: '4px 12px', borderRadius: '12px', backdropFilter: 'blur(4px)' }}>
+                        {s.price.toLocaleString('vi-VN')} đ
+                      </span>
+                    </div>
+                    <div style={{ padding: '1.35rem 1.5rem 0 1.5rem' }}>
+                      <h3
+                        onClick={() => openServiceDetail(s)}
+                        style={{ fontSize: '1.18rem', fontWeight: 800, marginBottom: '0.55rem', color: '#0f172a', lineHeight: 1.4, cursor: 'pointer' }}
+                      >
+                        {s.name}
+                      </h3>
+                      <p style={{ fontSize: '0.86rem', color: 'var(--text-secondary)', marginBottom: '1.1rem', lineHeight: '1.55' }}>{s.description}</p>
+                    </div>
+                  </div>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '1rem 1.5rem 1.35rem 1.5rem', borderTop: '1px solid var(--border-light)' }}>
+                    <span style={{ fontSize: '0.82rem', color: 'var(--text-muted)', display: 'flex', alignItems: 'center', gap: '4px' }}>
+                      <Clock size={14} color="#64748b" /> Thời gian: {s.durationMinutes || 45} phút
+                    </span>
+                    <div style={{ display: 'flex', gap: '0.5rem' }}>
+                      <button type="button" className="btn btn-secondary" style={{ padding: '0.45rem 0.8rem', fontSize: '0.8rem' }} onClick={() => openServiceDetail(s)}>
+                        Xem Chi Tiết
+                      </button>
+                      <button type="button" className="btn btn-coral" onClick={() => {
+                        if (!currentUser) {
+                          toast.warning('Vui lòng đăng nhập để tiến hành đặt lịch dịch vụ!', 'Yêu Cầu Đăng Nhập', {
+                            actionText: '🔐 Đăng Nhập Ngay',
+                            onAction: () => onOpenLogin && onOpenLogin()
+                          });
+                          onOpenLogin();
+                          return;
+                        }
+                        setBookingForm(prev => ({ ...prev, serviceId: s.id }));
+                        setShowBookingModal(true);
+                      }}>
+                        Đăng Ký Đặt Lịch
+                      </button>
+                    </div>
                   </div>
                 </div>
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '1rem 1.5rem 1.35rem 1.5rem', borderTop: '1px solid var(--border-light)' }}>
-                  <span style={{ fontSize: '0.82rem', color: 'var(--text-muted)', display: 'flex', alignItems: 'center', gap: '4px' }}>
-                    <Clock size={14} color="#64748b" /> Thời gian: {s.durationMinutes >= 60 ? `${Math.floor(s.durationMinutes / 60)}h${s.durationMinutes % 60 ? ` ${s.durationMinutes % 60}p` : ''}` : `${s.durationMinutes} phút`}
-                  </span>
-                  <div style={{ display: 'flex', gap: '0.5rem' }}>
-                    <button type="button" className="btn btn-secondary" style={{ padding: '0.45rem 0.8rem', fontSize: '0.8rem' }} onClick={() => openServiceDetail(s)}>
-                      Xem Chi Tiết
-                    </button>
-                    <button type="button" className="btn btn-coral" onClick={() => {
-                      if (!currentUser) {
-                        toast.warning('Vui lòng đăng nhập để tiến hành đặt lịch dịch vụ!', 'Yêu Cầu Đăng Nhập', {
-                          actionText: '🔐 Đăng Nhập Ngay',
-                          onAction: () => onOpenLogin && onOpenLogin()
-                        });
-                        onOpenLogin();
-                        return;
-                      }
-                      setBookingForm(prev => ({ ...prev, serviceId: s.id }));
-                      setShowBookingModal(true);
-                    }}>
-                      Đăng Ký Đặt Lịch
-                    </button>
-                  </div>
-                </div>
-              </div>
-            ))}
-          </div>
+              ))}
+            </div>
+          )}
         </div>
       )}
 
@@ -1426,9 +1610,7 @@ export default function CustomerPortal({
         }
 
         const svcInfo = getServiceRichDetails(ds);
-        const durationText = ds.durationMinutes >= 60
-          ? `${Math.floor(ds.durationMinutes / 60)} giờ${ds.durationMinutes % 60 ? ` ${ds.durationMinutes % 60} phút` : ''}`
-          : `${ds.durationMinutes} phút`;
+        const durationText = `${ds.durationMinutes || 45} phút`;
         const relatedServices = services
           .filter(item => item.id !== ds.id && item.category === ds.category)
           .concat(services.filter(item => item.id !== ds.id && item.category !== ds.category))
@@ -1648,6 +1830,26 @@ export default function CustomerPortal({
                 <strong>📌 Lưu ý chuẩn bị trước khi đưa bé đến:</strong> {svcInfo.prepNote}
               </div>
             </section>
+
+            {/* Customer Reviews for this Service */}
+            <CustomerReviewSection
+              reviews={reviews.filter(
+                (r) =>
+                  r.targetType === 'SERVICE' &&
+                  (r.targetId === ds.id ||
+                    (r.targetName || '').trim().toLowerCase() === (ds.name || '').trim().toLowerCase())
+              )}
+              targetType="SERVICE"
+              targetId={ds.id}
+              targetName={ds.name}
+              currentUser={currentUser}
+              myPets={myPets}
+              onAddReview={onAddReview}
+              onDeleteReview={onDeleteReview}
+              onOpenLogin={onOpenLogin}
+              title={`Đánh Giá Dịch Vụ`}
+              subtitle={`Cảm nhận của khách hàng đã trải nghiệm "${ds.name}"`}
+            />
 
             {/* Related Services */}
             {relatedServices.length > 0 && (
@@ -2403,6 +2605,26 @@ export default function CustomerPortal({
                 <strong>📌 Hướng dẫn sử dụng &amp; bảo quản:</strong> {dInfo.usage}
               </div>
             </section>
+
+            {/* Customer Reviews for this Product */}
+            <CustomerReviewSection
+              reviews={reviews.filter(
+                (r) =>
+                  r.targetType === 'PRODUCT' &&
+                  (r.targetId === dp.id ||
+                    (r.targetName || '').trim().toLowerCase() === (dp.name || '').trim().toLowerCase())
+              )}
+              targetType="PRODUCT"
+              targetId={dp.id}
+              targetName={dp.name}
+              currentUser={currentUser}
+              myPets={myPets}
+              onAddReview={onAddReview}
+              onDeleteReview={onDeleteReview}
+              onOpenLogin={onOpenLogin}
+              title="Đánh Giá Sản Phẩm"
+              subtitle={`Nhận xét từ khách hàng đã mua "${dp.name}"`}
+            />
 
             {/* Related Products Grid */}
             {relatedProducts.length > 0 && (
@@ -3723,10 +3945,15 @@ export default function CustomerPortal({
                         SĐT tài khoản: <strong>{currentUser.phone || currentUser.email || 'Chưa cập nhật'}</strong>
                       </>
                     )}
+                    {currentUser.address && (
+                      <div style={{ marginTop: '2px' }}>
+                        Địa chỉ: <strong>{currentUser.address}</strong>
+                      </div>
+                    )}
                   </div>
                 </div>
                 <button className="btn btn-secondary" style={{ fontSize: '0.8rem', padding: '0.4rem 0.85rem' }} onClick={() => setShowProfileModal(true)}>
-                  Cập Nhật SĐT / Mật Khẩu
+                  Cập Nhật SĐT / Địa Chỉ
                 </button>
               </div>
 
@@ -3749,8 +3976,17 @@ export default function CustomerPortal({
                       myAppointments.map((app) => (
                         <tr key={app.id}>
                           <td><strong>{app.petName}</strong> ({app.species})</td>
-                          <td>{app.serviceName}</td>
-                          <td>{app.appointmentDate} ({app.timeSlot})</td>
+                          <td>
+                            <div style={{ fontWeight: 700, color: '#0f172a' }}>{app.serviceName}</div>
+                            {(app.totalPrice || app.price) ? (
+                              <div style={{ fontSize: '0.76rem', color: '#ea580c', fontWeight: 700, marginTop: '2px' }}>
+                                {Number(app.totalPrice || app.price).toLocaleString('vi-VN')} đ
+                              </div>
+                            ) : null}
+                          </td>
+                          <td>
+                            <div>{app.appointmentDate} ({app.timeSlot})</div>
+                          </td>
                           <td>
                             <span className={`badge ${app.status === 'COMPLETED' ? 'badge-success' : app.status === 'IN_PROGRESS' ? 'badge-info' : app.status === 'CANCELLED' ? 'badge-danger' : 'badge-pending'}`}>
                               {app.status === 'CANCELLED' ? 'ĐÃ HỦY' : app.status}
@@ -3761,26 +3997,59 @@ export default function CustomerPortal({
                           </td>
                           <td>
                             {app.status === 'PENDING' ? (
-                              <button 
-                                className="btn btn-secondary" 
-                                style={{ padding: '0.35rem 0.75rem', fontSize: '0.78rem', color: '#f87171', borderColor: 'rgba(248, 113, 113, 0.4)' }}
-                                onClick={async () => {
-                                  const confirmed = await confirmModal(
-                                    `Bạn có chắc chắn muốn hủy ca hẹn [${app.serviceName}] cho bé ${app.petName}? Khung giờ sẽ được giải phóng lập tức.`,
-                                    'Xác Nhận Hủy Lịch Hẹn',
-                                    { type: 'danger', confirmText: 'Hủy Lịch Hẹn', cancelText: 'Giữ Lại Ca Hẹn' }
-                                  );
-                                  if (confirmed && onCancelAppointment) {
-                                    onCancelAppointment(app.id);
-                                  }
-                                }}
-                              >
-                                Hủy Lịch
-                              </button>
-                            ) : app.status === 'CANCELLED' ? (
+                              <div style={{ display: 'flex', gap: '0.4rem', flexWrap: 'nowrap' }}>
+                                <button
+                                  type="button"
+                                  className="btn btn-secondary"
+                                  style={{ padding: '0.35rem 0.68rem', fontSize: '0.76rem', color: '#0284c7', borderColor: '#bae6fd', background: '#f0f9ff', whiteSpace: 'nowrap' }}
+                                  onClick={() => openRescheduleModal(app)}
+                                >
+                                  <Edit3 size={12} /> Đổi Lịch
+                                </button>
+                                <button 
+                                  type="button"
+                                  className="btn btn-secondary" 
+                                  style={{ padding: '0.35rem 0.68rem', fontSize: '0.76rem', color: '#dc2626', borderColor: 'rgba(248, 113, 113, 0.45)', whiteSpace: 'nowrap' }}
+                                  onClick={async () => {
+                                    const confirmed = await confirmModal(
+                                      `Bạn có chắc chắn muốn hủy ca hẹn [${app.serviceName}] cho bé ${app.petName}? Khung giờ sẽ được giải phóng lập tức.`,
+                                      'Xác Nhận Hủy Lịch Hẹn',
+                                      { type: 'danger', confirmText: 'Hủy Lịch Hẹn', cancelText: 'Giữ Lại Ca Hẹn' }
+                                    );
+                                    if (confirmed && onCancelAppointment) {
+                                      onCancelAppointment(app.id);
+                                    }
+                                  }}
+                                >
+                                  Hủy Lịch
+                                </button>
+                              </div>
+                            ) : app.status === 'COMPLETED' ? (() => {
+                              const existingRev = reviews.find((r) => r.appointmentId === app.id);
+                              if (existingRev) {
+                                return (
+                                  <span className="badge badge-success" style={{ display: 'inline-flex', alignItems: 'center', gap: '4px', whiteSpace: 'nowrap' }}>
+                                    <Star size={12} fill="#059669" color="#059669" /> Đã đánh giá {existingRev.rating}★
+                                  </span>
+                                );
+                              }
+                              return (
+                                <button
+                                  type="button"
+                                  className="btn btn-coral"
+                                  style={{ padding: '0.35rem 0.72rem', fontSize: '0.76rem', whiteSpace: 'nowrap' }}
+                                  onClick={() => {
+                                    setReviewingAppointment(app);
+                                    setAppReviewForm({ rating: 5, comment: '' });
+                                  }}
+                                >
+                                  <Star size={12} fill="#ffffff" /> Đánh Giá
+                                </button>
+                              );
+                            })() : app.status === 'CANCELLED' ? (
                               <span style={{ fontSize: '0.78rem', color: '#f87171' }}>Đã giải phóng</span>
                             ) : (
-                              <span style={{ fontSize: '0.78rem', color: 'var(--text-muted)' }}>Không thể hủy</span>
+                              <span style={{ fontSize: '0.78rem', color: 'var(--text-muted)' }}>Đang thực hiện</span>
                             )}
                           </td>
                         </tr>
@@ -3846,7 +4115,7 @@ export default function CustomerPortal({
               <BrandLogo size="md" subtitle="SPA • THÚ Y 24/7 • PET SHOP" />
             </a>
             <p style={{ fontSize: '0.84rem', color: 'var(--text-muted)', lineHeight: '1.65', marginBottom: '0.85rem' }}>
-              Chăm sóc thú cưng toàn diện — dịch vụ Spa Grooming, Khoa Sinh Sản 24/7, lưu trú VIP và cửa hàng chính hãng trong một nền tảng thông minh.
+              Chăm sóc thú cưng toàn diện — dịch vụ Spa Grooming, Tiêm phòng vắc xin, Khám bệnh &amp; Khoa Sinh Sản 24/7 cùng cửa hàng chính hãng trong một nền tảng thông minh.
             </p>
             <div style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', background: '#ecfdf5', border: '1px solid #a7f3d0', color: '#047857', fontSize: '0.73rem', fontWeight: 800, padding: '4px 10px', borderRadius: '999px' }}>
               <ShieldCheck size={13} /> Chứng nhận 100% Chính Hãng
@@ -3937,11 +4206,13 @@ export default function CustomerPortal({
         </div>
       </footer>
 
-      {/* MODAL THÊM THÚ CƯNG */}
+      {/* MODAL THÊM / SỬA THÚ CƯNG */}
       {showAddPet && (
         <div className="modal-overlay">
           <div className="modal-content">
-            <h3 style={{ fontSize: '1.3rem', fontWeight: 800, marginBottom: '1.25rem' }}>Tạo Hồ Sơ Thú Cưng Mới</h3>
+            <h3 style={{ fontSize: '1.3rem', fontWeight: 800, marginBottom: '1.25rem' }}>
+              {editingPet ? `Chỉnh Sửa Hồ Sơ: ${editingPet.name}` : 'Tạo Hồ Sơ Thú Cưng Mới'}
+            </h3>
             <form onSubmit={handleCreatePetSubmit}>
               <div className="form-group">
                 <label>Tên Thú Cưng *</label>
@@ -3964,31 +4235,104 @@ export default function CustomerPortal({
               <div className="grid-2">
                 <div className="form-group">
                   <label>Tuổi (tháng)</label>
-                  <input type="number" className="form-control" value={newPet.ageMonths} onChange={e => setNewPet({ ...newPet, ageMonths: e.target.value })} />
+                  <input type="number" min="0" className="form-control" value={newPet.ageMonths} onChange={e => setNewPet({ ...newPet, ageMonths: e.target.value })} />
                 </div>
                 <div className="form-group">
                   <label>Cân nặng (kg)</label>
-                  <input type="number" step="0.1" className="form-control" value={newPet.weightKg} onChange={e => setNewPet({ ...newPet, weightKg: e.target.value })} />
+                  <input type="number" min="0" step="0.1" className="form-control" value={newPet.weightKg} onChange={e => setNewPet({ ...newPet, weightKg: e.target.value })} />
                 </div>
               </div>
               <div className="form-group">
-                <label>Tiền sử y tế / Lưu ý dịch ứng</label>
+                <label>Tiền sử y tế / Lưu ý dị ứng</label>
                 <textarea className="form-control" rows={3} value={newPet.medicalHistory} onChange={e => setNewPet({ ...newPet, medicalHistory: e.target.value })} placeholder="Nhạy cảm với sữa, dị ứng xà phòng..." />
               </div>
               <div style={{ display: 'flex', gap: '0.85rem', justifyContent: 'flex-end', marginTop: '1.25rem' }}>
-                <button type="button" className="btn btn-secondary" onClick={() => setShowAddPet(false)}>Hủy</button>
-                <button type="submit" className="btn btn-coral">Lưu Hồ Sơ</button>
+                <button type="button" className="btn btn-secondary" onClick={() => { setShowAddPet(false); setEditingPet(null); }}>Hủy</button>
+                <button type="submit" className="btn btn-coral">{editingPet ? 'Lưu Thay Đổi' : 'Lưu Hồ Sơ'}</button>
               </div>
             </form>
           </div>
         </div>
       )}
 
-      {/* MODAL ĐẶT LỊCH HẸN */}
+      {/* MODAL ĐỔI LỊCH HẸN (KHÁCH HÀNG SỬA NGÀY / GIỜ / GHI CHÚ KHI PENDING) */}
+      {editingAppointment && (
+        <div className="modal-overlay" onClick={(e) => { if (e.target === e.currentTarget) setEditingAppointment(null); }}>
+          <div className="modal-content animate-fade-in" style={{ maxWidth: 500, borderRadius: '20px' }}>
+            <h3 style={{ fontSize: '1.25rem', fontWeight: 800, marginBottom: '0.9rem', color: '#0f172a' }}>
+              📅 Đổi Lịch Hẹn: {editingAppointment.petName}
+            </h3>
+            <div style={{ background: '#f0f9ff', border: '1px solid #bae6fd', borderRadius: '12px', padding: '0.75rem 0.95rem', marginBottom: '1rem', fontSize: '0.84rem', color: '#0369a1' }}>
+              Dịch vụ: <strong>{editingAppointment.serviceName}</strong>
+            </div>
+            <form onSubmit={handleRescheduleSubmit}>
+              <div className="grid-2" style={{ gap: '0.85rem' }}>
+                <div className="form-group">
+                  <label style={{ fontWeight: 700, color: '#334155' }}>Ngày Hẹn Mới *</label>
+                  <input
+                    type="date"
+                    className="form-control"
+                    min={getLocalTodayStr()}
+                    value={rescheduleForm.appointmentDate}
+                    onChange={e => setRescheduleForm(prev => ({ ...prev, appointmentDate: e.target.value }))}
+                    required
+                  />
+                </div>
+                <div className="form-group">
+                  <label style={{ fontWeight: 700, color: '#334155' }}>Khung Giờ Mới *</label>
+                  <select
+                    className="form-control"
+                    value={rescheduleForm.timeSlot}
+                    onChange={e => setRescheduleForm({ ...rescheduleForm, timeSlot: e.target.value })}
+                  >
+                    {BOOKING_TIME_SLOT_GROUPS.map((group) => (
+                      <optgroup key={group.label} label={group.label}>
+                        {group.hours.map((h) => {
+                          const slotVal = formatHourSlot(h);
+                          const isSameSlot =
+                            rescheduleForm.appointmentDate === String(editingAppointment.appointmentDate || '').slice(0, 10) &&
+                            slotVal === editingAppointment.timeSlot;
+                          const st = getSlotStatus(h, rescheduleForm.appointmentDate);
+                          const disabled = !isSameSlot && st.disabled;
+                          return (
+                            <option key={slotVal} value={slotVal} disabled={disabled}>
+                              {slotVal} ({isSameSlot ? 'Giờ hiện tại' : st.statusText})
+                            </option>
+                          );
+                        })}
+                      </optgroup>
+                    ))}
+                  </select>
+                </div>
+              </div>
+              <div className="form-group">
+                <label style={{ fontWeight: 700, color: '#334155' }}>Ghi Chú Cập Nhật</label>
+                <input
+                  className="form-control"
+                  value={rescheduleForm.notes}
+                  onChange={e => setRescheduleForm({ ...rescheduleForm, notes: e.target.value })}
+                  placeholder="Ghi chú mới cho nhân viên..."
+                />
+              </div>
+              <div style={{ display: 'flex', gap: '0.75rem', justifyContent: 'flex-end', marginTop: '1.1rem' }}>
+                <button type="button" className="btn btn-secondary" onClick={() => setEditingAppointment(null)}>Hủy</button>
+                <button type="submit" className="btn btn-primary">Lưu Lịch Hẹn Mới</button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* MODAL ĐẶT LỊCH HẸN DỊCH VỤ */}
       {showBookingModal && (
         <div className="modal-overlay">
-          <div className="modal-content animate-fade-in" style={{ maxWidth: 540, borderRadius: '20px' }}>
-            <h3 style={{ fontSize: '1.35rem', fontWeight: 800, marginBottom: '1.25rem', color: '#0f172a' }}>Xác Nhận Đặt Lịch Dịch Vụ</h3>
+          <div
+            className="modal-content animate-fade-in"
+            style={{ maxWidth: 540, borderRadius: '20px', maxHeight: '90vh', overflowY: 'auto' }}
+          >
+            <h3 style={{ fontSize: '1.35rem', fontWeight: 800, marginBottom: '1.15rem', color: '#0f172a' }}>
+              Xác Nhận Đặt Lịch Dịch Vụ
+            </h3>
             
             {!currentUser ? (
               <div style={{ background: 'rgba(255, 107, 53, 0.06)', padding: '1.5rem', borderRadius: '16px', marginBottom: '1.25rem', border: '1px solid rgba(255, 107, 53, 0.25)', textAlign: 'center' }}>
@@ -4036,9 +4380,13 @@ export default function CustomerPortal({
                   <select 
                     className="form-control" 
                     value={bookingForm.petId || (myPets[0] ? myPets[0].id : '')} 
-                    onChange={e => setBookingForm({ ...bookingForm, petId: e.target.value })}
+                    onChange={e => setBookingForm(prev => ({ ...prev, petId: e.target.value }))}
                   >
-                    {myPets.map(p => <option key={p.id} value={p.id}>{p.name} ({p.species} - {p.breed})</option>)}
+                    {myPets.map(p => (
+                      <option key={p.id} value={p.id}>
+                        {p.name} ({p.species}{p.breed ? ` - ${p.breed}` : ''}{p.weightKg ? ` • ${p.weightKg}kg` : ''})
+                      </option>
+                    ))}
                   </select>
                 </div>
                 <div className="form-group">
@@ -4046,12 +4394,17 @@ export default function CustomerPortal({
                   <select 
                     className="form-control" 
                     value={bookingForm.serviceId || (services[0] ? services[0].id : '')} 
-                    onChange={e => setBookingForm({ ...bookingForm, serviceId: e.target.value })}
+                    onChange={e => setBookingForm(prev => ({ ...prev, serviceId: e.target.value }))}
                   >
-                    {services.map(s => <option key={s.id} value={s.id}>{s.name} - {s.price.toLocaleString('vi-VN')} đ ({s.durationMinutes} phút)</option>)}
+                    {services.map(s => (
+                      <option key={s.id} value={s.id}>
+                        {s.name} — {s.price.toLocaleString('vi-VN')} đ ({s.durationMinutes || 45} phút)
+                      </option>
+                    ))}
                   </select>
                 </div>
-                <div className="grid-2">
+
+                <div className="grid-2" style={{ gap: '0.85rem' }}>
                   <div className="form-group">
                     <label style={{ fontWeight: 700, color: '#334155' }}>Ngày Hẹn *</label>
                     <input
@@ -4059,7 +4412,7 @@ export default function CustomerPortal({
                       className="form-control"
                       min={getLocalTodayStr()}
                       value={bookingForm.appointmentDate}
-                      onChange={e => setBookingForm({ ...bookingForm, appointmentDate: e.target.value })}
+                      onChange={e => setBookingForm(prev => ({ ...prev, appointmentDate: e.target.value }))}
                       required
                     />
                   </div>
@@ -4086,13 +4439,21 @@ export default function CustomerPortal({
                     </select>
                   </div>
                 </div>
+
                 <div className="form-group">
                   <label style={{ fontWeight: 700, color: '#334155' }}>Ghi chú dặn dò nhân viên</label>
-                  <input className="form-control" value={bookingForm.notes} onChange={e => setBookingForm({ ...bookingForm, notes: e.target.value })} placeholder="VD: Bé hơi nhát nước, nhờ tắm nhẹ tay..." />
+                  <input
+                    className="form-control"
+                    value={bookingForm.notes}
+                    onChange={e => setBookingForm({ ...bookingForm, notes: e.target.value })}
+                    placeholder="VD: Bé hơi nhát nước, nhờ tắm nhẹ tay..."
+                  />
                 </div>
                 <div style={{ display: 'flex', gap: '0.85rem', justifyContent: 'flex-end', marginTop: '1.25rem' }}>
                   <button type="button" className="btn btn-secondary" onClick={() => setShowBookingModal(false)}>Hủy</button>
-                  <button type="submit" className="btn btn-emerald" style={{ padding: '0.65rem 1.4rem', fontWeight: 800 }}>Xác Nhận Đặt Lịch</button>
+                  <button type="submit" className="btn btn-emerald" style={{ padding: '0.65rem 1.4rem', fontWeight: 800 }}>
+                    Xác Nhận Đặt Lịch
+                  </button>
                 </div>
               </form>
             )}
@@ -4102,6 +4463,80 @@ export default function CustomerPortal({
                 <button type="button" className="btn btn-secondary" onClick={() => setShowBookingModal(false)}>Đóng</button>
               </div>
             ) : null}
+          </div>
+        </div>
+      )}
+
+      {/* MODAL ĐÁNH GIÁ CA HẸN ĐÃ HOÀN THÀNH */}
+      {reviewingAppointment && (
+        <div className="modal-overlay" onClick={(e) => { if (e.target === e.currentTarget) setReviewingAppointment(null); }}>
+          <div className="modal-content animate-fade-in" style={{ maxWidth: 480, borderRadius: '20px' }}>
+            <h3 style={{ fontSize: '1.25rem', fontWeight: 800, marginBottom: '0.75rem', color: '#0f172a', display: 'flex', alignItems: 'center', gap: '8px' }}>
+              <Star size={20} fill="#f59e0b" color="#f59e0b" /> Đánh Giá Dịch Vụ Đã Hoàn Thành
+            </h3>
+            <div style={{ background: '#fff7ed', border: '1px solid #fed7aa', borderRadius: '12px', padding: '0.75rem 0.95rem', marginBottom: '1rem', fontSize: '0.84rem', color: '#9a3412' }}>
+              <div>Dịch vụ: <strong>{reviewingAppointment.serviceName}</strong></div>
+              <div style={{ fontSize: '0.78rem', marginTop: '2px' }}>Bé cưng: <strong>{reviewingAppointment.petName}</strong> • Ngày: {reviewingAppointment.appointmentDate}</div>
+            </div>
+            <form
+              onSubmit={async (e) => {
+                e.preventDefault();
+                if (appReviewForm.comment.trim().length < 5) {
+                  toast.warning('Vui lòng nhập nhận xét tối thiểu 5 ký tự!', 'Nội Dung Quá Ngắn');
+                  return;
+                }
+                if (onAddReview) {
+                  const res = await onAddReview({
+                    targetType: 'SERVICE',
+                    targetId: reviewingAppointment.serviceId,
+                    targetName: reviewingAppointment.serviceName,
+                    appointmentId: reviewingAppointment.id,
+                    petName: `${reviewingAppointment.petName}${reviewingAppointment.species ? ` • ${reviewingAppointment.species}` : ''}`,
+                    rating: appReviewForm.rating,
+                    comment: appReviewForm.comment.trim(),
+                  });
+                  if (res && res.error) {
+                    toast.error(res.error, 'Không Thể Gửi Đánh Giá');
+                    return;
+                  }
+                }
+                setReviewingAppointment(null);
+              }}
+            >
+              <div className="form-group">
+                <label style={{ fontWeight: 700, color: '#334155' }}>Chấm Điểm Hài Lòng *</label>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '6px', marginTop: '4px' }}>
+                  {[1, 2, 3, 4, 5].map((s) => (
+                    <button
+                      key={s}
+                      type="button"
+                      onClick={() => setAppReviewForm((prev) => ({ ...prev, rating: s }))}
+                      style={{ background: 'none', border: 'none', cursor: 'pointer', padding: '2px' }}
+                    >
+                      <Star size={28} fill={s <= appReviewForm.rating ? '#f59e0b' : '#ffffff'} color={s <= appReviewForm.rating ? '#f59e0b' : '#cbd5e1'} />
+                    </button>
+                  ))}
+                  <span style={{ fontSize: '0.86rem', fontWeight: 800, color: '#ea580c', marginLeft: '6px' }}>
+                    {appReviewForm.rating} / 5 sao
+                  </span>
+                </div>
+              </div>
+              <div className="form-group">
+                <label style={{ fontWeight: 700, color: '#334155' }}>Nhận Xét Của Bạn *</label>
+                <textarea
+                  className="form-control"
+                  rows={3}
+                  value={appReviewForm.comment}
+                  onChange={(e) => setAppReviewForm((prev) => ({ ...prev, comment: e.target.value }))}
+                  placeholder="Chia sẻ trải nghiệm thực tế của bé khi làm dịch vụ..."
+                  required
+                />
+              </div>
+              <div style={{ display: 'flex', gap: '0.75rem', justifyContent: 'flex-end', marginTop: '1rem' }}>
+                <button type="button" className="btn btn-secondary" onClick={() => setReviewingAppointment(null)}>Hủy</button>
+                <button type="submit" className="btn btn-coral">Gửi Đánh Giá</button>
+              </div>
+            </form>
           </div>
         </div>
       )}
@@ -4152,13 +4587,13 @@ export default function CustomerPortal({
               </div>
 
               <div className="form-group">
-                <label>Mật Khẩu Mới (Để trống nếu không đổi)</label>
+                <label>Địa Chỉ</label>
                 <input 
-                  type="password"
+                  type="text"
                   className="form-control" 
-                  value={profileForm.password} 
-                  onChange={e => setProfileForm({ ...profileForm, password: e.target.value })} 
-                  placeholder="Nhập mật khẩu mới..." 
+                  value={profileForm.address} 
+                  onChange={e => setProfileForm({ ...profileForm, address: e.target.value })} 
+                  placeholder="VD: Số 12 Nguyễn Văn Bảo, P. Hạnh Thông, TP.HCM" 
                 />
               </div>
 

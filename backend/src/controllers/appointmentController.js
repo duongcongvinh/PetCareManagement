@@ -11,7 +11,7 @@ const getAppointments = async (req, res) => {
 
 const createAppointment = async (req, res) => {
   try {
-    const { petId, serviceId, appointmentDate, timeSlot, notes } = req.body;
+    const { petId, serviceId, appointmentDate, totalPrice, timeSlot, notes } = req.body;
     const customerId = req.user.id;
 
     if (!petId || !serviceId || !appointmentDate || !timeSlot) {
@@ -19,7 +19,7 @@ const createAppointment = async (req, res) => {
     }
 
     const appointment = await appointmentService.createNewAppointment(
-      { petId, serviceId, appointmentDate, timeSlot, notes },
+      { petId, serviceId, appointmentDate, totalPrice, timeSlot, notes },
       customerId
     );
 
@@ -50,6 +50,19 @@ const updateStatus = async (req, res) => {
     });
   } catch (error) {
     return res.status(500).json({ message: 'Lỗi khi cập nhật trạng thái lịch hẹn.' });
+  }
+};
+
+const rescheduleAppointment = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const updated = await appointmentService.rescheduleAppointment(id, req.body, req.user);
+    return res.json({
+      message: 'Đổi lịch hẹn thành công!',
+      appointment: updated,
+    });
+  } catch (error) {
+    return res.status(400).json({ message: error.message || 'Lỗi khi đổi lịch hẹn.' });
   }
 };
 
@@ -87,6 +100,18 @@ const createService = async (req, res) => {
   }
 };
 
+const updateService = async (req, res) => {
+  try {
+    const service = await appointmentService.updateService(req.params.id, req.body);
+    return res.json({
+      message: 'Cập nhật dịch vụ thành công!',
+      service,
+    });
+  } catch (error) {
+    return res.status(500).json({ message: error.message || 'Lỗi khi cập nhật dịch vụ.' });
+  }
+};
+
 const deleteService = async (req, res) => {
   try {
     await appointmentService.deleteService(req.params.id);
@@ -100,8 +125,10 @@ module.exports = {
   getAppointments,
   createAppointment,
   updateStatus,
+  rescheduleAppointment,
   cancelAppointment,
   getServices,
   createService,
+  updateService,
   deleteService,
 };

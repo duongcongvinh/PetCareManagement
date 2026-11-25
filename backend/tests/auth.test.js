@@ -2,7 +2,14 @@ const test = require('node:test');
 const assert = require('node:assert/strict');
 const jwt = require('jsonwebtoken');
 const { authenticateToken, authorizeRoles } = require('../src/middleware/auth');
-const { validatePortalAccess, validateStrongPassword } = require('../src/services/authService');
+const {
+  validatePortalAccess,
+  validateStrongPassword,
+  validatePasswordForRegistration,
+  maskIdentifier,
+  createOtpEntry,
+  verifyAndConsumeOtp,
+} = require('../src/services/authService');
 
 const SECRET = process.env.JWT_SECRET || 'super_secret_petcare_jwt_key_2026';
 
@@ -104,4 +111,44 @@ test('Password Strength: Chặn mật khẩu yếu khi đăng ký (dưới 8 ký
   assert.throws(() => validateStrongPassword('Abcdef12'), /ký tự đặc biệt/i);
   assert.doesNotThrow(() => validateStrongPassword('Petzera@1'));
   assert.doesNotThrow(() => validateStrongPassword('Abcd123!'));
+});
+
+test('Admin tạo tài khoản nội bộ (Nhân viên/Quản lý kho/Admin) không bị ràng buộc độ dài 8 ký tự', () => {
+  assert.throws(() => validatePasswordForRegistration('', false), /nhập mật khẩu/i);
+  assert.throws(() => validatePasswordForRegistration('   ', false), /nhập mật khẩu/i);
+  assert.doesNotThrow(() => validatePasswordForRegistration('123456', false));
+  assert.doesNotThrow(() => validatePasswordForRegistration('1234', false));
+  assert.doesNotThrow(() => validatePasswordForRegistration('staff', false));
+  // Đăng ký công khai ngoài cổng khách hàng vẫn giữ ràng buộc mật khẩu mạnh
+  assert.throws(() => validatePasswordForRegistration('123456', true), /ít nhất 8 ký tự/i);
+  assert.doesNotThrow(() => validatePasswordForRegistration('Petzera@1', true));
+});
+
+test('Forgot Password OTP: Tạo mã 6 số, xác thực 1 lần, khóa sau 5 lần sai và chặn mã hết hạn', () => {
+  assert.equal(maskIdentifier({ type: 'email', value: 'khachhang@gmail.com' }), 'kh***@gmail.com');
+  assert.equal(maskIdentifier({ type: 'phone', value: '0934567890' }), '093****890');
+
+  const key = 'TEST_CUSTOMER:user-1';
+  const now = 1_700_000_000_000;
+  const entry = createOtpEntry(key, 'user-1', now);
+  assert.match(entry.otp, /^\d{6}$/);
+
+  // Nhập sai OTP -> báo còn số lần thử
+  assert.throws(() => verifyAndConsumeOtp(key, '000000', now + 1000), /còn 4 lần thử/i);
+
+  // Nhập đúng OTP -> thành công & hủy mã (dùng 1 lần)
+  const consumed = verifyAndConsumeOtp(key, entry.otp, now + 2000);
+  assert.equal(consumed.userId, 'user-1');
+  assert.throws(() => verifyAndConsumeOtp(key, entry.otp, now + 3000), /không tồn tại hoặc đã được sử dụng/i);
+
+  // Mã hết hạn quá 5 phút -> bị chặn
+  const expEntry = createOtpEntry(key, 'user-1', now);
+  assert.throws(() => verifyAndConsumeOtp(key, expEntry.otp, now + 6 * 60 * 1000), /hết hạn/i);
+
+  // Nhập sai quá 5 lần -> tự hủy mã
+  createOtpEntry(key, 'user-1', now);
+  for (let i = 0; i < 4; i += 1) {
+    assert.throws(() => verifyAndConsumeOtp(key, '999999', now + 1000), /không chính xác/i);
+  }
+  assert.throws(() => verifyAndConsumeOtp(key, '999999', now + 1000), /quá 5 lần/i);
 });

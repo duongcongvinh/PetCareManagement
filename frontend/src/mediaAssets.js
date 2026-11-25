@@ -12,7 +12,6 @@ export const HERO_IMAGES = {
   heroCat: pexels(28426509, 900),        // Flagship hero collage: British Shorthair cat
   heroPoodle: pexels(29477518, 600),     // Review pet avatar: adorable Toy Poodle
   heroBritishCat: pexels(17089872, 600), // Review pet avatar: British Shorthair cat
-  heroHotel: pexels(20898436, 900),      // Cozy VIP Pet Hotel
 };
 
 // 100% verified pet-only HD stock videos (Pexels Dog Grooming/Bathing/Brushing & Wikimedia Cat/Dog)
@@ -37,7 +36,7 @@ export const HERO_VIDEOS = [
     tag: '🐶 Chăm Sóc Cún Cưng',
     badge: 'LIVE HD • CHẢI LÔNG & THÚ Y',
     title: 'Nâng Niu Từng Khoảnh Khắc Cùng Cún Yêu',
-    subtitle: 'Chải dưỡng mượt lông, khám sức khỏe định kỳ & Khách Sạn VIP có camera theo dõi 24/7.',
+    subtitle: 'Chải dưỡng mượt lông, tiêm phòng vắc xin & khám sức khỏe thú y toàn diện 24/7.',
     duration: '0:14',
     sources: [
       { url: 'https://videos.pexels.com/video-files/5732525/5732525-hd_1920_1080_25fps.mp4', type: 'video/mp4' },
@@ -112,7 +111,7 @@ export const getPetAvatar = (pet) => {
   return pexels(29582994, 420);
 };
 
-// 3. REAL PHOTOGRAPHS MATCHING ALL 20 SERVICES
+// 3. REAL PHOTOGRAPHS MATCHING ALL 18 SERVICES
 export const SERVICE_IMAGES = {
   // Spa & Grooming
   s1: pexels(19145873, 640),  // Spa Grooming Trọn Gói (Cắt tỉa & Tắm mượt)
@@ -122,21 +121,15 @@ export const SERVICE_IMAGES = {
   s7: pexels(6235113, 640),   // Cạo Vôi Răng Siêu Âm (Vet dental exam)
   s8: pexels(19145875, 640),  // Vệ Sinh Toàn Diện: Cắt Mài Móng
 
-  // Khách Sạn & Lưu Trú
-  s9: pexels(20898436, 640),  // Khách Sạn Thú Cưng VIP (Dog resting in cozy bed)
-  s10: pexels(37443358, 640), // Trông Giữ Trong Ngày (Pet Daycare)
-
   // Y Tế & Tiêm Phòng
   s2: pexels(7469213, 640),   // Tiêm Vắc Xin 5 Trong 1 Cho Chó
   s11: pexels(7303957, 640),  // Tiêm Vắc Xin 4 Bệnh Cho Mèo
   s12: pexels(28644464, 640), // Tiêm Phòng Bệnh Dại Định Kỳ
 
-  // Khám Bệnh & Trị Liệu
+  // Khám Bệnh, Trị Liệu & Sinh Sản
   s3: pexels(5732461, 640),   // Khám Sức Khỏe Tổng Quát & Ống Nghe
   s13: pexels(28644631, 640), // Tẩy Giun Sán & Nhỏ Gáy Phòng Ve Rận
   s14: pexels(19145891, 640), // Trị Liệu Nấm Da & Phục Hồi Lông
-
-  // Khoa Sinh Sản (VPet's Standard)
   s15: pexels(6235114, 640),  // Siêu Âm Thai Kỹ Thuật Số Doppler
   s16: pexels(18859864, 640), // Gói Hộ Sinh Đỡ Đẻ & Hồi Sức Sơ Sinh 24/7
   s17: pexels(7121954, 640),  // Phẫu Thuật Mổ Đẻ Cấp Cứu Vô Trùng (C-Section)
@@ -153,7 +146,7 @@ export const getServiceImage = (service) => {
   const name = (service.name || '').toLowerCase();
   const cat = (service.category || '').toLowerCase();
 
-  if (name.includes('siêu âm')) return SERVICE_IMAGES.s15;
+  if (name.includes('siêu âm thai') || name.includes('doppler')) return SERVICE_IMAGES.s15;
   if (name.includes('đỡ đẻ') || name.includes('hộ sinh')) return SERVICE_IMAGES.s16;
   if (name.includes('viêm tử cung') || name.includes('pyometra')) return SERVICE_IMAGES.s20;
   if (name.includes('mổ đẻ') || name.includes('c-section')) return SERVICE_IMAGES.s17;
@@ -162,14 +155,16 @@ export const getServiceImage = (service) => {
   if (name.includes('phẫu thuật')) return SERVICE_IMAGES.s17;
   if (name.includes('răng')) return SERVICE_IMAGES.s7;
   if (name.includes('móng')) return SERVICE_IMAGES.s8;
-  if (name.includes('tắm')) return SERVICE_IMAGES.s4;
+  if (name.includes('nhuộm')) return SERVICE_IMAGES.s6;
+  if (name.includes('nấm da') || name.includes('xông hơi')) return SERVICE_IMAGES.s14;
+  if (name.includes('tẩy giun') || name.includes('ve rận')) return SERVICE_IMAGES.s13;
+  if (name.includes('tắm dưỡng')) return SERVICE_IMAGES.s4;
   if (name.includes('cắt tỉa')) return SERVICE_IMAGES.s5;
+  if (name.includes('bệnh dại')) return SERVICE_IMAGES.s12;
   if (name.includes('vắc xin') && name.includes('mèo')) return SERVICE_IMAGES.s11;
   if (name.includes('vắc xin') || name.includes('tiêm')) return SERVICE_IMAGES.s2;
-  if (name.includes('khách sạn')) return SERVICE_IMAGES.s9;
-  if (name.includes('trông giữ') || name.includes('daycare')) return SERVICE_IMAGES.s10;
+  if (name.includes('siêu âm')) return SERVICE_IMAGES.s3;
   if (cat.includes('sinh sản')) return SERVICE_IMAGES.s15;
-  if (cat.includes('khách sạn')) return SERVICE_IMAGES.s9;
   if (cat.includes('tiêm') || cat.includes('khám')) return SERVICE_IMAGES.s3;
   return SERVICE_IMAGES.s1;
 };

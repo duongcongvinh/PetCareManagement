@@ -97,8 +97,8 @@ const createUser = async (req, res) => {
 
 const updateProfile = async (req, res) => {
   try {
-    const { fullName, phone, password } = req.body;
-    const updated = await authService.updateUserProfile(req.user.id, { fullName, phone, password });
+    const { fullName, phone, address, password } = req.body;
+    const updated = await authService.updateUserProfile(req.user.id, { fullName, phone, address, password });
     return res.json({ message: 'Cập nhật thông tin thành công!', user: updated });
   } catch (error) {
     return res.status(500).json({ message: error.message || 'Lỗi server khi cập nhật thông tin.' });
@@ -128,9 +128,46 @@ const deleteUser = async (req, res) => {
   }
 };
 
+const forgotPassword = async (req, res) => {
+  try {
+    const { identifier, email, phone, portal } = req.body;
+    const result = await authService.requestPasswordReset({
+      identifier,
+      email,
+      phone,
+      portal: portal || 'CUSTOMER',
+    });
+    return res.json(result);
+  } catch (error) {
+    console.error('forgotPassword error:', error);
+    return res.status(400).json({ message: error.message || 'Không thể gửi yêu cầu khôi phục mật khẩu.' });
+  }
+};
+
+const resetPassword = async (req, res) => {
+  try {
+    const { identifier, email, phone, otp, newPassword, confirmPassword, portal } = req.body;
+    const result = await authService.resetPasswordWithOtp({
+      identifier,
+      email,
+      phone,
+      otp,
+      newPassword,
+      confirmPassword,
+      portal: portal || 'CUSTOMER',
+    });
+    return res.json(result);
+  } catch (error) {
+    console.error('resetPassword error:', error);
+    return res.status(400).json({ message: error.message || 'Không thể đặt lại mật khẩu.' });
+  }
+};
+
 module.exports = {
   register,
   login,
+  forgotPassword,
+  resetPassword,
   getProfile,
   getUsers,
   createUser,

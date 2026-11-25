@@ -22,9 +22,9 @@ const DEFAULT_RBAC_MATRIX = [
   { id: 'uc-staff-promo', group: 'Nhân viên', label: 'Quản lý chương trình khuyến mãi', CUSTOMER: false, CARE_STAFF: true, WAREHOUSE_STAFF: false, ADMIN: false },
   { id: 'uc-staff-pets', group: 'Nhân viên', label: 'Quản lý hồ sơ thú cưng', CUSTOMER: false, CARE_STAFF: true, WAREHOUSE_STAFF: false, ADMIN: false },
   { id: 'uc-staff-report', group: 'Nhân viên', label: 'Báo cáo, thống kê vận hành', CUSTOMER: false, CARE_STAFF: true, WAREHOUSE_STAFF: false, ADMIN: true },
-  { id: 'uc-staff-wh', group: 'Nhân viên', label: 'Tra cứu & báo nhập kho', CUSTOMER: false, CARE_STAFF: true, WAREHOUSE_STAFF: true, ADMIN: false },
   // Quản lý kho
   { id: 'uc-wh-inv', group: 'Quản lý kho', label: 'Quản lý kho (Nhập / Xuất / Tồn kho)', CUSTOMER: false, CARE_STAFF: false, WAREHOUSE_STAFF: true, ADMIN: false },
+  { id: 'uc-wh-products', group: 'Quản lý kho', label: 'Quản lý sản phẩm (Thêm / Sửa / Xóa)', CUSTOMER: false, CARE_STAFF: false, WAREHOUSE_STAFF: true, ADMIN: false },
   { id: 'uc-wh-ai', group: 'Quản lý kho', label: 'Dự báo nhu cầu (AI)', CUSTOMER: false, CARE_STAFF: false, WAREHOUSE_STAFF: true, ADMIN: true },
   { id: 'uc-wh-prop', group: 'Quản lý kho', label: 'Lập đề xuất nhập hàng', CUSTOMER: false, CARE_STAFF: false, WAREHOUSE_STAFF: true, ADMIN: false },
   // Admin
@@ -228,7 +228,7 @@ export default function AdminDashboard({
   // Handlers: Accounts
   const openCreateUser = () => {
     setEditingUser(null);
-    setUserForm({ fullName: '', email: '', phone: '', role: 'CARE_STAFF', password: 'password123' });
+    setUserForm({ fullName: '', email: '', phone: '', role: 'CARE_STAFF', password: '' });
     setShowUserModal(true);
   };
 
@@ -262,14 +262,19 @@ export default function AdminDashboard({
       }
       toast.success(`Đã cập nhật tài khoản "${userForm.fullName}"!`, 'Quản Lý Tài Khoản');
     } else {
+      if (!userForm.password.trim()) {
+        toast.warning('Vui lòng nhập mật khẩu khởi tạo cho tài khoản mới!', 'Thiếu Mật Khẩu');
+        return;
+      }
       if (onAddUser) {
-        await onAddUser({
+        const created = await onAddUser({
           fullName: userForm.fullName.trim(),
           email: userForm.email.trim(),
           phone: userForm.phone.trim(),
           role: userForm.role,
-          password: userForm.password || 'password123'
+          password: userForm.password
         });
+        if (!created) return;
       }
       toast.success(`Đã tạo tài khoản "${userForm.fullName}" (${ROLE_META[userForm.role]?.label})!`, 'Quản Lý Tài Khoản');
     }
@@ -814,7 +819,7 @@ export default function AdminDashboard({
             {[
               { key: 'CUSTOMER', title: 'Khách hàng', desc: 'Đặt lịch, quản lý thú cưng, mua sắm', color: '#059669', bg: '#ecfdf5' },
               { key: 'CARE_STAFF', title: 'Nhân viên', desc: 'Lịch hẹn, dịch vụ, KM, thú cưng, báo cáo', color: '#0284c7', bg: '#f0f9ff' },
-              { key: 'WAREHOUSE_STAFF', title: 'Quản lý kho', desc: 'Nhập/xuất/tồn, dự báo AI, đề xuất nhập', color: '#d97706', bg: '#fffbeb' },
+              { key: 'WAREHOUSE_STAFF', title: 'Quản lý kho', desc: 'Nhập/xuất/tồn, sản phẩm, dự báo AI, đề xuất nhập', color: '#d97706', bg: '#fffbeb' },
               { key: 'ADMIN', title: 'Admin', desc: 'Tổng quan, TK, RBAC, duyệt nhập, NCC, cấu hình', color: '#7c3aed', bg: '#faf5ff' },
             ].map(r => (
               <div key={r.key} className="glass-panel" style={{ padding: '1.15rem', background: r.bg, borderColor: `${r.color}40` }}>
@@ -1453,7 +1458,7 @@ export default function AdminDashboard({
                     className="form-control"
                     value={userForm.password}
                     onChange={e => setUserForm({ ...userForm, password: e.target.value })}
-                    placeholder={editingUser ? 'Để trống nếu không đổi' : 'Nhập mật khẩu'}
+                    placeholder={editingUser ? 'Để trống nếu không đổi' : 'Nhập mật khẩu (VD: 123456)'}
                     required={!editingUser}
                   />
                 </div>

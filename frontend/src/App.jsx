@@ -21,7 +21,8 @@ import {
   INITIAL_PROMOTIONS,
   INITIAL_REORDER_PROPOSALS,
   INITIAL_USERS,
-  INITIAL_SUPPLIERS
+  INITIAL_SUPPLIERS,
+  INITIAL_REVIEWS
 } from './mockData';
 
 const STAFF_ROLES = ['CARE_STAFF', 'WAREHOUSE_STAFF', 'ADMIN'];
@@ -44,39 +45,56 @@ const getUrlPortalConfig = () => {
 };
 
 export default function App() {
-  const mergeWithDefaults = (incoming, defaultVal) => {
+  const getDeletedProductIds = () => {
+    try {
+      const saved = localStorage.getItem('petcare_deleted_product_ids');
+      const parsed = saved ? JSON.parse(saved) : [];
+      return Array.isArray(parsed) ? parsed : [];
+    } catch {
+      return [];
+    }
+  };
+
+  const mergeWithDefaults = (incoming, defaultVal, deletedIds = []) => {
     if (!Array.isArray(defaultVal) || !Array.isArray(incoming)) return incoming;
+    const deletedSet = new Set(Array.isArray(deletedIds) ? deletedIds : []);
     const defaultMap = new Map(defaultVal.map(i => [i.id, i]));
-    const enriched = incoming.map(item => {
-      const def = defaultMap.get(item.id);
-      if (def) {
-        return {
-          ...def,
-          ...item,
-          category: def.category || item.category,
-          image: def.image || item.image,
-        };
-      }
-      return item;
-    });
+    const enriched = incoming
+      .filter(item => !deletedSet.has(item.id))
+      .map(item => {
+        const def = defaultMap.get(item.id);
+        if (def) {
+          return {
+            ...def,
+            ...item,
+            category: def.category || item.category,
+            image: def.image || item.image,
+          };
+        }
+        return item;
+      });
     const existingIds = new Set(enriched.map(i => i.id));
-    const missingItems = defaultVal.filter(i => !existingIds.has(i.id));
+    const missingItems = defaultVal.filter(i => !existingIds.has(i.id) && !deletedSet.has(i.id));
     return missingItems.length > 0 ? [...missingItems, ...enriched] : enriched;
   };
 
-  const getInitialState = (key, defaultVal) => {
+  const getInitialState = (key, defaultVal, deletedIds = []) => {
     try {
       const saved = localStorage.getItem(key);
       if (saved) {
         const parsed = JSON.parse(saved);
         if (Array.isArray(defaultVal) && Array.isArray(parsed)) {
-          const merged = mergeWithDefaults(parsed, defaultVal);
+          const merged = mergeWithDefaults(parsed, defaultVal, deletedIds);
           try {
             localStorage.setItem(key, JSON.stringify(merged));
           } catch (e) {}
           return merged;
         }
         return parsed;
+      }
+      if (Array.isArray(defaultVal) && deletedIds.length > 0) {
+        const deletedSet = new Set(deletedIds);
+        return defaultVal.filter(i => !deletedSet.has(i.id));
       }
       return defaultVal;
     } catch {
@@ -127,8 +145,8 @@ export default function App() {
 
   const ROLE_VALID_TABS = {
     ADMIN: ['overview', 'accounts-admin', 'roles-admin', 'approve-proposals', 'suppliers-admin', 'system-settings'],
-    CARE_STAFF: ['queue', 'services', 'promotions', 'pets-logs', 'reports', 'warehouse-view'],
-    WAREHOUSE_STAFF: ['inventory', 'demand-forecast', 'reorder-proposals'],
+    CARE_STAFF: ['queue', 'services', 'promotions', 'pets-logs', 'reports'],
+    WAREHOUSE_STAFF: ['inventory', 'products-mgmt', 'demand-forecast', 'reorder-proposals'],
     CUSTOMER: ['home', 'about', 'booking', 'service-detail', 'shop', 'product-detail', 'cart', 'checkout', 'pets', 'history', 'profile', 'reproduction'],
   };
 
@@ -183,6 +201,7 @@ export default function App() {
   
   const [showLoginModal, setShowLoginModal] = useState(false);
   const [showStaffLoginModal, setShowStaffLoginModal] = useState(false);
+  const [profileModalSignal, setProfileModalSignal] = useState(0);
 
   // Persistent shopping cart state
   const [cart, setCart] = useState(() => {
@@ -343,12 +362,20 @@ export default function App() {
     return INITIAL_USERS;
   });
   const [pets, setPets] = useState(() => getInitialState('petcare_pets', INITIAL_PETS));
-  const [services, setServices] = useState(() => getInitialState('petcare_services', INITIAL_SERVICES));
+  const [services, setServices] = useState(() => {
+    const raw = getInitialState('petcare_services', INITIAL_SERVICES);
+    return Array.isArray(raw)
+      ? raw
+          .filter((s) => s.category !== 'Khách Sạn & Lưu Trú')
+          .map((s) => (s.category === 'Khoa Sinh Sản' || s.category === 'Khám Bệnh' ? { ...s, category: 'Khám Bệnh & Trị Liệu' } : s))
+      : INITIAL_SERVICES;
+  });
   const [appointments, setAppointments] = useState(() => getInitialState('petcare_appointments', INITIAL_APPOINTMENTS));
-  const [products, setProducts] = useState(() => getInitialState('petcare_products', INITIAL_PRODUCTS));
+  const [products, setProducts] = useState(() => getInitialState('petcare_products', INITIAL_PRODUCTS, getDeletedProductIds()));
   const [promotions, setPromotions] = useState(() => getInitialState('petcare_promotions', INITIAL_PROMOTIONS));
   const [reorderProposals, setReorderProposals] = useState(() => getInitialState('petcare_reorderProposals', INITIAL_REORDER_PROPOSALS));
   const [suppliers, setSuppliers] = useState(() => getInitialState('petcare_suppliers', INITIAL_SUPPLIERS));
+  const [reviews, setReviews] = useState(() => getInitialState('petcare_reviews', INITIAL_REVIEWS));
   const [orders, setOrders] = useState(() => getInitialState('petcare_orders', [
     { id: 'ORD-001', customerName: 'Phạm Minh Anh', phone: '0934567890', items: 'Hạt Royal Canin (2kg) x 2, Pate Cung Đình x 5', total: 600000, status: 'PENDING', date: '2026-08-25 10:30' },
     { id: 'ORD-002', customerName: 'Nguyễn Văn Nam', phone: '0912345678', items: 'Cát Đậu Nành Tofu x 3', total: 270000, status: 'CONFIRMED', date: '2026-08-25 09:15' }
@@ -399,8 +426,10 @@ export default function App() {
         if (type === 'SYNC_APPOINTMENTS') setAppointments(payload);
         if (type === 'SYNC_ORDERS') setOrders(payload);
         if (type === 'SYNC_PETS') setPets(payload);
-        if (type === 'SYNC_PRODUCTS') setProducts(mergeWithDefaults(payload, INITIAL_PRODUCTS));
+        if (type === 'SYNC_PRODUCTS') setProducts(mergeWithDefaults(payload, INITIAL_PRODUCTS, getDeletedProductIds()));
+        if (type === 'SYNC_PROMOTIONS') setPromotions(payload);
         if (type === 'SYNC_SUPPLIERS') setSuppliers(mergeWithDefaults(payload, INITIAL_SUPPLIERS));
+        if (type === 'SYNC_REVIEWS') setReviews(payload);
       };
     } catch (e) {}
 
@@ -410,8 +439,10 @@ export default function App() {
         if (e.key === 'petcare_appointments' && e.newValue) setAppointments(JSON.parse(e.newValue));
         if (e.key === 'petcare_orders' && e.newValue) setOrders(JSON.parse(e.newValue));
         if (e.key === 'petcare_pets' && e.newValue) setPets(JSON.parse(e.newValue));
-        if (e.key === 'petcare_products' && e.newValue) setProducts(mergeWithDefaults(JSON.parse(e.newValue), INITIAL_PRODUCTS));
+        if (e.key === 'petcare_products' && e.newValue) setProducts(mergeWithDefaults(JSON.parse(e.newValue), INITIAL_PRODUCTS, getDeletedProductIds()));
+        if (e.key === 'petcare_promotions' && e.newValue) setPromotions(JSON.parse(e.newValue));
         if (e.key === 'petcare_suppliers' && e.newValue) setSuppliers(mergeWithDefaults(JSON.parse(e.newValue), INITIAL_SUPPLIERS));
+        if (e.key === 'petcare_reviews' && e.newValue) setReviews(JSON.parse(e.newValue));
       } catch (err) {}
     };
 
@@ -445,17 +476,30 @@ export default function App() {
             setOrders(res.data.orders);
             localStorage.setItem('petcare_orders', JSON.stringify(res.data.orders));
           }
+          if (Array.isArray(res.data.deletedProductIds)) {
+            const combinedDeleted = Array.from(new Set([...getDeletedProductIds(), ...res.data.deletedProductIds]));
+            try { localStorage.setItem('petcare_deleted_product_ids', JSON.stringify(combinedDeleted)); } catch (e) {}
+          }
           if (res.data.products) {
-            const mergedProducts = mergeWithDefaults(res.data.products, INITIAL_PRODUCTS);
+            const deletedIds = getDeletedProductIds();
+            const mergedProducts = mergeWithDefaults(res.data.products, INITIAL_PRODUCTS, deletedIds);
             setProducts(mergedProducts);
             localStorage.setItem('petcare_products', JSON.stringify(mergedProducts));
             if (JSON.stringify(mergedProducts) !== JSON.stringify(res.data.products)) {
-              apiService.postLiveSyncState({ products: mergedProducts });
+              apiService.postLiveSyncState({ products: mergedProducts, deletedProductIds: deletedIds });
             }
+          }
+          if (Array.isArray(res.data.promotions)) {
+            setPromotions(res.data.promotions);
+            localStorage.setItem('petcare_promotions', JSON.stringify(res.data.promotions));
           }
           if (res.data.pets) {
             setPets(res.data.pets);
             localStorage.setItem('petcare_pets', JSON.stringify(res.data.pets));
+          }
+          if (Array.isArray(res.data.reviews)) {
+            setReviews(res.data.reviews);
+            localStorage.setItem('petcare_reviews', JSON.stringify(res.data.reviews));
           }
         } else if (res && !res.data) {
           // If server store is empty, push current active browser state to initialize server (excluding users which live in MongoDB)
@@ -493,10 +537,16 @@ export default function App() {
       'SYNC_APPOINTMENTS': 'appointments',
       'SYNC_ORDERS': 'orders',
       'SYNC_PRODUCTS': 'products',
-      'SYNC_PETS': 'pets'
+      'SYNC_PROMOTIONS': 'promotions',
+      'SYNC_PETS': 'pets',
+      'SYNC_REVIEWS': 'reviews'
     };
     if (keyMap[type]) {
-      apiService.postLiveSyncState({ [keyMap[type]]: payload });
+      const syncBody = { [keyMap[type]]: payload };
+      if (type === 'SYNC_PRODUCTS') {
+        syncBody.deletedProductIds = getDeletedProductIds();
+      }
+      apiService.postLiveSyncState(syncBody);
     }
   };
 
@@ -523,11 +573,23 @@ export default function App() {
       try {
         const liveServices = await apiService.getServices();
         if (Array.isArray(liveServices) && liveServices.length > 0) {
-          setServices(liveServices);
+          const cleaned = liveServices
+            .filter((s) => s.category !== 'Khách Sạn & Lưu Trú')
+            .map((s) => (s.category === 'Khoa Sinh Sản' || s.category === 'Khám Bệnh' ? { ...s, category: 'Khám Bệnh & Trị Liệu' } : s));
+          setServices(cleaned);
+          try { localStorage.setItem('petcare_services', JSON.stringify(cleaned)); } catch (e) {}
         }
       } catch (err) {
         console.log('Using local fallback state for services');
       }
+
+      try {
+        const liveRev = await apiService.getReviews();
+        if (liveRev && Array.isArray(liveRev.reviews) && liveRev.reviews.length > 0) {
+          setReviews(liveRev.reviews);
+          try { localStorage.setItem('petcare_reviews', JSON.stringify(liveRev.reviews)); } catch (e) {}
+        }
+      } catch (err) {}
 
       await refreshUsersFromServer();
     }
@@ -762,8 +824,9 @@ export default function App() {
     const newPetObj = {
       ...petData,
       id: 'p-' + Date.now(),
-      ownerId: currentUser?.id || 'u-4',
-      ownerName: currentUser?.fullName || 'Phạm Minh Anh'
+      ownerId: petData.ownerId || currentUser?.id || 'u-4',
+      ownerName: petData.ownerName || currentUser?.fullName || 'Phạm Minh Anh',
+      ownerPhone: petData.ownerPhone || currentUser?.phone || ''
     };
     updatedPets = [newPetObj, ...pets];
     setPets(updatedPets);
@@ -771,7 +834,9 @@ export default function App() {
   };
 
   const handleBookAppointment = async (bookingData) => {
-    const isConflict = appointments.some(a => 
+    const selectedService = services.find(s => s.id === bookingData.serviceId) || services[0];
+
+    const isConflict = appointments.some(a =>
       a.appointmentDate === bookingData.appointmentDate &&
       a.timeSlot === bookingData.timeSlot &&
       ['PENDING', 'CONFIRMED', 'IN_PROGRESS'].includes(a.status)
@@ -787,17 +852,22 @@ export default function App() {
       if (res && res.appointment) {
         newApp = {
           ...res.appointment,
+          appointmentDate: bookingData.appointmentDate,
+          totalPrice: bookingData.totalPrice ?? res.appointment.totalPrice ?? selectedService?.price ?? 200000,
+          price: bookingData.totalPrice ?? res.appointment.totalPrice ?? selectedService?.price ?? 200000,
           petName: res.appointment.pet?.name || 'Thú Cưng',
           species: res.appointment.pet?.species || 'Chó',
-          serviceName: res.appointment.service?.name || 'Dịch Vụ',
+          serviceName: res.appointment.service?.name || selectedService?.name || 'Dịch Vụ',
           customerName: currentUser?.fullName || 'Phạm Minh Anh'
         };
+      } else if (res && res.message && !res.appointment && res.message.includes('đã có khách')) {
+        return { error: res.message };
       }
     } catch (e) {}
 
     if (!newApp) {
       const selectedPet = pets.find(p => p.id === bookingData.petId) || pets[0];
-      const selectedService = services.find(s => s.id === bookingData.serviceId) || services[0];
+      const computedPrice = bookingData.totalPrice ?? selectedService?.price ?? 200000;
 
       newApp = {
         id: 'app-' + Date.now(),
@@ -809,7 +879,8 @@ export default function App() {
         customerPhone: currentUser?.phone || '0934567890',
         serviceId: selectedService?.id || bookingData.serviceId || 's1',
         serviceName: selectedService?.name || 'Dịch Vụ',
-        price: selectedService?.price || 200000,
+        price: computedPrice,
+        totalPrice: computedPrice,
         appointmentDate: bookingData.appointmentDate,
         timeSlot: bookingData.timeSlot,
         status: 'PENDING',
@@ -856,6 +927,101 @@ export default function App() {
     broadcastSync('SYNC_ORDERS', updatedOrders, 'petcare_orders');
   };
 
+  // Customer Reviews & Ratings Handlers (MongoDB + Real-time Sync)
+  const handleAddReview = async (reviewData) => {
+    let created = null;
+    try {
+      const res = await apiService.createReview(reviewData, authToken);
+      if (res && res._ok && res.review) {
+        created = res.review;
+      } else if (res && !res._ok && res.message) {
+        return { error: res.message };
+      }
+    } catch (e) {}
+
+    if (!created) {
+      created = {
+        id: 'rev-' + Date.now(),
+        targetType: reviewData.targetType || 'GENERAL',
+        targetId: reviewData.targetId || null,
+        targetName: reviewData.targetName || 'Trải nghiệm tại Petzera',
+        appointmentId: reviewData.appointmentId || null,
+        customerId: currentUser?.id || 'u-4',
+        customerName: currentUser?.fullName || 'Khách hàng Petzera',
+        petName: reviewData.petName || null,
+        rating: Number(reviewData.rating) || 5,
+        comment: reviewData.comment || '',
+        staffReply: null,
+        createdAt: new Date().toISOString()
+      };
+    }
+
+    const updated = [created, ...reviews];
+    setReviews(updated);
+    broadcastSync('SYNC_REVIEWS', updated, 'petcare_reviews');
+    toast.success('Cảm ơn bạn đã gửi đánh giá cho Petzera! ⭐', 'Đánh Giá Thành Công');
+    return { success: true, review: created };
+  };
+
+  const handleReplyReview = async (reviewId, staffReply) => {
+    const cleanReply = String(staffReply || '').trim();
+    if (!cleanReply) return;
+    try {
+      await apiService.replyReview(reviewId, cleanReply, authToken);
+    } catch (e) {}
+    const updated = reviews.map(r => (r.id === reviewId ? { ...r, staffReply: cleanReply } : r));
+    setReviews(updated);
+    broadcastSync('SYNC_REVIEWS', updated, 'petcare_reviews');
+    toast.success('Đã gửi phản hồi tới đánh giá của khách hàng!', 'Phản Hồi Đánh Giá');
+  };
+
+  const handleDeleteReview = async (reviewId) => {
+    try {
+      await apiService.deleteReview(reviewId, authToken);
+    } catch (e) {}
+    const updated = reviews.filter(r => r.id !== reviewId);
+    setReviews(updated);
+    broadcastSync('SYNC_REVIEWS', updated, 'petcare_reviews');
+    toast.info('Đã xóa đánh giá.', 'Đánh Giá Khách Hàng');
+  };
+
+  const handleRescheduleAppointment = async (appId, updates) => {
+    const target = appointments.find(a => a.id === appId);
+    if (!target) return { error: 'Không tìm thấy lịch hẹn cần đổi!' };
+
+    const isConflict = appointments.some(a =>
+      a.id !== appId &&
+      a.appointmentDate === updates.appointmentDate &&
+      a.timeSlot === updates.timeSlot &&
+      ['PENDING', 'CONFIRMED', 'IN_PROGRESS'].includes(a.status)
+    );
+    if (isConflict) {
+      return { error: `Khung giờ ${updates.timeSlot} ngày ${updates.appointmentDate} đã có khách đặt. Vui lòng chọn giờ khác!` };
+    }
+
+    try {
+      const res = await apiService.rescheduleAppointment(appId, updates, authToken);
+      if (res && res.message && !res.appointment && res.message.includes('đã có khách')) {
+        return { error: res.message };
+      }
+    } catch (e) {}
+
+    const updated = appointments.map(a =>
+      a.id === appId
+        ? {
+            ...a,
+            appointmentDate: updates.appointmentDate || a.appointmentDate,
+            timeSlot: updates.timeSlot || a.timeSlot,
+            notes: updates.notes !== undefined ? updates.notes : a.notes,
+          }
+        : a
+    );
+    setAppointments(updated);
+    broadcastSync('SYNC_APPOINTMENTS', updated, 'petcare_appointments');
+    toast.success('Đã đổi lịch hẹn thành công!', 'Đổi Lịch Hẹn');
+    return { success: true };
+  };
+
   const handleCancelAppointment = async (appId) => {
     try {
       await apiService.cancelAppointment(appId, authToken);
@@ -889,7 +1055,8 @@ export default function App() {
     const updatedUser = { 
       ...currentUser, 
       fullName: profileData.fullName || currentUser?.fullName, 
-      phone: profileData.phone || currentUser?.phone 
+      phone: profileData.phone !== undefined ? profileData.phone : currentUser?.phone,
+      address: profileData.address !== undefined ? profileData.address : currentUser?.address
     };
     setCurrentUser(updatedUser);
     const storageKey = ['CARE_STAFF', 'WAREHOUSE_STAFF', 'ADMIN'].includes(updatedUser.role) 
@@ -922,25 +1089,63 @@ export default function App() {
   };
 
   // 3. Warehouse Actions
-  const handleUpdateStock = async (productId, type, quantity, note) => {
+  const handleUpdateStock = async (productId, type, quantity, note, thresholds = {}) => {
+    const parsedQty = parseInt(quantity, 10);
+    const qtyNum = Number.isNaN(parsedQty) ? 0 : Math.max(0, parsedQty);
     try {
-      await apiService.updateStock(productId, type, quantity, note, authToken);
+      await apiService.updateStock(productId, type, qtyNum, note, authToken, thresholds);
     } catch (e) {}
 
+    const target = products.find(p => p.id === productId);
     const updated = products.map(p => {
       if (p.id === productId) {
         let newQty = p.currentStock;
-        const qtyNum = parseInt(quantity) || 0;
         if (type === 'IN' || type === 'IMPORT') newQty += qtyNum;
         else if (type === 'OUT' || type === 'EXPORT') newQty = Math.max(0, newQty - qtyNum);
         else if (type === 'ADJUSTMENT') newQty = qtyNum;
-        return { ...p, currentStock: newQty };
+        return {
+          ...p,
+          currentStock: newQty,
+          ...(thresholds.minStockLevel !== undefined ? { minStockLevel: thresholds.minStockLevel } : {}),
+          ...(thresholds.maxStockLevel !== undefined ? { maxStockLevel: thresholds.maxStockLevel } : {}),
+        };
       }
       return p;
     });
     setProducts(updated);
     broadcastSync('SYNC_PRODUCTS', updated, 'petcare_products');
-    toast.success('Cập nhật giao dịch tồn kho thành công!', 'Quản Lý Kho Hàng');
+    if (target) {
+      const actionLabel = type === 'ADJUSTMENT' ? 'Điều chỉnh tồn kho' : type === 'OUT' ? 'Xuất kho' : 'Nhập kho';
+      handleAddAuditLog(
+        'INVENTORY',
+        actionLabel,
+        `${actionLabel} "${target.name}" (${target.sku}): ${type === 'ADJUSTMENT' ? `${target.currentStock} → ${qtyNum}` : `${type === 'OUT' ? '-' : '+'}${qtyNum}`}${note ? ` — ${note}` : ''}.`
+      );
+    }
+    toast.success(
+      type === 'ADJUSTMENT'
+        ? `Đã điều chỉnh tồn kho "${target?.name || ''}" về ${qtyNum} sản phẩm!`
+        : 'Cập nhật giao dịch tồn kho thành công!',
+      type === 'ADJUSTMENT' ? 'Điều Chỉnh Tồn Kho' : 'Quản Lý Kho Hàng'
+    );
+  };
+
+  const handleDeleteProduct = async (productId) => {
+    const target = products.find(p => p.id === productId);
+    try {
+      await apiService.deleteProduct(productId, authToken);
+    } catch (e) {}
+
+    const nextDeletedIds = Array.from(new Set([...getDeletedProductIds(), productId]));
+    try { localStorage.setItem('petcare_deleted_product_ids', JSON.stringify(nextDeletedIds)); } catch (e) {}
+
+    const updated = products.filter(p => p.id !== productId);
+    setProducts(updated);
+    broadcastSync('SYNC_PRODUCTS', updated, 'petcare_products');
+    if (target) {
+      handleAddAuditLog('INVENTORY', 'Xóa sản phẩm khỏi kho', `Đã xóa "${target.name}" (SKU: ${target.sku}).`);
+      toast.info(`Đã xóa sản phẩm "${target.name}" khỏi kho hàng.`, 'Quản Lý Kho Hàng');
+    }
   };
 
   const handleAddSupplier = async (supData) => {
@@ -986,7 +1191,8 @@ export default function App() {
     let created = null;
     try {
       const res = await apiService.createService(svcData, authToken);
-      if (res && res.id) created = res;
+      if (res && res.service && res.service.id) created = res.service;
+      else if (res && res.id) created = res;
     } catch (e) {}
 
     if (!created) {
@@ -997,7 +1203,10 @@ export default function App() {
     try { localStorage.setItem('petcare_services', JSON.stringify(updated)); } catch (e) {}
   };
 
-  const handleUpdateService = (serviceId, updates) => {
+  const handleUpdateService = async (serviceId, updates) => {
+    try {
+      await apiService.updateService(serviceId, updates, authToken);
+    } catch (e) {}
     const updated = services.map(s => s.id === serviceId ? { ...s, ...updates } : s);
     setServices(updated);
     try { localStorage.setItem('petcare_services', JSON.stringify(updated)); } catch (e) {}
@@ -1016,32 +1225,71 @@ export default function App() {
     const created = {
       ...promoData,
       id: 'promo-' + Date.now(),
-      status: 'ACTIVE'
+      status: promoData.status || 'ACTIVE'
     };
     const updated = [created, ...promotions];
     setPromotions(updated);
-    try { localStorage.setItem('petcare_promotions', JSON.stringify(updated)); } catch (e) {}
+    broadcastSync('SYNC_PROMOTIONS', updated, 'petcare_promotions');
     toast.success(`Đã tạo mã khuyến mãi ${created.code} (-${created.discountPercent}%)!`, 'Khuyến Mãi');
+  };
+
+  const handleUpdatePromotion = (promoId, updates) => {
+    const updated = promotions.map(p => p.id === promoId ? { ...p, ...updates } : p);
+    setPromotions(updated);
+    broadcastSync('SYNC_PROMOTIONS', updated, 'petcare_promotions');
+    handleAddAuditLog('SYSTEM', 'Chỉnh sửa chương trình khuyến mãi', `Cập nhật mã ${updates.code || promoId} (-${updates.discountPercent ?? ''}%).`);
+    toast.success(`Đã cập nhật chương trình khuyến mãi "${updates.code || ''}"!`, 'Khuyến Mãi');
   };
 
   const handleTogglePromotion = (promoId) => {
     const updated = promotions.map(p => p.id === promoId ? { ...p, status: p.status === 'ACTIVE' ? 'PAUSED' : 'ACTIVE' } : p);
     setPromotions(updated);
-    try { localStorage.setItem('petcare_promotions', JSON.stringify(updated)); } catch (e) {}
+    broadcastSync('SYNC_PROMOTIONS', updated, 'petcare_promotions');
     toast.info('Đã cập nhật trạng thái chương trình khuyến mãi.', 'Khuyến Mãi');
   };
 
   const handleDeletePromotion = (promoId) => {
     const updated = promotions.filter(p => p.id !== promoId);
     setPromotions(updated);
-    try { localStorage.setItem('petcare_promotions', JSON.stringify(updated)); } catch (e) {}
+    broadcastSync('SYNC_PROMOTIONS', updated, 'petcare_promotions');
     toast.info('Đã xóa chương trình khuyến mãi.', 'Khuyến Mãi');
   };
 
-  const handleUpdatePet = (petId, updates) => {
+  const handleUpdatePet = async (petId, updates) => {
+    try {
+      await apiService.updatePet(petId, updates, authToken);
+    } catch (e) {}
     const updated = pets.map(p => p.id === petId ? { ...p, ...updates } : p);
     setPets(updated);
     broadcastSync('SYNC_PETS', updated, 'petcare_pets');
+  };
+
+  const handleDeletePet = async (petId) => {
+    const target = pets.find(p => p.id === petId);
+    try {
+      await apiService.deletePet(petId, authToken);
+    } catch (e) {}
+    const updated = pets.filter(p => p.id !== petId);
+    setPets(updated);
+    broadcastSync('SYNC_PETS', updated, 'petcare_pets');
+    if (target) {
+      toast.info(`Đã xóa hồ sơ thú cưng "${target.name}".`, 'Hồ Sơ Thú Cưng');
+    }
+  };
+
+  const handleUpdateProposal = (proposalId, updates) => {
+    const updated = reorderProposals.map(p => (p.id === proposalId ? { ...p, ...updates } : p));
+    setReorderProposals(updated);
+    try { localStorage.setItem('petcare_reorderProposals', JSON.stringify(updated)); } catch (e) {}
+    toast.success('Đã cập nhật phiếu đề xuất nhập hàng!', 'Đề Xuất Nhập Hàng');
+  };
+
+  const handleDeleteProposal = (proposalId) => {
+    const target = reorderProposals.find(p => p.id === proposalId);
+    const updated = reorderProposals.filter(p => p.id !== proposalId);
+    setReorderProposals(updated);
+    try { localStorage.setItem('petcare_reorderProposals', JSON.stringify(updated)); } catch (e) {}
+    toast.info(`Đã xóa phiếu đề xuất${target ? ` "${target.productName}"` : ''}.`, 'Đề Xuất Nhập Hàng');
   };
 
   const handleCreateProposal = (propData) => {
@@ -1081,23 +1329,59 @@ export default function App() {
     });
   };
 
-  // Add New Product Action
-  const handleAddProduct = (newProdData) => {
-    const created = {
-      id: 'prod-' + Date.now(),
-      name: newProdData.name,
-      sku: newProdData.sku || ('SKU-' + Math.floor(1000 + Math.random() * 9000)),
+  // Add & Update Product Actions
+  const handleAddProduct = async (newProdData) => {
+    const payload = {
+      name: newProdData.name.trim(),
+      sku: (newProdData.sku || ('SKU-' + Math.floor(1000 + Math.random() * 9000))).trim().toUpperCase(),
       category: newProdData.category || 'Thức ăn',
       unitPrice: parseFloat(newProdData.unitPrice) || 100000,
-      currentStock: parseInt(newProdData.currentStock) || 10,
-      minStockLevel: parseInt(newProdData.minStockLevel) || 10,
-      maxStockLevel: parseInt(newProdData.maxStockLevel) || 100,
+      costPrice: parseFloat(newProdData.costPrice) || Math.round((parseFloat(newProdData.unitPrice) || 100000) * 0.65),
+      currentStock: Math.max(0, parseInt(newProdData.currentStock, 10) || 0),
+      minStockLevel: Math.max(0, parseInt(newProdData.minStockLevel, 10) || 10),
+      maxStockLevel: Math.max(1, parseInt(newProdData.maxStockLevel, 10) || 100),
       supplierName: newProdData.supplierName || 'Royal Canin Việt Nam'
     };
+
+    let created = null;
+    try {
+      const res = await apiService.createProduct(payload, authToken);
+      if (res && res.id) {
+        created = { ...payload, ...res };
+      }
+    } catch (e) {}
+
+    if (!created) {
+      created = { ...payload, id: 'prod-' + Date.now() };
+    }
     const updated = [created, ...products];
     setProducts(updated);
     broadcastSync('SYNC_PRODUCTS', updated, 'petcare_products');
-    toast.success(`Đã thêm sản phẩm mới thành công: ${created.name}`, 'Kho Hàng');
+    handleAddAuditLog('INVENTORY', 'Thêm sản phẩm mới', `Thêm "${created.name}" (SKU: ${created.sku}, giá ${Number(created.unitPrice).toLocaleString('vi-VN')}đ).`);
+    toast.success(`Đã thêm sản phẩm mới thành công: ${created.name}`, 'Quản Lý Sản Phẩm');
+  };
+
+  const handleUpdateProduct = async (productId, updates) => {
+    const payload = {
+      ...updates,
+      name: updates.name ? updates.name.trim() : undefined,
+      sku: updates.sku ? updates.sku.trim().toUpperCase() : undefined,
+      unitPrice: updates.unitPrice !== undefined ? (parseFloat(updates.unitPrice) || 0) : undefined,
+      costPrice: updates.costPrice !== undefined ? (parseFloat(updates.costPrice) || 0) : undefined,
+      currentStock: updates.currentStock !== undefined ? Math.max(0, parseInt(updates.currentStock, 10) || 0) : undefined,
+      minStockLevel: updates.minStockLevel !== undefined ? Math.max(0, parseInt(updates.minStockLevel, 10) || 0) : undefined,
+      maxStockLevel: updates.maxStockLevel !== undefined ? Math.max(1, parseInt(updates.maxStockLevel, 10) || 100) : undefined,
+    };
+
+    try {
+      await apiService.updateProduct(productId, payload, authToken);
+    } catch (e) {}
+
+    const updated = products.map(p => (p.id === productId ? { ...p, ...payload } : p));
+    setProducts(updated);
+    broadcastSync('SYNC_PRODUCTS', updated, 'petcare_products');
+    handleAddAuditLog('INVENTORY', 'Cập nhật sản phẩm', `Cập nhật thông tin sản phẩm "${payload.name || productId}" (SKU: ${payload.sku || ''}).`);
+    toast.success(`Đã cập nhật thông tin sản phẩm "${payload.name || ''}"!`, 'Quản Lý Sản Phẩm');
   };
 
   // 4. AI Forecasting & Reorder Proposal Actions
@@ -1199,6 +1483,7 @@ export default function App() {
         currentUser={currentUser}
         onOpenLogin={() => setShowLoginModal(true)}
         onOpenStaffLogin={() => setShowStaffLoginModal(true)}
+        onOpenProfile={() => setProfileModalSignal(s => s + 1)}
         onLogout={handleLogout}
         portalMode={portalMode}
         onSwitchPortalMode={togglePortalMode}
@@ -1225,12 +1510,19 @@ export default function App() {
             products={products}
             promotions={promotions}
             orders={orders}
+            reviews={reviews}
             cart={cart}
             setCart={setCart}
             onAddPet={handleAddPet}
+            onUpdatePet={handleUpdatePet}
+            onDeletePet={handleDeletePet}
             onBookAppointment={handleBookAppointment}
+            onRescheduleAppointment={handleRescheduleAppointment}
             onCancelAppointment={handleCancelAppointment}
+            onAddReview={handleAddReview}
+            onDeleteReview={handleDeleteReview}
             onUpdateProfile={handleUpdateProfile}
+            profileModalSignal={profileModalSignal}
             onCheckoutOrder={handleCheckoutOrder}
             onOpenLogin={() => setShowLoginModal(true)}
             onQuickLogin={(user) => {
@@ -1282,14 +1574,22 @@ export default function App() {
                   promotions={promotions}
                   products={products}
                   orders={orders}
+                  reviews={reviews}
                   onUpdateStatus={handleUpdateAppointmentStatus}
+                  onCancelAppointment={handleCancelAppointment}
+                  onReplyReview={handleReplyReview}
+                  onDeleteReview={handleDeleteReview}
                   onAddService={handleAddService}
                   onUpdateService={handleUpdateService}
                   onDeleteService={handleDeleteService}
                   onAddPromotion={handleAddPromotion}
+                  onUpdatePromotion={handleUpdatePromotion}
                   onTogglePromotion={handleTogglePromotion}
                   onDeletePromotion={handleDeletePromotion}
+                  onAddPet={handleAddPet}
                   onUpdatePet={handleUpdatePet}
+                  onDeletePet={handleDeletePet}
+                  users={users}
                   onUpdateOrderStatus={(id, status) => {
                     const updated = orders.map(o => o.id === id ? { ...o, status } : o);
                     setOrders(updated);
@@ -1312,9 +1612,13 @@ export default function App() {
                   onUpdateStock={handleUpdateStock}
                   onTriggerAI={handleTriggerAI}
                   onAddProduct={handleAddProduct}
+                  onUpdateProduct={handleUpdateProduct}
+                  onDeleteProduct={handleDeleteProduct}
                   onApproveProposal={handleApproveProposal}
                   onRejectProposal={handleRejectProposal}
                   onCreateProposal={handleCreateProposal}
+                  onUpdateProposal={handleUpdateProposal}
+                  onDeleteProposal={handleDeleteProposal}
                   onExecuteProposalInbound={handleExecuteProposalInbound}
                 />
               )}

@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import {
   Calendar, CheckCircle2, Clock, PlayCircle, FileText,
   PawPrint, Search, Tag, Sparkles, TrendingUp, ShieldAlert,
-  Plus, Edit3, Trash2, X, Check, Package, ShoppingBag, DollarSign, AlertTriangle, Send
+  Plus, Edit3, Trash2, X, Check, Package, ShoppingBag, DollarSign, AlertTriangle, Send, Star, MessageSquare
 } from 'lucide-react';
 import { getPetAvatar, getServiceImage, getProductImage, FALLBACK_IMAGES } from '../mediaAssets';
 import { toast, confirmModal } from './ToastNotification';
@@ -14,15 +14,23 @@ export default function CareStaffDashboard({
   promotions = [],
   products = [],
   orders = [],
+  users = [],
+  reviews = [],
   activeTab = 'queue',
   onUpdateStatus,
+  onCancelAppointment,
+  onReplyReview,
+  onDeleteReview,
   onAddService,
   onUpdateService,
   onDeleteService,
   onAddPromotion,
+  onUpdatePromotion,
   onTogglePromotion,
   onDeletePromotion,
+  onAddPet,
   onUpdatePet,
+  onDeletePet,
   onUpdateOrderStatus,
   onRequestRestock
 }) {
@@ -30,6 +38,7 @@ export default function CareStaffDashboard({
   const [selectedApp, setSelectedApp] = useState(null);
   const [careSummary, setCareSummary] = useState('');
   const [appSearch, setAppSearch] = useState('');
+  const [showCancelledApps, setShowCancelledApps] = useState(false);
 
   // 2. Services state
   const [serviceSearch, setServiceSearch] = useState('');
@@ -46,26 +55,39 @@ export default function CareStaffDashboard({
 
   // 3. Promotions state
   const [showPromoModal, setShowPromoModal] = useState(false);
+  const [editingPromo, setEditingPromo] = useState(null);
   const [promoForm, setPromoForm] = useState({
     code: '',
     name: '',
     discountPercent: 10,
     applicableTo: 'Tất cả dịch vụ & đơn hàng',
     startDate: new Date().toISOString().split('T')[0],
-    endDate: '2026-12-31'
+    endDate: '2026-12-31',
+    status: 'ACTIVE'
   });
 
-  // 4. Pets state
+  // 4. Pets state (Thêm mới / Sửa đầy đủ / Xóa hồ sơ thú cưng tại quầy)
   const [petSearch, setPetSearch] = useState('');
   const [selectedPetDetail, setSelectedPetDetail] = useState(null);
   const [editingPet, setEditingPet] = useState(null);
-  const [petMedicalForm, setPetMedicalForm] = useState({ weightKg: '', ageMonths: '', medicalHistory: '' });
+  const [showCreatePetModal, setShowCreatePetModal] = useState(false);
+  const [petMedicalForm, setPetMedicalForm] = useState({
+    name: '',
+    species: 'Chó',
+    breed: '',
+    weightKg: '',
+    ageMonths: '',
+    ownerName: '',
+    ownerPhone: '',
+    medicalHistory: ''
+  });
 
   // 6. Warehouse view state
   const [warehouseSearch, setWarehouseSearch] = useState('');
   const [warehouseFilter, setWarehouseFilter] = useState('ALL');
+  const [replyDrafts, setReplyDrafts] = useState({});
 
-  const validTabs = ['queue', 'services', 'promotions', 'pets-logs', 'reports', 'warehouse-view'];
+  const validTabs = ['queue', 'services', 'promotions', 'pets-logs', 'reports'];
   const currentTab = validTabs.includes(activeTab) ? activeTab : 'queue';
 
   // Filtered appointments
@@ -81,9 +103,10 @@ export default function CareStaffDashboard({
   const pendingApps = filteredApps.filter(a => a.status === 'PENDING' || a.status === 'CONFIRMED');
   const inProgressApps = filteredApps.filter(a => a.status === 'IN_PROGRESS');
   const completedApps = filteredApps.filter(a => a.status === 'COMPLETED');
+  const cancelledApps = filteredApps.filter(a => a.status === 'CANCELLED');
 
   // Filtered services
-  const serviceCategories = ['ALL', 'Spa & Grooming', 'Khoa Sinh Sản', 'Khách Sạn & Lưu Trú', 'Y Tế & Tiêm Phòng', 'Khám Bệnh & Trị Liệu'];
+  const serviceCategories = ['ALL', 'Spa & Grooming', 'Y Tế & Tiêm Phòng', 'Khám Bệnh & Trị Liệu'];
   const filteredServices = services.filter(s => {
     const matchCat = serviceCatFilter === 'ALL' || s.category === serviceCatFilter;
     const matchQ = !serviceSearch.trim() || s.name.toLowerCase().includes(serviceSearch.toLowerCase()) || (s.description || '').toLowerCase().includes(serviceSearch.toLowerCase());
@@ -173,27 +196,66 @@ export default function CareStaffDashboard({
     }
   };
 
-  const handleSavePromo = (e) => {
-    e.preventDefault();
-    if (!promoForm.code.trim() || !promoForm.name.trim()) {
-      toast.warning('Vui lòng nhập đầy đủ mã voucher và tên chương trình!', 'Thiếu Thông Tin');
-      return;
-    }
-    if (onAddPromotion) {
-      onAddPromotion({
-        ...promoForm,
-        code: promoForm.code.trim().toUpperCase(),
-        name: promoForm.name.trim(),
-        discountPercent: Number(promoForm.discountPercent) || 10,
-      });
-    }
+  const openCreatePromo = () => {
+    setEditingPromo(null);
     setPromoForm({
       code: '',
       name: '',
       discountPercent: 10,
       applicableTo: 'Tất cả dịch vụ & đơn hàng',
       startDate: new Date().toISOString().split('T')[0],
-      endDate: '2026-12-31'
+      endDate: '2026-12-31',
+      status: 'ACTIVE'
+    });
+    setShowPromoModal(true);
+  };
+
+  const openEditPromo = (promo) => {
+    setEditingPromo(promo);
+    setPromoForm({
+      code: promo.code || '',
+      name: promo.name || '',
+      discountPercent: promo.discountPercent ?? 10,
+      applicableTo: promo.applicableTo || 'Tất cả dịch vụ & đơn hàng',
+      startDate: promo.startDate || new Date().toISOString().split('T')[0],
+      endDate: promo.endDate || '2026-12-31',
+      status: promo.status || 'ACTIVE'
+    });
+    setShowPromoModal(true);
+  };
+
+  const handleSavePromo = (e) => {
+    e.preventDefault();
+    if (!promoForm.code.trim() || !promoForm.name.trim()) {
+      toast.warning('Vui lòng nhập đầy đủ mã voucher và tên chương trình!', 'Thiếu Thông Tin');
+      return;
+    }
+    if (promoForm.startDate && promoForm.endDate && promoForm.endDate < promoForm.startDate) {
+      toast.warning('Ngày kết thúc phải lớn hơn hoặc bằng ngày bắt đầu!', 'Thời Hạn Chưa Hợp Lệ');
+      return;
+    }
+    const payload = {
+      ...promoForm,
+      code: promoForm.code.trim().toUpperCase(),
+      name: promoForm.name.trim(),
+      discountPercent: Math.min(100, Math.max(1, Number(promoForm.discountPercent) || 10)),
+    };
+    if (editingPromo) {
+      if (onUpdatePromotion) {
+        onUpdatePromotion(editingPromo.id, payload);
+      }
+    } else if (onAddPromotion) {
+      onAddPromotion(payload);
+    }
+    setEditingPromo(null);
+    setPromoForm({
+      code: '',
+      name: '',
+      discountPercent: 10,
+      applicableTo: 'Tất cả dịch vụ & đơn hàng',
+      startDate: new Date().toISOString().split('T')[0],
+      endDate: '2026-12-31',
+      status: 'ACTIVE'
     });
     setShowPromoModal(false);
   };
@@ -209,27 +271,91 @@ export default function CareStaffDashboard({
     }
   };
 
+  const openCreatePetStaff = () => {
+    const firstCustomer = users.find(u => u.role === 'CUSTOMER');
+    setEditingPet(null);
+    setPetMedicalForm({
+      name: '',
+      species: 'Chó',
+      breed: '',
+      weightKg: '',
+      ageMonths: '',
+      ownerId: firstCustomer?.id || 'u-4',
+      ownerName: firstCustomer?.fullName || 'Khách vãng lai tại quầy',
+      ownerPhone: firstCustomer?.phone || '',
+      medicalHistory: ''
+    });
+    setShowCreatePetModal(true);
+  };
+
   const openEditPet = (pet) => {
+    setShowCreatePetModal(false);
     setEditingPet(pet);
     setPetMedicalForm({
-      weightKg: pet.weightKg || '',
-      ageMonths: pet.ageMonths || '',
+      name: pet.name || '',
+      species: pet.species || 'Chó',
+      breed: pet.breed || '',
+      weightKg: pet.weightKg ?? '',
+      ageMonths: pet.ageMonths ?? '',
+      ownerName: pet.ownerName || '',
+      ownerPhone: pet.ownerPhone || '',
       medicalHistory: pet.medicalHistory || ''
     });
   };
 
   const handleSavePetMedical = (e) => {
     e.preventDefault();
-    if (!editingPet) return;
-    if (onUpdatePet) {
-      onUpdatePet(editingPet.id, {
-        weightKg: petMedicalForm.weightKg ? parseFloat(petMedicalForm.weightKg) : editingPet.weightKg,
-        ageMonths: petMedicalForm.ageMonths ? parseInt(petMedicalForm.ageMonths, 10) : editingPet.ageMonths,
-        medicalHistory: petMedicalForm.medicalHistory.trim()
-      });
+    if (!petMedicalForm.name.trim()) {
+      toast.warning('Vui lòng nhập tên thú cưng!', 'Thiếu Thông Tin');
+      return;
     }
-    toast.success(`Đã cập nhật y bạ cho bé ${editingPet.name}!`, 'Hồ Sơ Thú Cưng');
-    setEditingPet(null);
+    const payload = {
+      name: petMedicalForm.name.trim(),
+      species: petMedicalForm.species || 'Chó',
+      breed: (petMedicalForm.breed || '').trim(),
+      weightKg: petMedicalForm.weightKg !== '' ? parseFloat(petMedicalForm.weightKg) : null,
+      ageMonths: petMedicalForm.ageMonths !== '' ? parseInt(petMedicalForm.ageMonths, 10) : null,
+      medicalHistory: (petMedicalForm.medicalHistory || '').trim()
+    };
+
+    if (editingPet) {
+      if (onUpdatePet) onUpdatePet(editingPet.id, payload);
+      toast.success(`Đã cập nhật hồ sơ & y bạ cho bé ${payload.name}!`, 'Hồ Sơ Thú Cưng');
+      setEditingPet(null);
+    } else if (showCreatePetModal) {
+      if (onAddPet) {
+        onAddPet({
+          ...payload,
+          ownerId: petMedicalForm.ownerId || 'u-4',
+          ownerName: (petMedicalForm.ownerName || '').trim() || 'Khách tại quầy',
+          ownerPhone: (petMedicalForm.ownerPhone || '').trim()
+        });
+      }
+      toast.success(`Đã tạo hồ sơ thú cưng "${payload.name}" tại quầy!`, 'Hồ Sơ Thú Cưng');
+      setShowCreatePetModal(false);
+    }
+  };
+
+  const handleDeletePetStaff = async (pet) => {
+    const ok = await confirmModal(
+      `Bạn có chắc chắn muốn xóa hồ sơ thú cưng "${pet.name}" (${pet.species}${pet.breed ? ` - ${pet.breed}` : ''})?`,
+      'Xác Nhận Xóa Hồ Sơ Thú Cưng',
+      { type: 'danger', confirmText: 'Xóa Hồ Sơ', cancelText: 'Hủy' }
+    );
+    if (ok && onDeletePet) {
+      onDeletePet(pet.id);
+    }
+  };
+
+  const handleCancelAppStaff = async (app) => {
+    const ok = await confirmModal(
+      `Xác nhận hủy ca hẹn [${app.serviceName || app.service?.name}] của bé ${app.petName || app.pet?.name} vào khung giờ ${app.timeSlot}?`,
+      'Xác Nhận Hủy Lịch Hẹn',
+      { type: 'danger', confirmText: 'Hủy Lịch Hẹn', cancelText: 'Giữ Lại' }
+    );
+    if (ok && onCancelAppointment) {
+      onCancelAppointment(app.id);
+    }
   };
 
   return (
@@ -247,15 +373,25 @@ export default function CareStaffDashboard({
                 Tiếp nhận lịch hẹn từ khách hàng, cập nhật tiến độ thực hiện và ghi nhận nhật ký chăm sóc
               </p>
             </div>
-            <div style={{ display: 'flex', alignItems: 'center', background: '#ffffff', borderRadius: '12px', padding: '0.5rem 0.9rem', border: '1px solid #cbd5e1', minWidth: 260 }}>
-              <Search size={16} color="#64748b" style={{ marginRight: '8px' }} />
-              <input
-                type="text"
-                value={appSearch}
-                onChange={e => setAppSearch(e.target.value)}
-                placeholder="Tìm tên bé, chủ nuôi, dịch vụ..."
-                style={{ background: 'transparent', border: 'none', color: '#0f172a', fontSize: '0.85rem', outline: 'none', width: '100%' }}
-              />
+            <div style={{ display: 'flex', gap: '0.6rem', flexWrap: 'wrap', alignItems: 'center' }}>
+              <button
+                type="button"
+                className={showCancelledApps ? 'btn btn-danger' : 'btn btn-secondary'}
+                style={{ padding: '0.45rem 0.85rem', fontSize: '0.8rem' }}
+                onClick={() => setShowCancelledApps(prev => !prev)}
+              >
+                {showCancelledApps ? 'Ẩn Lịch Đã Hủy' : `Lịch Đã Hủy (${cancelledApps.length})`}
+              </button>
+              <div style={{ display: 'flex', alignItems: 'center', background: '#ffffff', borderRadius: '12px', padding: '0.5rem 0.9rem', border: '1px solid #cbd5e1', minWidth: 260 }}>
+                <Search size={16} color="#64748b" style={{ marginRight: '8px' }} />
+                <input
+                  type="text"
+                  value={appSearch}
+                  onChange={e => setAppSearch(e.target.value)}
+                  placeholder="Tìm tên bé, chủ nuôi, dịch vụ..."
+                  style={{ background: 'transparent', border: 'none', color: '#0f172a', fontSize: '0.85rem', outline: 'none', width: '100%' }}
+                />
+              </div>
             </div>
           </div>
 
@@ -312,17 +448,30 @@ export default function CareStaffDashboard({
                           ⚠️ {app.notes}
                         </div>
                       )}
-                      <button
-                        type="button"
-                        className="btn btn-primary"
-                        style={{ width: '100%', marginTop: '0.75rem', padding: '0.5rem', fontSize: '0.82rem' }}
-                        onClick={() => {
-                          onUpdateStatus(app.id, 'IN_PROGRESS', 'Bắt đầu tiếp nhận và thực hiện dịch vụ');
-                          toast.info(`Đã tiếp nhận bé ${app.petName || 'thú cưng'}!`, 'Bắt Đầu Ca Hẹn');
-                        }}
-                      >
-                        <PlayCircle size={15} /> Tiếp Nhận & Bắt Đầu
-                      </button>
+                      <div style={{ display: 'flex', gap: '0.45rem', marginTop: '0.75rem' }}>
+                        <button
+                          type="button"
+                          className="btn btn-primary"
+                          style={{ flex: 1, padding: '0.5rem', fontSize: '0.8rem' }}
+                          onClick={() => {
+                            onUpdateStatus(app.id, 'IN_PROGRESS', 'Bắt đầu tiếp nhận và thực hiện dịch vụ');
+                            toast.info(`Đã tiếp nhận bé ${app.petName || 'thú cưng'}!`, 'Bắt Đầu Ca Hẹn');
+                          }}
+                        >
+                          <PlayCircle size={15} /> Tiếp Nhận
+                        </button>
+                        {onCancelAppointment && (
+                          <button
+                            type="button"
+                            className="btn btn-danger"
+                            style={{ padding: '0.5rem 0.7rem', fontSize: '0.78rem' }}
+                            onClick={() => handleCancelAppStaff(app)}
+                            title="Hủy ca hẹn & giải phóng khung giờ"
+                          >
+                            <X size={14} /> Hủy
+                          </button>
+                        )}
+                      </div>
                     </div>
                   ))
                 )}
@@ -402,6 +551,32 @@ export default function CareStaffDashboard({
               </div>
             </div>
           </div>
+          {/* CANCELLED APPOINTMENTS PANEL (TOGGLED) */}
+          {showCancelledApps && (
+            <div className="glass-panel" style={{ padding: '1.25rem', borderColor: '#fecaca', background: '#fef2f2' }}>
+              <h3 style={{ fontSize: '1rem', fontWeight: 800, color: '#991b1b', marginBottom: '0.85rem' }}>
+                🚫 Danh Sách Ca Hẹn Đã Hủy ({cancelledApps.length})
+              </h3>
+              {cancelledApps.length === 0 ? (
+                <div style={{ fontSize: '0.84rem', color: '#7f1d1d', opacity: 0.8 }}>Chưa có lịch hẹn nào bị hủy.</div>
+              ) : (
+                <div className="grid-3" style={{ gap: '0.85rem' }}>
+                  {cancelledApps.map(app => (
+                    <div key={app.id} className="glass-card" style={{ padding: '0.85rem' }}>
+                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '4px' }}>
+                        <strong>{app.petName || app.pet?.name || 'Thú Cưng'}</strong>
+                        <span className="badge badge-danger">ĐÃ HỦY</span>
+                      </div>
+                      <div style={{ fontSize: '0.8rem', color: '#475569' }}>{app.serviceName || app.service?.name}</div>
+                      <div style={{ fontSize: '0.75rem', color: '#64748b', marginTop: '2px' }}>
+                        {app.appointmentDate} ({app.timeSlot}) • Chủ: {app.customerName || 'Khách hàng'}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+          )}
         </>
       )}
 
@@ -414,7 +589,7 @@ export default function CareStaffDashboard({
                 <FileText size={21} color="#0284c7" /> Quản Lý Danh Mục Dịch Vụ ({filteredServices.length})
               </h2>
               <p style={{ fontSize: '0.84rem', color: 'var(--text-muted)' }}>
-                Thêm mới, chỉnh sửa đơn giá, thời lượng và quản lý danh mục dịch vụ Spa, Thú y & Khoa Sinh Sản
+                Thêm mới, chỉnh sửa đơn giá, thời lượng và quản lý danh mục dịch vụ Spa, Tiêm phòng & Khám bệnh trị liệu
               </p>
             </div>
             <button type="button" className="btn btn-coral" onClick={openCreateService}>
@@ -488,9 +663,11 @@ export default function CareStaffDashboard({
                       </div>
                     </td>
                     <td><span className="badge badge-info">{s.category}</span></td>
-                    <td style={{ whiteSpace: 'nowrap' }}>{s.durationMinutes} phút</td>
+                    <td style={{ whiteSpace: 'nowrap' }}>{s.durationMinutes || 45} phút</td>
                     <td style={{ whiteSpace: 'nowrap' }}>
-                      <strong style={{ color: '#ea580c' }}>{Number(s.price).toLocaleString('vi-VN')} đ</strong>
+                      <strong style={{ color: '#ea580c' }}>
+                        {Number(s.price).toLocaleString('vi-VN')} đ
+                      </strong>
                     </td>
                     <td>
                       <div style={{ display: 'flex', gap: '0.45rem' }}>
@@ -522,7 +699,7 @@ export default function CareStaffDashboard({
                 Tạo mã giảm giá voucher, bật/tắt trạng thái áp dụng cho khách hàng khi thanh toán & đặt lịch
               </p>
             </div>
-            <button type="button" className="btn btn-coral" onClick={() => setShowPromoModal(true)}>
+            <button type="button" className="btn btn-coral" onClick={openCreatePromo}>
               <Plus size={16} /> Tạo Chương Trình Khuyến Mãi
             </button>
           </div>
@@ -579,11 +756,19 @@ export default function CareStaffDashboard({
                         </span>
                       </td>
                       <td>
-                        <div style={{ display: 'flex', gap: '0.45rem' }}>
+                        <div style={{ display: 'flex', gap: '0.45rem', flexWrap: 'nowrap' }}>
+                          <button
+                            type="button"
+                            className="btn btn-primary"
+                            style={{ padding: '0.35rem 0.65rem', fontSize: '0.76rem', whiteSpace: 'nowrap' }}
+                            onClick={() => openEditPromo(p)}
+                          >
+                            <Edit3 size={13} /> Sửa
+                          </button>
                           <button
                             type="button"
                             className="btn btn-secondary"
-                            style={{ padding: '0.35rem 0.65rem', fontSize: '0.76rem' }}
+                            style={{ padding: '0.35rem 0.65rem', fontSize: '0.76rem', whiteSpace: 'nowrap' }}
                             onClick={() => onTogglePromotion && onTogglePromotion(p.id)}
                           >
                             {isActive ? 'Tạm dừng' : 'Kích hoạt'}
@@ -593,6 +778,7 @@ export default function CareStaffDashboard({
                             className="btn btn-danger"
                             style={{ padding: '0.35rem 0.65rem', fontSize: '0.76rem' }}
                             onClick={() => handleDeletePromoClick(p)}
+                            title="Xóa khuyến mãi"
                           >
                             <Trash2 size={13} />
                           </button>
@@ -620,15 +806,20 @@ export default function CareStaffDashboard({
               </p>
             </div>
 
-            <div style={{ display: 'flex', alignItems: 'center', background: '#f8fafc', borderRadius: '10px', padding: '0.5rem 0.85rem', border: '1px solid #cbd5e1', minWidth: 240 }}>
-              <Search size={15} color="#64748b" style={{ marginRight: '6px' }} />
-              <input
-                type="text"
-                value={petSearch}
-                onChange={e => setPetSearch(e.target.value)}
-                placeholder="Tìm tên bé, giống, chủ nuôi..."
-                style={{ background: 'transparent', border: 'none', color: '#0f172a', fontSize: '0.85rem', outline: 'none', width: '100%' }}
-              />
+            <div style={{ display: 'flex', gap: '0.65rem', flexWrap: 'wrap', alignItems: 'center' }}>
+              <div style={{ display: 'flex', alignItems: 'center', background: '#f8fafc', borderRadius: '10px', padding: '0.5rem 0.85rem', border: '1px solid #cbd5e1', minWidth: 230 }}>
+                <Search size={15} color="#64748b" style={{ marginRight: '6px' }} />
+                <input
+                  type="text"
+                  value={petSearch}
+                  onChange={e => setPetSearch(e.target.value)}
+                  placeholder="Tìm tên bé, giống, chủ nuôi..."
+                  style={{ background: 'transparent', border: 'none', color: '#0f172a', fontSize: '0.85rem', outline: 'none', width: '100%' }}
+                />
+              </div>
+              <button type="button" className="btn btn-coral" onClick={openCreatePetStaff}>
+                <Plus size={16} /> Thêm Hồ Sơ Thú Cưng
+              </button>
             </div>
           </div>
 
@@ -666,12 +857,15 @@ export default function CareStaffDashboard({
                   </div>
                 </div>
 
-                <div style={{ display: 'flex', gap: '0.5rem', marginTop: '0.25rem' }}>
-                  <button type="button" className="btn btn-secondary" style={{ flex: 1, padding: '0.45rem', fontSize: '0.78rem' }} onClick={() => setSelectedPetDetail(p)}>
-                    Lịch Sử Spa
+                <div style={{ display: 'flex', gap: '0.45rem', marginTop: '0.25rem' }}>
+                  <button type="button" className="btn btn-secondary" style={{ flex: 1, padding: '0.45rem', fontSize: '0.76rem' }} onClick={() => setSelectedPetDetail(p)}>
+                    Lịch Sử
                   </button>
-                  <button type="button" className="btn btn-primary" style={{ flex: 1, padding: '0.45rem', fontSize: '0.78rem' }} onClick={() => openEditPet(p)}>
-                    <Edit3 size={13} /> Cập Nhật Y Bạ
+                  <button type="button" className="btn btn-primary" style={{ flex: 1.2, padding: '0.45rem', fontSize: '0.76rem' }} onClick={() => openEditPet(p)}>
+                    <Edit3 size={13} /> Sửa / Y Bạ
+                  </button>
+                  <button type="button" className="btn btn-danger" style={{ padding: '0.45rem 0.6rem', fontSize: '0.76rem' }} onClick={() => handleDeletePetStaff(p)} title="Xóa hồ sơ thú cưng">
+                    <Trash2 size={13} />
                   </button>
                 </div>
               </div>
@@ -733,8 +927,14 @@ export default function CareStaffDashboard({
                 <span>Đánh Giá Hài Lòng</span>
                 <Sparkles size={17} color="#f59e0b" />
               </div>
-              <div style={{ fontSize: '1.5rem', fontWeight: 900, color: '#d97706', marginTop: '6px' }}>4.9 / 5 ★</div>
-              <div style={{ fontSize: '0.74rem', color: '#64748b', marginTop: '2px' }}>100% đúng khung giờ hẹn</div>
+              <div style={{ fontSize: '1.5rem', fontWeight: 900, color: '#d97706', marginTop: '6px' }}>
+                {reviews.length > 0
+                  ? `${(reviews.reduce((s, r) => s + (Number(r.rating) || 5), 0) / reviews.length).toFixed(1)} / 5 ★`
+                  : '5.0 / 5 ★'}
+              </div>
+              <div style={{ fontSize: '0.74rem', color: '#64748b', marginTop: '2px' }}>
+                {reviews.length} đánh giá từ khách hàng
+              </div>
             </div>
           </div>
 
@@ -826,6 +1026,79 @@ export default function CareStaffDashboard({
                 </tbody>
               </table>
             </div>
+          </div>
+
+          {/* CUSTOMER REVIEWS & STAFF REPLY PANEL */}
+          <div className="glass-panel" style={{ padding: '1.5rem' }}>
+            <h3 style={{ fontSize: '1.15rem', fontWeight: 800, color: '#0f172a', marginBottom: '0.35rem', display: 'flex', alignItems: 'center', gap: '8px' }}>
+              <MessageSquare size={19} color="#f59e0b" /> Đánh Giá Từ Khách Hàng &amp; Phản Hồi ({reviews.length})
+            </h3>
+            <p style={{ fontSize: '0.82rem', color: 'var(--text-muted)', marginBottom: '1rem' }}>
+              Theo dõi nhận xét thực tế từ khách hàng và gửi lời cảm ơn / giải đáp trực tiếp lên website
+            </p>
+            {reviews.length === 0 ? (
+              <div style={{ textAlign: 'center', color: 'var(--text-muted)', padding: '1.5rem', fontSize: '0.86rem' }}>
+                Chưa có đánh giá nào từ khách hàng.
+              </div>
+            ) : (
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '0.85rem' }}>
+                {reviews.map((rev) => {
+                  const draft = replyDrafts[rev.id] !== undefined ? replyDrafts[rev.id] : (rev.staffReply || '');
+                  return (
+                    <div key={rev.id} className="glass-card" style={{ padding: '1rem 1.15rem' }}>
+                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '0.5rem', marginBottom: '0.4rem' }}>
+                        <div>
+                          <strong style={{ color: '#0f172a', fontSize: '0.92rem' }}>{rev.customerName}</strong>
+                          {rev.petName && <span style={{ fontSize: '0.78rem', color: '#64748b' }}> • {rev.petName}</span>}
+                          <span style={{ fontSize: '0.76rem', color: '#ea580c', fontWeight: 700, marginLeft: '8px' }}>
+                            [{rev.targetName}]
+                          </span>
+                        </div>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                          <span style={{ display: 'inline-flex', gap: '2px' }}>
+                            {[1, 2, 3, 4, 5].map((s) => (
+                              <Star key={s} size={13} fill={s <= (Number(rev.rating) || 5) ? '#f59e0b' : 'none'} color="#f59e0b" />
+                            ))}
+                          </span>
+                          {onDeleteReview && (
+                            <button
+                              type="button"
+                              className="btn btn-danger"
+                              style={{ padding: '0.2rem 0.45rem', fontSize: '0.72rem' }}
+                              onClick={async () => {
+                                const ok = await confirmModal('Xác nhận xóa đánh giá này?', 'Xóa Đánh Giá', { type: 'danger', confirmText: 'Xóa', cancelText: 'Hủy' });
+                                if (ok) onDeleteReview(rev.id);
+                              }}
+                              title="Xóa đánh giá"
+                            >
+                              <Trash2 size={12} />
+                            </button>
+                          )}
+                        </div>
+                      </div>
+                      <p style={{ fontSize: '0.85rem', color: '#334155', margin: '0 0 0.65rem 0', lineHeight: 1.55 }}>{rev.comment}</p>
+                      <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center' }}>
+                        <input
+                          className="form-control"
+                          style={{ flex: 1, fontSize: '0.82rem', padding: '0.45rem 0.75rem' }}
+                          value={draft}
+                          onChange={(e) => setReplyDrafts((prev) => ({ ...prev, [rev.id]: e.target.value }))}
+                          placeholder="Nhập phản hồi chính thức từ Petzera Care..."
+                        />
+                        <button
+                          type="button"
+                          className="btn btn-primary"
+                          style={{ padding: '0.45rem 0.85rem', fontSize: '0.78rem', whiteSpace: 'nowrap' }}
+                          onClick={() => onReplyReview && onReplyReview(rev.id, draft)}
+                        >
+                          <Send size={13} /> {rev.staffReply ? 'Cập Nhật' : 'Phản Hồi'}
+                        </button>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            )}
           </div>
         </div>
       )}
@@ -995,10 +1268,8 @@ export default function CareStaffDashboard({
                   <label>Danh Mục</label>
                   <select className="form-control" value={serviceForm.category} onChange={e => setServiceForm({ ...serviceForm, category: e.target.value })}>
                     <option value="Spa & Grooming">Spa & Grooming</option>
-                    <option value="Khoa Sinh Sản">Khoa Sinh Sản</option>
-                    <option value="Khách Sạn & Lưu Trú">Khách Sạn & Lưu Trú</option>
                     <option value="Y Tế & Tiêm Phòng">Y Tế & Tiêm Phòng</option>
-                    <option value="Khám Bệnh & Trị Liệu">Khám Bệnh & Trị Liệu</option>
+                    <option value="Khám Bệnh & Trị Liệu">Khám Bệnh & Trị Liệu (gồm Sinh Sản)</option>
                   </select>
                 </div>
                 <div className="form-group">
@@ -1023,13 +1294,15 @@ export default function CareStaffDashboard({
         </div>
       )}
 
-      {/* ==================== MODAL: TẠO KHUYẾN MÃI ==================== */}
+      {/* ==================== MODAL: TẠO / SỬA KHUYẾN MÃI ==================== */}
       {showPromoModal && (
-        <div className="modal-overlay" onClick={(e) => { if (e.target === e.currentTarget) setShowPromoModal(false); }}>
+        <div className="modal-overlay" onClick={(e) => { if (e.target === e.currentTarget) { setShowPromoModal(false); setEditingPromo(null); } }}>
           <div className="modal-content animate-fade-in" style={{ maxWidth: 500 }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.15rem' }}>
-              <h3 style={{ fontSize: '1.25rem', fontWeight: 800, color: '#0f172a' }}>Tạo Chương Trình Khuyến Mãi</h3>
-              <button type="button" onClick={() => setShowPromoModal(false)} style={{ background: '#f1f5f9', border: 'none', borderRadius: '50%', width: 32, height: 32, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+              <h3 style={{ fontSize: '1.25rem', fontWeight: 800, color: '#0f172a' }}>
+                {editingPromo ? 'Chỉnh Sửa Chương Trình Khuyến Mãi' : 'Tạo Chương Trình Khuyến Mãi'}
+              </h3>
+              <button type="button" onClick={() => { setShowPromoModal(false); setEditingPromo(null); }} style={{ background: '#f1f5f9', border: 'none', borderRadius: '50%', width: 32, height: 32, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
                 <X size={16} />
               </button>
             </div>
@@ -1052,7 +1325,8 @@ export default function CareStaffDashboard({
                   <select className="form-control" value={promoForm.applicableTo} onChange={e => setPromoForm({ ...promoForm, applicableTo: e.target.value })}>
                     <option value="Tất cả dịch vụ & đơn hàng">Tất cả dịch vụ & đơn hàng</option>
                     <option value="Spa & Grooming">Spa & Grooming</option>
-                    <option value="Khoa Sinh Sản">Khoa Sinh Sản</option>
+                    <option value="Y Tế & Tiêm Phòng">Y Tế & Tiêm Phòng</option>
+                    <option value="Khám Bệnh & Trị Liệu">Khám Bệnh, Trị Liệu & Sinh Sản</option>
                     <option value="Vật phẩm & Thức ăn">Vật phẩm & Thức ăn</option>
                   </select>
                 </div>
@@ -1067,45 +1341,84 @@ export default function CareStaffDashboard({
                   <input type="date" className="form-control" value={promoForm.endDate} onChange={e => setPromoForm({ ...promoForm, endDate: e.target.value })} />
                 </div>
               </div>
+              {editingPromo && (
+                <div className="form-group">
+                  <label>Trạng Thái Chương Trình</label>
+                  <select className="form-control" value={promoForm.status} onChange={e => setPromoForm({ ...promoForm, status: e.target.value })}>
+                    <option value="ACTIVE">Đang chạy (Kích hoạt)</option>
+                    <option value="PAUSED">Tạm dừng</option>
+                  </select>
+                </div>
+              )}
               <div style={{ display: 'flex', gap: '0.75rem', justifyContent: 'flex-end', marginTop: '1.25rem' }}>
-                <button type="button" className="btn btn-secondary" onClick={() => setShowPromoModal(false)}>Hủy</button>
-                <button type="submit" className="btn btn-coral">Tạo Khuyến Mãi</button>
+                <button type="button" className="btn btn-secondary" onClick={() => { setShowPromoModal(false); setEditingPromo(null); }}>Hủy</button>
+                <button type="submit" className="btn btn-coral">{editingPromo ? 'Lưu Thay Đổi' : 'Tạo Khuyến Mãi'}</button>
               </div>
             </form>
           </div>
         </div>
       )}
 
-      {/* ==================== MODAL: CẬP NHẬT Y BẠ THÚ CƯNG ==================== */}
-      {editingPet && (
-        <div className="modal-overlay" onClick={(e) => { if (e.target === e.currentTarget) setEditingPet(null); }}>
-          <div className="modal-content animate-fade-in" style={{ maxWidth: 480 }}>
+      {/* ==================== MODAL: THÊM / CẬP NHẬT HỒ SƠ & Y BẠ THÚ CƯNG ==================== */}
+      {(editingPet || showCreatePetModal) && (
+        <div className="modal-overlay" onClick={(e) => { if (e.target === e.currentTarget) { setEditingPet(null); setShowCreatePetModal(false); } }}>
+          <div className="modal-content animate-fade-in" style={{ maxWidth: 500 }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.15rem' }}>
               <h3 style={{ fontSize: '1.2rem', fontWeight: 800, color: '#0f172a' }}>
-                Cập Nhật Y Bạ: {editingPet.name}
+                {editingPet ? `Cập Nhật Hồ Sơ & Y Bạ: ${editingPet.name}` : 'Thêm Hồ Sơ Thú Cưng Mới Tại Quầy'}
               </h3>
-              <button type="button" onClick={() => setEditingPet(null)} style={{ background: '#f1f5f9', border: 'none', borderRadius: '50%', width: 32, height: 32, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+              <button type="button" onClick={() => { setEditingPet(null); setShowCreatePetModal(false); }} style={{ background: '#f1f5f9', border: 'none', borderRadius: '50%', width: 32, height: 32, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
                 <X size={16} />
               </button>
             </div>
             <form onSubmit={handleSavePetMedical}>
+              <div className="form-group">
+                <label>Tên Thú Cưng *</label>
+                <input className="form-control" value={petMedicalForm.name} onChange={e => setPetMedicalForm({ ...petMedicalForm, name: e.target.value })} placeholder="VD: LuLu" required />
+              </div>
+              <div className="grid-2">
+                <div className="form-group">
+                  <label>Loài</label>
+                  <select className="form-control" value={petMedicalForm.species} onChange={e => setPetMedicalForm({ ...petMedicalForm, species: e.target.value })}>
+                    <option value="Chó">Chó 🐶</option>
+                    <option value="Mèo">Mèo 🐱</option>
+                    <option value="Khác">Khác 🐰</option>
+                  </select>
+                </div>
+                <div className="form-group">
+                  <label>Giống (Breed)</label>
+                  <input className="form-control" value={petMedicalForm.breed} onChange={e => setPetMedicalForm({ ...petMedicalForm, breed: e.target.value })} placeholder="VD: Poodle, Anh Lông Ngắn..." />
+                </div>
+              </div>
               <div className="grid-2">
                 <div className="form-group">
                   <label>Tuổi (tháng)</label>
-                  <input type="number" className="form-control" value={petMedicalForm.ageMonths} onChange={e => setPetMedicalForm({ ...petMedicalForm, ageMonths: e.target.value })} />
+                  <input type="number" min="0" className="form-control" value={petMedicalForm.ageMonths} onChange={e => setPetMedicalForm({ ...petMedicalForm, ageMonths: e.target.value })} />
                 </div>
                 <div className="form-group">
                   <label>Cân Nặng (kg)</label>
-                  <input type="number" step="0.1" className="form-control" value={petMedicalForm.weightKg} onChange={e => setPetMedicalForm({ ...petMedicalForm, weightKg: e.target.value })} />
+                  <input type="number" min="0" step="0.1" className="form-control" value={petMedicalForm.weightKg} onChange={e => setPetMedicalForm({ ...petMedicalForm, weightKg: e.target.value })} />
                 </div>
               </div>
+              {showCreatePetModal && (
+                <div className="grid-2">
+                  <div className="form-group">
+                    <label>Chủ Nuôi (Khách Hàng)</label>
+                    <input className="form-control" value={petMedicalForm.ownerName} onChange={e => setPetMedicalForm({ ...petMedicalForm, ownerName: e.target.value })} placeholder="Họ tên chủ nuôi" />
+                  </div>
+                  <div className="form-group">
+                    <label>SĐT Chủ Nuôi</label>
+                    <input className="form-control" value={petMedicalForm.ownerPhone} onChange={e => setPetMedicalForm({ ...petMedicalForm, ownerPhone: e.target.value })} placeholder="09xxxxxxxx" />
+                  </div>
+                </div>
+              )}
               <div className="form-group">
                 <label>Tiền Sử Y Tế / Dị Ứng / Ghi Chú Chăm Sóc</label>
-                <textarea className="form-control" rows={4} value={petMedicalForm.medicalHistory} onChange={e => setPetMedicalForm({ ...petMedicalForm, medicalHistory: e.target.value })} placeholder="Ghi nhận mũi tiêm, dị ứng sữa tắm, lưu ý hành vi..." />
+                <textarea className="form-control" rows={3} value={petMedicalForm.medicalHistory} onChange={e => setPetMedicalForm({ ...petMedicalForm, medicalHistory: e.target.value })} placeholder="Ghi nhận mũi tiêm, dị ứng sữa tắm, lưu ý hành vi..." />
               </div>
               <div style={{ display: 'flex', gap: '0.75rem', justifyContent: 'flex-end', marginTop: '1rem' }}>
-                <button type="button" className="btn btn-secondary" onClick={() => setEditingPet(null)}>Hủy</button>
-                <button type="submit" className="btn btn-primary">Lưu Y Bạ</button>
+                <button type="button" className="btn btn-secondary" onClick={() => { setEditingPet(null); setShowCreatePetModal(false); }}>Hủy</button>
+                <button type="submit" className="btn btn-primary">{editingPet ? 'Lưu Thay Đổi' : 'Tạo Hồ Sơ'}</button>
               </div>
             </form>
           </div>

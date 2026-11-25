@@ -16,6 +16,7 @@ export default function StaffLoginModal({ isOpen = true, onClose, onLoginSuccess
   const [selectedRole, setSelectedRole] = useState('ADMIN');
   const [loading, setLoading] = useState(false);
   const [errorMessage, setErrorMessage] = useState('');
+  const [showForgotHelp, setShowForgotHelp] = useState(false);
 
   if (!isOpen) return null;
 
@@ -231,10 +232,19 @@ export default function StaffLoginModal({ isOpen = true, onClose, onLoginSuccess
           </div>
         </div>
 
-        <div className="form-group" style={{ marginBottom: '1.25rem' }}>
-          <label style={{ fontSize: '0.82rem', fontWeight: 700, color: '#334155', marginBottom: '4px', display: 'block' }}>
-            Mật Khẩu *
-          </label>
+        <div className="form-group" style={{ marginBottom: '1rem' }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '4px' }}>
+            <label style={{ fontSize: '0.82rem', fontWeight: 700, color: '#334155', marginBottom: 0 }}>
+              Mật Khẩu *
+            </label>
+            <button
+              type="button"
+              onClick={() => setShowForgotHelp((prev) => !prev)}
+              style={{ background: 'none', border: 'none', color: '#0284c7', fontSize: '0.76rem', fontWeight: 700, cursor: 'pointer', padding: 0 }}
+            >
+              Quên mật khẩu?
+            </button>
+          </div>
           <div style={{ position: 'relative' }}>
             <Lock size={16} color="#94a3b8" style={{ position: 'absolute', left: '12px', top: '50%', transform: 'translateY(-50%)' }} />
             <input
@@ -248,6 +258,11 @@ export default function StaffLoginModal({ isOpen = true, onClose, onLoginSuccess
               required
             />
           </div>
+          {showForgotHelp && (
+            <div style={{ marginTop: '0.65rem', background: '#f0f9ff', border: '1px solid #bae6fd', borderRadius: '10px', padding: '0.65rem 0.85rem', fontSize: '0.76rem', color: '#0369a1', lineHeight: 1.5 }}>
+              🔒 Vì lý do bảo mật phân quyền nội bộ (RBAC), Nhân viên &amp; Quản lý kho vui lòng liên hệ <strong>Admin</strong> (mục <em>Quản Lý Tài Khoản</em>) hoặc Hotline <strong>0348 639 603</strong> để cấp lại mật khẩu mới.
+            </div>
+          )}
         </div>
 
         <button

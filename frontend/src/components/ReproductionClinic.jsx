@@ -98,7 +98,7 @@ export default function ReproductionClinic({ onBookService, services = [] }) {
     {
       id: 's15',
       name: 'Siêu Âm Thai Kỹ Thuật Số Doppler & Dự Sinh Chuẩn Xác',
-      category: 'Khoa Sinh Sản',
+      category: 'Khám Bệnh & Trị Liệu',
       durationMinutes: 25,
       price: 150000,
       badge: 'Bác Sĩ CKI',
@@ -108,7 +108,7 @@ export default function ReproductionClinic({ onBookService, services = [] }) {
     {
       id: 's16',
       name: 'Gói Hộ Sinh Đỡ Đẻ & Hồi Sức Sơ Sinh An Toàn 24/7',
-      category: 'Khoa Sinh Sản',
+      category: 'Khám Bệnh & Trị Liệu',
       durationMinutes: 120,
       price: 350000,
       badge: 'Trực 24/7 Cấp Cứu',
@@ -118,7 +118,7 @@ export default function ReproductionClinic({ onBookService, services = [] }) {
     {
       id: 's17',
       name: 'Phẫu Thuật Mổ Đẻ Cấp Cứu Vô Trùng (C-Section)',
-      category: 'Khoa Sinh Sản',
+      category: 'Khám Bệnh & Trị Liệu',
       durationMinutes: 60,
       price: 850000,
       badge: 'Cấp Cứu Khẩn Cấp',
@@ -128,7 +128,7 @@ export default function ReproductionClinic({ onBookService, services = [] }) {
     {
       id: 's18',
       name: 'Triệt Sản Mèo Cái / Chó Cái Công Nghệ Minilap Thẩm Mỹ',
-      category: 'Khoa Sinh Sản',
+      category: 'Khám Bệnh & Trị Liệu',
       durationMinutes: 45,
       price: 450000,
       badge: 'Công Nghệ Minilap',
@@ -138,7 +138,7 @@ export default function ReproductionClinic({ onBookService, services = [] }) {
     {
       id: 's19',
       name: 'Thiến Chó Đực / Mèo Đực An Toàn & Kháng Khuẩn',
-      category: 'Khoa Sinh Sản',
+      category: 'Khám Bệnh & Trị Liệu',
       durationMinutes: 25,
       price: 280000,
       badge: 'Nhanh Chóng 15 Phút',
@@ -148,7 +148,7 @@ export default function ReproductionClinic({ onBookService, services = [] }) {
     {
       id: 's20',
       name: 'Phẫu Thuật Cấp Cứu Viêm Tử Cung Tích Mủ (Pyometra)',
-      category: 'Khoa Sinh Sản',
+      category: 'Khám Bệnh & Trị Liệu',
       durationMinutes: 75,
       price: 900000,
       badge: 'Điều Trị Khẩn Cấp',
@@ -182,9 +182,17 @@ export default function ReproductionClinic({ onBookService, services = [] }) {
   ];
 
   const handleBookRepro = (serviceId) => {
-    if (onBookService) {
-      onBookService(serviceId);
+    if (!onBookService) return;
+    const direct = services.find((s) => s.id === serviceId);
+    if (direct) {
+      onBookService(direct.id);
+      return;
     }
+    const localSpec = reproductiveServices.find((r) => r.id === serviceId);
+    const matched = localSpec
+      ? services.find((s) => (s.name || '').trim().toLowerCase() === localSpec.name.trim().toLowerCase())
+      : null;
+    onBookService(matched ? matched.id : serviceId);
   };
 
   return (

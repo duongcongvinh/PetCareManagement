@@ -50,6 +50,7 @@ model User {
   password     String
   fullName     String
   phone        String?
+  address      String?
   role         Role          @default(CUSTOMER)
   status       String?       @default("ACTIVE")
   createdAt    DateTime      @default(now())
@@ -101,6 +102,10 @@ model Appointment {
   serviceId       String            @db.ObjectId
   service         ServiceCatalog    @relation(fields: [serviceId], references: [id])
   appointmentDate DateTime
+  checkOutDate    DateTime?         // Ngày trả phòng dự kiến (Khách Sạn & Lưu Trú)
+  nights          Int?              // Số đêm lưu trú (0/1 với Daycare)
+  totalPrice      Float?            // Tổng chi phí sau khi tính số đêm, cân nặng, add-ons & ưu đãi
+  boardingDetails Json?             // Chi tiết lưu trú (weightTier, dietOption, addOns, discountPercent, freeBathGift)
   timeSlot        String            // e.g. "09:00 - 10:00"
   status          AppointmentStatus @default(PENDING)
   notes           String?
@@ -184,4 +189,20 @@ model ReorderProposal {
   status            ProposalStatus @default(DRAFT)
   createdAt         DateTime       @default(now())
   updatedAt         DateTime       @updatedAt
+}
+
+model Review {
+  id            String   @id @default(auto()) @map("_id") @db.ObjectId
+  targetType    String   // 'SERVICE' | 'PRODUCT' | 'GENERAL'
+  targetId      String?
+  targetName    String
+  appointmentId String?
+  customerId    String?
+  customerName  String
+  petName       String?
+  rating        Int
+  comment       String
+  staffReply    String?
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
 }

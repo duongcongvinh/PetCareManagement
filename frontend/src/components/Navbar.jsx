@@ -7,6 +7,7 @@ export default function Navbar({
   currentUser, 
   onOpenLogin, 
   onOpenStaffLogin,
+  onOpenProfile,
   onLogout, 
   portalMode, 
   onSwitchPortalMode, 
@@ -249,12 +250,19 @@ export default function Navbar({
             </button>
           ) : currentUser ? (
             <div style={{ display: 'flex', alignItems: 'center', gap: '0.65rem', background: '#f8fafc', padding: '0.35rem 0.9rem', borderRadius: '30px', border: '1px solid #e2e8f0' }}>
-              <div>
-                <div style={{ fontSize: '0.82rem', fontWeight: 700, color: '#0f172a' }}>{currentUser.fullName}</div>
-                <div style={{ fontSize: '0.68rem', color: '#16a34a', fontWeight: 800 }}>
-                  Khách Hàng
+              <button
+                type="button"
+                onClick={() => onOpenProfile && onOpenProfile()}
+                title="Bấm để quản lý thông tin cá nhân"
+                style={{ background: 'none', border: 'none', padding: 0, textAlign: 'left', cursor: 'pointer' }}
+              >
+                <div style={{ fontSize: '0.82rem', fontWeight: 700, color: '#0f172a', display: 'flex', alignItems: 'center', gap: '4px' }}>
+                  {currentUser.fullName}
                 </div>
-              </div>
+                <div style={{ fontSize: '0.68rem', color: '#16a34a', fontWeight: 800 }}>
+                  Khách Hàng • Hồ sơ ✎
+                </div>
+              </button>
               <button 
                 onClick={onLogout} 
                 style={{ 

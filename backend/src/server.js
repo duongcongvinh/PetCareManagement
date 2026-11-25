@@ -5,6 +5,9 @@ const dotenv = require('dotenv');
 dotenv.config();
 
 const apiRoutes = require('./routes/api');
+const prisma = require('./config/prisma');
+const { ensureDefaultServices } = require('./config/defaultServices');
+const { ensureDefaultReviews } = require('./services/reviewService');
 
 const app = express();
 const PORT = process.env.PORT || 5000;
@@ -34,7 +37,19 @@ app.use((err, req, res, next) => {
   });
 });
 
-app.listen(PORT, () => {
+app.listen(PORT, async () => {
   console.log(`🚀 PetCare Backend Server is running on http://localhost:${PORT}`);
   console.log(`🔗 API Endpoint: http://localhost:${PORT}/api`);
+  try {
+    const syncRes = await ensureDefaultServices(prisma);
+    console.log(
+      `✅ Service catalog synced (${syncRes.createdCount} added, ${syncRes.updatedCount} updated, ${syncRes.removedCount || 0} removed, ${syncRes.totalExpected} standard services)`
+    );
+    const revRes = await ensureDefaultReviews(prisma);
+    if (revRes.seededCount > 0) {
+      console.log(`✅ Initial customer reviews seeded (${revRes.seededCount} reviews)`);
+    }
+  } catch (err) {
+    console.warn('⚠️ Startup service catalog sync skipped:', err.message);
+  }
 });

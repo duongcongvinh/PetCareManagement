@@ -43,8 +43,8 @@ export default function AboutUsSection({
       icon: HeartHandshake,
       color: '#0284c7',
       bg: '#e0f2fe',
-      title: 'Khách Sạn VIP Camera 24/7',
-      desc: 'Phòng lưu trú điều hòa khử khuẩn UV mỗi ngày, chế độ ăn riêng biệt và camera theo dõi trực tuyến bất kỳ lúc nào.'
+      title: 'Tiêm Phòng & Khám Trị Liệu',
+      desc: 'Vắc xin nhập khẩu bảo quản chuẩn lạnh 2–8°C, siêu âm chẩn đoán tổng quát, trị liệu nấm da và lưu sổ y bạ điện tử trọn đời.'
     },
     {
       icon: ShoppingBag,
@@ -86,7 +86,7 @@ export default function AboutUsSection({
                 <span style={{ color: '#ea580c' }}>Toàn Diện 24/7</span>
               </h1>
               <p style={{ fontSize: '0.94rem', color: '#475569', lineHeight: 1.72, marginBottom: '1rem' }}>
-                <strong>Petzera</strong> được xây dựng với sứ mệnh mang đến trải nghiệm chăm sóc thú cưng minh bạch, tận tâm và chuẩn y khoa ngay tại trung tâm TP. Hồ Chí Minh. Từ <strong>Spa Grooming 5★</strong>, <strong>Khoa Sinh Sản &amp; Cấp cứu Thú y 24/7</strong>, <strong>Khách sạn thú cưng VIP</strong> cho đến <strong>Pet Shop chính hãng</strong> — tất cả được kết nối mượt mà trên một nền tảng đặt lịch không trùng giờ hiện đại.
+                <strong>Petzera</strong> được xây dựng với sứ mệnh mang đến trải nghiệm chăm sóc thú cưng minh bạch, tận tâm và chuẩn y khoa ngay tại trung tâm TP. Hồ Chí Minh. Từ <strong>Spa Grooming 5★</strong>, <strong>Tiêm phòng vắc xin</strong>, <strong>Khám bệnh, Trị liệu &amp; Khoa Sinh Sản 24/7</strong> cho đến <strong>Pet Shop chính hãng</strong> — tất cả được kết nối mượt mà trên một nền tảng đặt lịch không trùng giờ hiện đại.
               </p>
               <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.65rem', marginBottom: '1.35rem' }}>
                 {[

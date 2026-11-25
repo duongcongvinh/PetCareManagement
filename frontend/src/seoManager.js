@@ -58,11 +58,11 @@ export function getPathForCustomerTab(tab, productId = null, serviceId = null) {
 
 const CUSTOMER_SEO_META = {
   home: {
-    title: 'Petzera — Spa Thú Cưng, Khoa Sinh Sản Thú Y 24/7 & Pet Shop Chính Hãng',
+    title: 'Petzera — Spa Thú Cưng, Khám Thú Y & Khoa Sinh Sản 24/7 | Pet Shop Chính Hãng',
     description:
-      'Petzera cung cấp dịch vụ Spa Grooming cắt tỉa lông chó mèo, Khoa Sinh Sản & hộ sinh thú cưng 24/7, tiêm phòng vắc xin, khách sạn thú cưng và Pet Shop chính hãng giao nhanh 2H.',
+      'Petzera cung cấp dịch vụ Spa Grooming cắt tỉa lông chó mèo, Tiêm phòng vắc xin, Khám bệnh trị liệu & Khoa Sinh Sản hộ sinh 24/7 và Pet Shop chính hãng giao nhanh 2H.',
     keywords:
-      'Petzera, spa thú cưng, cắt tỉa lông chó mèo, khoa sinh sản thú cưng, khách sạn thú cưng, pet shop chính hãng, thức ăn Royal Canin',
+      'Petzera, spa thú cưng, cắt tỉa lông chó mèo, khám bệnh thú y, khoa sinh sản thú cưng, tiêm phòng vắc xin, pet shop chính hãng, thức ăn Royal Canin',
     robots: 'index, follow',
     breadcrumbName: 'Trang Chủ',
   },
@@ -85,11 +85,11 @@ const CUSTOMER_SEO_META = {
     breadcrumbName: 'Khoa Sinh Sản',
   },
   booking: {
-    title: 'Dịch Vụ Spa Grooming, Khách Sạn & Tiêm Phòng Thú Cưng Bảng Giá Công Khai | Petzera',
+    title: 'Dịch Vụ Spa Grooming, Tiêm Phòng & Khám Bệnh Trị Liệu Thú Cưng | Petzera',
     description:
-      'Đặt lịch Spa Grooming 7 bước, cắt tỉa tạo kiểu Teddy, cạo vôi răng siêu âm, tiêm vắc xin 5 trong 1 và khách sạn thú cưng có camera 24/7 — khóa khung giờ online không trùng slot.',
+      'Đặt lịch Spa Grooming 7 bước, cắt tỉa tạo kiểu Teddy, tiêm vắc xin 5 trong 1, khám bệnh tổng quát, siêu âm thai & triệt sản Minilap — khóa khung giờ online không trùng slot.',
     keywords:
-      'đặt lịch spa thú cưng, bảng giá tắm cắt tỉa chó mèo, tiêm phòng vắc xin chó mèo, khách sạn thú cưng, cạo vôi răng chó mèo',
+      'đặt lịch spa thú cưng, bảng giá tắm cắt tỉa chó mèo, tiêm phòng vắc xin chó mèo, khám bệnh trị liệu thú cưng, siêu âm thai triệt sản',
     robots: 'index, follow',
     breadcrumbName: 'Dịch Vụ Spa & Thú Y',
   },
