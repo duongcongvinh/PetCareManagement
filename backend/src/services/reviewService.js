@@ -58,6 +58,83 @@ const DEFAULT_REVIEWS = [
       'Cát đậu nành vón cục nhanh, gần như không bụi và mùi dễ chịu. Giao hàng nhanh đóng gói chắc chắn, rất hài lòng.',
     staffReply: null,
   },
+  {
+    targetType: 'SERVICE',
+    targetId: 's5',
+    targetName: 'Cắt Tỉa Tạo Kiểu Nghệ Thuật (Style Hàn Quốc / Teddy / Sư Tử)',
+    customerName: 'Trần Mỹ Hạnh',
+    petName: 'Bé Nâu • Shiba Inu',
+    rating: 5,
+    comment:
+      'Master Groomer tỉa dáng rất khéo, bé Nâu vốn nhát nước nhưng các bạn dỗ dành nhẹ nhàng nên bé hợp tác cực ngoan. Về nhà ai cũng khen đẹp!',
+    staffReply: 'Cảm ơn chị Hạnh và bé Nâu đã ghé thăm Petzera! Chúc bé luôn vui khỏe ạ 🧡',
+  },
+  {
+    targetType: 'SERVICE',
+    targetId: 's3',
+    targetName: 'Khám Sức Khỏe Tổng Quát & Siêu Âm Ổ Bụng Chẩn Đoán',
+    customerName: 'Nguyễn Văn Nam',
+    petName: 'Bé Max • Golden Retriever',
+    rating: 5,
+    comment:
+      'Bác sĩ Quân khám rất kỹ, giải thích rõ từng chỉ số siêu âm gan thận và kê thực đơn kiểm soát cân nặng hợp lý. Rất yên tâm đưa bé khám định kỳ ở đây.',
+    staffReply: null,
+  },
+  {
+    targetType: 'SERVICE',
+    targetId: 's18',
+    targetName: 'Triệt Sản Mèo Cái / Chó Cái Công Nghệ Minilap Thẩm Mỹ',
+    customerName: 'Võ Thị Thanh Trúc',
+    petName: 'Bé Bơ • Mèo Ragdoll',
+    rating: 5,
+    comment:
+      'Vết mổ Minilap bé xíu chưa tới 1.5cm, khâu chỉ tự tiêu nên không phải tháo chỉ. Hôm sau bé đã ăn uống đi lại bình thường, bác sĩ còn gọi hỏi thăm mỗi ngày.',
+    staffReply: 'Petzera rất vui khi bé Bơ hồi phục nhanh chóng ạ! Chị nhớ cho bé đeo vòng cổ chống liếm đủ 5 ngày nhé.',
+  },
+  {
+    targetType: 'SERVICE',
+    targetId: 's25',
+    targetName: 'Tắm Sục Ozone Nano Kháng Khuẩn & Thư Giãn Cơ Bắp',
+    customerName: 'Phạm Minh Anh',
+    petName: 'Bé Kem • Corgi Pembroke',
+    rating: 5,
+    comment:
+      'Lần đầu cho bé Kem thử tắm sục Ozone Nano, da bé giảm ngứa hẳn và lông bồng bềnh cực kỳ mềm. Không gian phòng spa sạch sẽ không hề có mùi hôi.',
+    staffReply: null,
+  },
+  {
+    targetType: 'PRODUCT',
+    targetId: 'prod-3',
+    targetName: 'Sữa Tắm Dưỡng Lông SOS Mềm Mượt & Lưu Hương Cho Chó Mèo 530ml',
+    customerName: 'Đặng Khánh Linh',
+    petName: 'Bé Kem • Poodle Trắng',
+    rating: 5,
+    comment:
+      'Sữa tắm SOS mùi thơm dịu, nhiều bọt và tắm xong lông bé trắng sáng không bị khô da. Đặt trên web có mã giảm giá nên rẻ hơn mua ngoài.',
+    staffReply: null,
+  },
+  {
+    targetType: 'PRODUCT',
+    targetId: 'vp-4',
+    targetName: 'Sữa bột cho chó Predogen (lon 400g) + TẶNG 1 Xúc xích',
+    customerName: 'Lê Hoàng Long',
+    petName: 'Bé Cún Con • Corgi 2 tháng',
+    rating: 5,
+    comment:
+      'Sữa Predogen pha nhanh tan, bé uống rất hào hứng và không bị tiêu chảy. Shop còn tặng kèm xúc xích và giao hàng cực nhanh trong 90 phút.',
+    staffReply: 'Cảm ơn anh Long đã tin tưởng Petzera Super Shop! Chúc bé Cún hay ăn chóng lớn ạ.',
+  },
+  {
+    targetType: 'PRODUCT',
+    targetId: 'prod-40',
+    targetName: 'Máy Lọc Nước Tự Động Tuần Hoàn Cho Chó Mèo Petkit Eversweet (2L)',
+    customerName: 'Ngô Minh Thư',
+    petName: 'Bé Mướp • Mèo Anh Lông Ngắn',
+    rating: 4,
+    comment:
+      'Máy chạy siêu êm gần như không nghe tiếng động, từ lúc mua máy bé mèo chịu uống nước nhiều hơn hẳn. Đóng gói chống sốc rất kỹ.',
+    staffReply: null,
+  },
 ];
 
 const validateReviewPayload = ({ targetType = 'GENERAL', targetName, rating, comment }) => {
@@ -104,12 +181,16 @@ const computeReviewStats = (reviews = []) => {
 };
 
 const ensureDefaultReviews = async (prismaClient = prisma) => {
-  const count = await prismaClient.review.count();
-  if (count > 0) {
-    return { seededCount: 0, existingCount: count };
+  const existing = await prismaClient.review.findMany({ select: { customerName: true, targetName: true } });
+  const existingKeys = new Set(existing.map((r) => `${r.customerName}::${r.targetName}`.toLowerCase()));
+  const missing = DEFAULT_REVIEWS.filter(
+    (r) => !existingKeys.has(`${r.customerName}::${r.targetName}`.toLowerCase())
+  );
+  if (missing.length === 0) {
+    return { seededCount: 0, existingCount: existing.length };
   }
-  await prismaClient.review.createMany({ data: DEFAULT_REVIEWS });
-  return { seededCount: DEFAULT_REVIEWS.length, existingCount: 0 };
+  await prismaClient.review.createMany({ data: missing });
+  return { seededCount: missing.length, existingCount: existing.length };
 };
 
 const getReviews = async ({ targetType, targetId } = {}) => {

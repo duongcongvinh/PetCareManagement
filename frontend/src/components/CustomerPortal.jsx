@@ -90,10 +90,20 @@ const getProductBrand = (p) => {
   if (!p || !p.name) return 'Petzera Mall';
   const n = p.name;
   if (n.includes('Royal Canin')) return 'Royal Canin';
-  if (n.includes('6 Free Natural')) return 'ANF 6 Free';
+  if (n.includes('6 Free')) return 'ANF 6 Free';
+  if (n.includes('SmartHeart')) return 'SmartHeart';
+  if (n.includes('Monge')) return 'Monge Italy';
+  if (n.includes('Snappy Tom')) return 'Snappy Tom';
+  if (n.includes('Zenith')) return 'Zenith Korea';
+  if (n.includes('Wanpy')) return 'Wanpy';
+  if (n.includes('JerHigh')) return 'JerHigh';
+  if (n.includes('Bowwow')) return 'Bowwow Korea';
   if (n.includes('Predogen')) return 'Dr. Kyan Predogen';
   if (n.includes('Precaten')) return 'Dr. Kyan Precaten';
+  if (n.includes('Esbilac')) return 'PetAg Esbilac';
+  if (n.includes('KMR')) return 'PetAg KMR';
   if (n.includes('Touchdog')) return 'Touchdog';
+  if (n.includes('Petkit')) return 'Petkit Smart';
   if (n.includes('Pian Pian')) return 'Pian Pian';
   if (n.includes('New Comfort')) return 'Flexi Germany';
   if (n.includes('Forcan')) return 'Forcans Korea';
@@ -103,15 +113,48 @@ const getProductBrand = (p) => {
   if (n.includes('Pedigree')) return 'Pedigree';
   if (n.includes('Orgo')) return 'Orgo Dental';
   if (n.includes('Ciao')) return 'Inaba Ciao';
+  if (n.includes('Cature')) return 'Cature Tofu';
+  if (n.includes('Kit Cat')) return 'Kit Cat';
+  if (n.includes('Lapaw')) return 'Lapaw';
   if (n.includes('Best')) return "Cat's Best";
   if (n.includes('SOS')) return 'SOS Japan';
+  if (n.includes('Joyce')) return 'Joyce & Dolls';
+  if (n.includes('Yu Hương')) return 'Yu Taiwan';
   if (n.includes('Davis')) return 'Davis USA';
   if (n.includes('Bioline')) return 'Bioline Germany';
+  if (n.includes('Virbac')) return 'Virbac France';
+  if (n.includes('GimCat')) return 'GimCat Germany';
   if (n.includes('Nourse')) return 'Nourse Vet';
   if (n.includes('Wild Salmon')) return 'Wild Alaskan';
-  if (n.includes('Bio-Calci')) return 'Bio-Pharm';
+  if (n.includes('Bio-Calci') || n.includes('Bio-Flora') || n.includes('Bio-Gentadrop')) return 'Bio-Pharm';
   if (n.includes('Probiotic')) return 'Probiotic Pet';
   if (n.includes('Frontline')) return 'Frontline Plus';
+  if (n.includes('NexGard')) return 'NexGard Spectra';
+  if (n.includes('Revolution')) return 'Revolution Plus';
+  if (n.includes('Bravecto')) return 'Bravecto MSD';
+  if (n.includes('Fungikur')) return 'Fungikur Vet';
+  if (n.includes('Eye-Envy')) return 'Eye-Envy USA';
+  if (n.includes('Advocate')) return 'Advocate Bayer';
+  if (n.includes('Taste of the Wild')) return 'Taste of the Wild';
+  if (n.includes('Greenies')) return 'Greenies USA';
+  if (n.includes('Goodies')) return 'Goodies';
+  if (n.includes('Temptations')) return 'Temptations';
+  if (n.includes('Kong Classic')) return 'KONG USA';
+  if (n.includes('TropiClean')) return 'TropiClean USA';
+  if (n.includes('Pet Naturals')) return 'Pet Naturals USA';
+  if (n.includes('Acana')) return 'Acana Canada';
+  if (n.includes('Natural Core')) return 'Natural Core';
+  if (n.includes('Catseye')) return 'Catseye Korea';
+  if (n.includes('Ganador')) return 'Ganador France';
+  if (n.includes("King's Pet")) return "King's Pet";
+  if (n.includes('Nekko')) return 'Nekko Japan';
+  if (n.includes('Sheba')) return 'Sheba Japan';
+  if (n.includes("Hill's")) return "Hill's USA";
+  if (n.includes('Whimzees')) return 'Whimzees';
+  if (n.includes('Budle')) return "Budle'Budle Korea";
+  if (n.includes('Furminator')) return 'FURminator USA';
+  if (n.includes('PlaqueOff')) return 'ProDen PlaqueOff';
+  if (n.includes('Sanpet')) return 'Sanpet Vet';
   if (n.includes('Drontal')) return 'Drontal Elanco';
   return 'Petzera Mall';
 };
@@ -409,6 +452,10 @@ export default function CustomerPortal({
   const [sortBy, setSortBy] = useState('DEFAULT');
   const [promoCode, setPromoCode] = useState('');
   const [discountPercent, setDiscountPercent] = useState(0);
+  const [historyAppQuery, setHistoryAppQuery] = useState('');
+  const [historyAppStatus, setHistoryAppStatus] = useState('ALL');
+  const [historyOrderQuery, setHistoryOrderQuery] = useState('');
+  const [historyOrderStatus, setHistoryOrderStatus] = useState('ALL');
 
   // Cart State (fallback internal if not passed from App)
   const [internalCart, setInternalCart] = useState([]);
@@ -549,9 +596,51 @@ export default function CustomerPortal({
     };
   });
 
-  const myPets = currentUser ? pets.filter(p => p.ownerId === currentUser.id) : [];
-  const myAppointments = currentUser ? appointments.filter(a => a.customerId === currentUser.id) : [];
-  const myOrders = currentUser ? orders.filter(o => o.customerId === currentUser.id || o.customerName === currentUser.fullName) : [];
+  const matchesCurrentUser = (recordId, recordName, recordPhone) => {
+    if (!currentUser) return false;
+    if (recordId && currentUser.id && recordId === currentUser.id) return true;
+    const uPhone = (currentUser.phone || '').trim();
+    if (uPhone && recordPhone && recordPhone.trim() === uPhone) return true;
+    const uName = (currentUser.fullName || '').trim().toLowerCase();
+    if (uName && recordName && recordName.trim().toLowerCase() === uName) return true;
+    return false;
+  };
+
+  const myPets = currentUser
+    ? pets.filter(p => matchesCurrentUser(p.ownerId, p.ownerName, p.ownerPhone))
+    : [];
+  const myAppointments = currentUser
+    ? appointments
+        .filter(a => matchesCurrentUser(a.customerId, a.customerName, a.customerPhone))
+        .sort((a, b) => String(b.appointmentDate || '').localeCompare(String(a.appointmentDate || '')))
+    : [];
+  const myOrders = currentUser
+    ? orders
+        .filter(o => matchesCurrentUser(o.customerId, o.customerName, o.phone))
+        .sort((a, b) => String(b.date || '').localeCompare(String(a.date || '')))
+    : [];
+
+  const filteredMyAppointments = myAppointments.filter((app) => {
+    const matchStatus = historyAppStatus === 'ALL' ? true : app.status === historyAppStatus;
+    const q = historyAppQuery.trim().toLowerCase();
+    const matchQ =
+      !q ||
+      (app.petName || '').toLowerCase().includes(q) ||
+      (app.serviceName || '').toLowerCase().includes(q) ||
+      (app.careSummary || '').toLowerCase().includes(q);
+    return matchStatus && matchQ;
+  });
+
+  const filteredMyOrders = myOrders.filter((order) => {
+    const matchStatus = historyOrderStatus === 'ALL' ? true : order.status === historyOrderStatus;
+    const q = historyOrderQuery.trim().toLowerCase();
+    const matchQ =
+      !q ||
+      (order.id || '').toLowerCase().includes(q) ||
+      (order.items || '').toLowerCase().includes(q) ||
+      (order.paymentMethod || '').toLowerCase().includes(q);
+    return matchStatus && matchQ;
+  });
 
   // Always ensure petId is populated with a valid pet
   useEffect(() => {
@@ -3957,23 +4046,88 @@ export default function CustomerPortal({
                 </button>
               </div>
 
+              {/* Summary KPIs for Customer History */}
+              <div className="grid-3" style={{ gap: '1rem', marginBottom: '1.5rem' }}>
+                <div className="glass-card" style={{ padding: '1rem 1.15rem', borderLeft: '4px solid #059669' }}>
+                  <div style={{ fontSize: '0.78rem', color: '#64748b', fontWeight: 700 }}>DỊCH VỤ ĐÃ HOÀN THÀNH</div>
+                  <div style={{ fontSize: '1.45rem', fontWeight: 900, color: '#059669', marginTop: '4px' }}>
+                    {myAppointments.filter(a => a.status === 'COMPLETED').length} / {myAppointments.length} ca
+                  </div>
+                  <div style={{ fontSize: '0.74rem', color: '#64748b', marginTop: '2px' }}>
+                    Spa, tiêm phòng &amp; khám bệnh
+                  </div>
+                </div>
+                <div className="glass-card" style={{ padding: '1rem 1.15rem', borderLeft: '4px solid #ea580c' }}>
+                  <div style={{ fontSize: '0.78rem', color: '#64748b', fontWeight: 700 }}>ĐƠN HÀNG SẢN PHẨM ĐÃ MUA</div>
+                  <div style={{ fontSize: '1.45rem', fontWeight: 900, color: '#ea580c', marginTop: '4px' }}>
+                    {myOrders.length} đơn hàng
+                  </div>
+                  <div style={{ fontSize: '0.74rem', color: '#64748b', marginTop: '2px' }}>
+                    {myOrders.filter(o => ['DELIVERED', 'PAID', 'COMPLETED'].includes(o.status)).length} đơn đã hoàn tất
+                  </div>
+                </div>
+                <div className="glass-card" style={{ padding: '1rem 1.15rem', borderLeft: '4px solid #0284c7' }}>
+                  <div style={{ fontSize: '0.78rem', color: '#64748b', fontWeight: 700 }}>TỔNG CHI TIÊU TÍCH LŨY</div>
+                  <div style={{ fontSize: '1.35rem', fontWeight: 900, color: '#0284c7', marginTop: '4px' }}>
+                    {(
+                      myAppointments.filter(a => a.status !== 'CANCELLED').reduce((s, a) => s + (Number(a.totalPrice || a.price) || 0), 0) +
+                      myOrders.filter(o => o.status !== 'CANCELLED').reduce((s, o) => s + (Number(o.total) || 0), 0)
+                    ).toLocaleString('vi-VN')} đ
+                  </div>
+                  <div style={{ fontSize: '0.74rem', color: '#64748b', marginTop: '2px' }}>
+                    Thành viên thân thiết Petzera
+                  </div>
+                </div>
+              </div>
+
+              {/* Filter Bar for Services History */}
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '0.75rem', marginBottom: '0.9rem' }}>
+                <h2 style={{ fontSize: '1.15rem', fontWeight: 800, color: '#0f172a' }}>
+                  🐾 Lịch Sử Dịch Vụ Đã Làm &amp; Lịch Hẹn ({filteredMyAppointments.length})
+                </h2>
+                <div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap', alignItems: 'center' }}>
+                  <div style={{ display: 'flex', alignItems: 'center', background: '#f8fafc', borderRadius: '10px', padding: '0.42rem 0.75rem', border: '1px solid #cbd5e1', minWidth: 210 }}>
+                    <Search size={14} color="#64748b" style={{ marginRight: '6px' }} />
+                    <input
+                      type="text"
+                      value={historyAppQuery}
+                      onChange={(e) => setHistoryAppQuery(e.target.value)}
+                      placeholder="Tìm bé, dịch vụ..."
+                      style={{ background: 'transparent', border: 'none', color: '#0f172a', fontSize: '0.82rem', outline: 'none', width: '100%' }}
+                    />
+                  </div>
+                  <select
+                    className="form-control"
+                    style={{ width: 'auto', padding: '0.42rem 0.75rem', fontSize: '0.82rem' }}
+                    value={historyAppStatus}
+                    onChange={(e) => setHistoryAppStatus(e.target.value)}
+                  >
+                    <option value="ALL">Tất cả trạng thái</option>
+                    <option value="COMPLETED">Đã hoàn thành</option>
+                    <option value="IN_PROGRESS">Đang thực hiện</option>
+                    <option value="PENDING">Chờ tiếp nhận</option>
+                    <option value="CANCELLED">Đã hủy</option>
+                  </select>
+                </div>
+              </div>
+
               <div className="table-container">
                 <table>
                   <thead>
                     <tr>
                       <th>Thú Cưng</th>
                       <th>Dịch Vụ</th>
-                      <th>Ngày & Giờ Hẹn</th>
+                      <th>Ngày &amp; Giờ Hẹn</th>
                       <th>Trạng Thái Tiến Độ</th>
                       <th>Nhật Ký Chăm Sóc Tuần Tự</th>
                       <th>Thao Tác</th>
                     </tr>
                   </thead>
                   <tbody>
-                    {myAppointments.length === 0 ? (
-                      <tr><td colSpan={6} style={{ textAlign: 'center', color: 'var(--text-muted)' }}>Chưa có ca hẹn nào.</td></tr>
+                    {filteredMyAppointments.length === 0 ? (
+                      <tr><td colSpan={6} style={{ textAlign: 'center', color: 'var(--text-muted)' }}>Chưa có ca hẹn nào phù hợp.</td></tr>
                     ) : (
-                      myAppointments.map((app) => (
+                      filteredMyAppointments.map((app) => (
                         <tr key={app.id}>
                           <td><strong>{app.petName}</strong> ({app.species})</td>
                           <td>
@@ -3989,10 +4143,18 @@ export default function CustomerPortal({
                           </td>
                           <td>
                             <span className={`badge ${app.status === 'COMPLETED' ? 'badge-success' : app.status === 'IN_PROGRESS' ? 'badge-info' : app.status === 'CANCELLED' ? 'badge-danger' : 'badge-pending'}`}>
-                              {app.status === 'CANCELLED' ? 'ĐÃ HỦY' : app.status}
+                              {app.status === 'COMPLETED'
+                                ? 'Hoàn thành'
+                                : app.status === 'IN_PROGRESS'
+                                  ? 'Đang thực hiện'
+                                  : app.status === 'PENDING'
+                                    ? 'Chờ tiếp nhận'
+                                    : app.status === 'CANCELLED'
+                                      ? 'Đã hủy'
+                                      : app.status}
                             </span>
                           </td>
-                          <td style={{ color: app.careSummary ? '#34d399' : 'var(--text-muted)', fontStyle: app.careSummary ? 'italic' : 'normal' }}>
+                          <td style={{ color: app.careSummary ? '#059669' : 'var(--text-muted)', fontStyle: app.careSummary ? 'italic' : 'normal' }}>
                             {app.careSummary || 'Đang cập nhật từ nhân viên...'}
                           </td>
                           <td>
@@ -4059,31 +4221,75 @@ export default function CustomerPortal({
                 </table>
               </div>
 
-          <h2 style={{ fontSize: '1.4rem', fontWeight: 800, margin: '2rem 0 1.25rem 0' }}>Lịch Sử Mua Hàng & Sản Phẩm</h2>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '0.75rem', margin: '2rem 0 1rem 0' }}>
+            <h2 style={{ fontSize: '1.25rem', fontWeight: 800, color: '#0f172a' }}>
+              🛍️ Lịch Sử Sản Phẩm Đã Mua ({filteredMyOrders.length})
+            </h2>
+            <div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap', alignItems: 'center' }}>
+              <div style={{ display: 'flex', alignItems: 'center', background: '#f8fafc', borderRadius: '10px', padding: '0.42rem 0.75rem', border: '1px solid #cbd5e1', minWidth: 210 }}>
+                <Search size={14} color="#64748b" style={{ marginRight: '6px' }} />
+                <input
+                  type="text"
+                  value={historyOrderQuery}
+                  onChange={(e) => setHistoryOrderQuery(e.target.value)}
+                  placeholder="Tìm mã đơn, tên sản phẩm..."
+                  style={{ background: 'transparent', border: 'none', color: '#0f172a', fontSize: '0.82rem', outline: 'none', width: '100%' }}
+                />
+              </div>
+              <select
+                className="form-control"
+                style={{ width: 'auto', padding: '0.42rem 0.75rem', fontSize: '0.82rem' }}
+                value={historyOrderStatus}
+                onChange={(e) => setHistoryOrderStatus(e.target.value)}
+              >
+                <option value="ALL">Tất cả đơn hàng</option>
+                <option value="DELIVERED">Đã giao hàng</option>
+                <option value="PAID">Đã thanh toán</option>
+                <option value="CONFIRMED">Đã xác nhận</option>
+                <option value="PENDING">Chờ xác nhận</option>
+                <option value="CANCELLED">Đã hủy</option>
+              </select>
+            </div>
+          </div>
           <div className="table-container">
             <table>
               <thead>
                 <tr>
                   <th>Mã Đơn</th>
-                  <th>Chi Tiết Sản Phẩm</th>
+                  <th>Chi Tiết Sản Phẩm Đã Mua</th>
+                  <th>Thanh Toán &amp; Giao Hàng</th>
                   <th>Tổng Tiền</th>
                   <th>Ngày Đặt</th>
                   <th>Trạng Thái</th>
                 </tr>
               </thead>
               <tbody>
-                {myOrders.length === 0 ? (
-                  <tr><td colSpan={5} style={{ textAlign: 'center', color: 'var(--text-muted)' }}>Chưa có đơn hàng nào.</td></tr>
+                {filteredMyOrders.length === 0 ? (
+                  <tr><td colSpan={6} style={{ textAlign: 'center', color: 'var(--text-muted)' }}>Chưa có đơn hàng nào phù hợp.</td></tr>
                 ) : (
-                  myOrders.map((order) => (
+                  filteredMyOrders.map((order) => (
                     <tr key={order.id}>
                       <td><strong>{order.id}</strong></td>
-                      <td style={{ maxWidth: '300px' }}>{order.items}</td>
-                      <td style={{ color: '#34d399', fontWeight: 700 }}>{order.total.toLocaleString('vi-VN')} đ</td>
-                      <td>{order.date}</td>
-                      <td>
-                        <span className={`badge ${order.status === 'CONFIRMED' ? 'badge-success' : 'badge-pending'}`}>
-                          {order.status}
+                      <td style={{ maxWidth: '320px', fontSize: '0.84rem' }}>{order.items}</td>
+                      <td style={{ fontSize: '0.78rem', color: '#475569' }}>
+                        <div style={{ fontWeight: 700, color: '#0369a1' }}>{order.paymentMethod || 'Tiền Mặt COD'}</div>
+                        <div>{order.shippingMethod || 'Tiêu Chuẩn'}</div>
+                      </td>
+                      <td style={{ color: '#059669', fontWeight: 800, whiteSpace: 'nowrap' }}>{Number(order.total || 0).toLocaleString('vi-VN')} đ</td>
+                      <td style={{ whiteSpace: 'nowrap', fontSize: '0.82rem', color: '#64748b' }}>{order.date}</td>
+                      <td style={{ whiteSpace: 'nowrap' }}>
+                        <span className={`badge ${['DELIVERED', 'PAID', 'COMPLETED'].includes(order.status) ? 'badge-success' : order.status === 'CONFIRMED' ? 'badge-info' : order.status === 'CANCELLED' ? 'badge-danger' : 'badge-pending'}`}>
+                          {order.status === 'DELIVERED'
+                            ? 'Đã giao hàng'
+                            : order.status === 'PAID'
+                              ? 'Đã thanh toán'
+                              : order.status === 'CONFIRMED'
+                                ? 'Đã xác nhận'
+                                : order.status === 'PENDING'
+                                  ? 'Chờ xác nhận'
+                                  : order.status === 'CANCELLED'
+                                    ? 'Đã hủy'
+                                    : order.status}
                         </span>
                       </td>
                     </tr>

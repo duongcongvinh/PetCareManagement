@@ -1,9 +1,9 @@
 import React from 'react';
 import {
-  LayoutDashboard, Calendar, PawPrint, Package, Brain, ShoppingBag, Users, Tag, Shield, FileText, CheckSquare, Activity, TrendingUp, Building2, Settings
+  LayoutDashboard, Calendar, PawPrint, Package, Brain, ShoppingBag, Users, Tag, Shield, FileText, CheckSquare, Activity, TrendingUp, Building2, Settings, History
 } from 'lucide-react';
 
-export default function Sidebar({ activeRole, activeTab, onTabChange, pendingProposalsCount = 0 }) {
+export default function Sidebar({ activeRole, activeTab, onTabChange, pendingProposalsCount = 0, pendingOrdersCount = 0 }) {
   const getRoleTheme = (role) => {
     switch (role) {
       case 'CARE_STAFF':
@@ -49,9 +49,11 @@ export default function Sidebar({ activeRole, activeTab, onTabChange, pendingPro
           { id: 'history', label: 'Tiến Độ & Lịch Hẹn', icon: LayoutDashboard },
         ];
       case 'CARE_STAFF':
-        // 5 Use Case khớp 1-1 sơ đồ Use Case tổng quát của Actor Nhân viên
+        // Các chức năng vận hành & lịch sử của Actor Nhân viên
         return [
           { id: 'queue', label: 'Quản Lý Lịch Hẹn', icon: Calendar },
+          { id: 'orders-mgmt', label: 'Quản Lý Đơn Đặt Hàng', icon: ShoppingBag, badgeCount: pendingOrdersCount },
+          { id: 'history-logs', label: 'Lịch Sử Dịch Vụ & Đơn Hàng', icon: History },
           { id: 'services', label: 'Quản Lý Dịch Vụ', icon: FileText },
           { id: 'promotions', label: 'Chương Trình Khuyến Mãi', icon: Tag },
           { id: 'pets-logs', label: 'Quản Lý Hồ Sơ Thú Cưng', icon: PawPrint },

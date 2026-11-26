@@ -2,8 +2,8 @@ const test = require('node:test');
 const assert = require('node:assert/strict');
 const { DEFAULT_SERVICES, ensureDefaultServices } = require('../src/config/defaultServices');
 
-test('DEFAULT_SERVICES chứa đủ 18 dịch vụ thuộc đúng 3 danh mục chuẩn (không còn Khách Sạn, gộp Khoa Sinh Sản vào Khám Bệnh & Trị Liệu)', () => {
-  assert.equal(DEFAULT_SERVICES.length, 18);
+test('DEFAULT_SERVICES chứa đủ 24 dịch vụ thuộc đúng 3 danh mục chuẩn (không còn Khách Sạn, gộp Khoa Sinh Sản vào Khám Bệnh & Trị Liệu)', () => {
+  assert.equal(DEFAULT_SERVICES.length, 24);
 
   const byCategory = DEFAULT_SERVICES.reduce((acc, s) => {
     acc[s.category] = (acc[s.category] || 0) + 1;
@@ -11,9 +11,9 @@ test('DEFAULT_SERVICES chứa đủ 18 dịch vụ thuộc đúng 3 danh mục c
   }, {});
 
   assert.deepEqual(byCategory, {
-    'Spa & Grooming': 6,
-    'Y Tế & Tiêm Phòng': 3,
-    'Khám Bệnh & Trị Liệu': 9,
+    'Spa & Grooming': 8,
+    'Y Tế & Tiêm Phòng': 6,
+    'Khám Bệnh & Trị Liệu': 10,
   });
 
   // Đảm bảo không còn danh mục Khách Sạn & Lưu Trú, Khoa Sinh Sản tách riêng hay tên cũ Khám Bệnh
@@ -77,6 +77,6 @@ test('ensureDefaultServices gộp Khoa Sinh Sản và xóa an toàn dịch vụ 
   assert.equal(res.removedCount, 1);
   assert.deepEqual(deletedIds, ['1']); // id=1 (0 lịch hẹn) bị xóa; id=3 (1 lịch hẹn cũ) được giữ an toàn
   assert.equal(rows.find((r) => r.id === '2').category, 'Khám Bệnh & Trị Liệu');
-  assert.equal(res.createdCount, 17);
-  assert.equal(res.totalExpected, 18);
+  assert.equal(res.createdCount, 23);
+  assert.equal(res.totalExpected, 24);
 });

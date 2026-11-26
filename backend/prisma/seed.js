@@ -1,13 +1,14 @@
 const { PrismaClient } = require('@prisma/client');
-const bcrypt = require('bcryptjs');
 const { DEFAULT_SERVICES } = require('../src/config/defaultServices');
+const { ensureDefaultOperationalData } = require('../src/config/defaultOperationalData');
+const { ensureDefaultReviews } = require('../src/services/reviewService');
 
 const prisma = new PrismaClient();
 
 async function main() {
   console.log('🌱 Starting Database Seeding...');
 
-  // Dọn dẹp dữ liệu cũ nếu có
+  // Dọn dẹp dữ liệu cũ (giữ nguyên User để không mất tài khoản tự tạo)
   await prisma.reorderProposal.deleteMany();
   await prisma.stockTransaction.deleteMany();
   await prisma.orderItem.deleteMany();
@@ -18,217 +19,103 @@ async function main() {
   await prisma.serviceCatalog.deleteMany();
   await prisma.pet.deleteMany();
 
-  // 1. Password Hashing
-  const passwordHash = await bcrypt.hash('123456', 10);
-
-  // 2. Users
-  const admin = await prisma.user.upsert({
-    where: { email: 'admin@petcare.com' },
-    update: {},
-    create: {
-      email: 'admin@petcare.com',
-      password: passwordHash,
-      fullName: 'Nguyễn Văn Admin',
-      phone: '0901234567',
-      role: 'ADMIN',
-    },
-  });
-
-  const careStaff = await prisma.user.upsert({
-    where: { email: 'care@petcare.com' },
-    update: {},
-    create: {
-      email: 'care@petcare.com',
-      password: passwordHash,
-      fullName: 'Trần Thị Chăm Sóc',
-      phone: '0912345678',
-      role: 'CARE_STAFF',
-    },
-  });
-
-  const warehouseStaff = await prisma.user.upsert({
-    where: { email: 'warehouse@petcare.com' },
-    update: {},
-    create: {
-      email: 'warehouse@petcare.com',
-      password: passwordHash,
-      fullName: 'Lê Văn Kho',
-      phone: '0923456789',
-      role: 'WAREHOUSE_STAFF',
-    },
-  });
-
-  const customer1 = await prisma.user.upsert({
-    where: { email: 'khachhang@gmail.com' },
-    update: {},
-    create: {
-      email: 'khachhang@gmail.com',
-      password: passwordHash,
-      fullName: 'Phạm Minh Anh',
-      phone: '0934567890',
-      role: 'CUSTOMER',
-    },
-  });
-
-  console.log('✅ Users seeded');
-
-  // 3. Pets
-  const pet1 = await prisma.pet.create({
-    data: {
-      name: 'LuLu',
-      species: 'Chó',
-      breed: 'Poodle',
-      ageMonths: 18,
-      weightKg: 4.5,
-      medicalHistory: 'Đã tiêm phòng dại 3 mũi, tẩy giun tháng trước',
-      ownerId: customer1.id,
-    },
-  });
-
-  const pet2 = await prisma.pet.create({
-    data: {
-      name: 'Miu Miu',
-      species: 'Mèo',
-      breed: 'Anh Lông Ngắn',
-      ageMonths: 12,
-      weightKg: 3.8,
-      medicalHistory: 'Khỏe mạnh, nhạy cảm với xà phòng có mùi nồng',
-      ownerId: customer1.id,
-    },
-  });
-
-  console.log('✅ Pets seeded');
-
-  // 4. Services (Đồng bộ đầy đủ 18 dịch vụ thuộc 3 chuyên mục từ defaultServices.js)
+  // 1. Services (24 dịch vụ thuộc 3 chuyên mục chuẩn từ defaultServices.js)
   const createdServices = [];
   for (const item of DEFAULT_SERVICES) {
     const { legacyNames, ...serviceData } = item;
     const created = await prisma.serviceCatalog.create({ data: serviceData });
     createdServices.push(created);
   }
-  const service1 = createdServices[0];
-
   console.log(`✅ Services seeded (${createdServices.length} services across 3 categories)`);
 
-  // 5. Suppliers
-  const supplier1 = await prisma.supplier.create({
-    data: {
-      name: 'Công ty TNHH Thức Ăn Thú Cưng Royal Canin',
-      contactPerson: 'Đặng Quốc Huy',
-      phone: '02838990011',
-      email: 'contact@royalcanin.vn',
-      address: 'KCN Tân Bình, TP.HCM',
-    },
+  // 2. Users, Suppliers, Products & Pets (đồng bộ tập dữ liệu vận hành mở rộng)
+  const opRes = await ensureDefaultOperationalData(prisma);
+  console.log(`✅ Operational data seeded (${opRes.usersTotal} users, ${opRes.suppliersTotal} suppliers, ${opRes.productsAdded} products)`);
+
+  // 3. Appointments đa trạng thái (PENDING, CONFIRMED, IN_PROGRESS, COMPLETED, CANCELLED)
+  const customer1 = await prisma.user.findUnique({ where: { email: 'khachhang@gmail.com' } });
+  const customer2 = await prisma.user.findUnique({ where: { email: 'khachhang2@gmail.com' } });
+  const careStaff = await prisma.user.findUnique({ where: { email: 'care@petcare.com' } });
+  const allPets = await prisma.pet.findMany();
+  const findPet = (name) => allPets.find((p) => p.name === name) || allPets[0];
+
+  const today = new Date();
+  const yesterday = new Date(today.getTime() - 24 * 60 * 60 * 1000);
+  const tomorrow = new Date(today.getTime() + 24 * 60 * 60 * 1000);
+
+  if (customer1 && careStaff && allPets.length > 0 && createdServices.length >= 16) {
+    await prisma.appointment.createMany({
+      data: [
+        {
+          petId: findPet('LuLu').id,
+          customerId: customer1.id,
+          staffId: careStaff.id,
+          serviceId: createdServices[0].id,
+          appointmentDate: today,
+          timeSlot: '09:00 - 10:00',
+          status: 'IN_PROGRESS',
+          totalPrice: createdServices[0].price,
+          notes: 'Bé hơi nhát, nhờ cắt ngắn bớt lông quanh mắt',
+        },
+        {
+          petId: findPet('Miu Miu').id,
+          customerId: customer1.id,
+          serviceId: createdServices[8].id,
+          appointmentDate: tomorrow,
+          timeSlot: '14:00 - 15:00',
+          status: 'PENDING',
+          totalPrice: createdServices[8].price,
+          notes: 'Tiêm nhắc lại vắc xin định kỳ hằng năm',
+        },
+        {
+          petId: findPet('Kem').id,
+          customerId: customer1.id,
+          staffId: careStaff.id,
+          serviceId: createdServices[6].id,
+          appointmentDate: yesterday,
+          timeSlot: '10:00 - 11:00',
+          status: 'COMPLETED',
+          totalPrice: createdServices[6].price,
+          notes: 'Bé Corgi rụng lông nhiều mùa nóng',
+          careSummary: 'Đã tắm sục Ozone Nano, chải bỏ lông chết và dưỡng ẩm da. Bé ngoan, lông mượt.',
+        },
+        {
+          petId: findPet('Bé Bông').id,
+          customerId: (customer2 || customer1).id,
+          staffId: careStaff.id,
+          serviceId: createdServices[14].id,
+          appointmentDate: yesterday,
+          timeSlot: '15:00 - 16:00',
+          status: 'COMPLETED',
+          totalPrice: createdServices[14].price,
+          notes: 'Khám sức khỏe tổng quát định kỳ 6 tháng',
+          careSummary: 'Nhịp tim, phổi và siêu âm ổ bụng hoàn toàn bình thường. Cân nặng đạt chuẩn.',
+        },
+      ],
+    });
+  }
+  console.log('✅ Appointments seeded');
+
+  // 4. Reorder Proposals (AI Generated)
+  const lowStockProducts = await prisma.product.findMany({
+    where: { sku: { in: ['RC-MINI-2KG', 'SOS-SHAMPOO-530', 'RC-INDOOR27-2KG', 'NEXGARD-SPECTRA-M'] } },
   });
+  for (const prod of lowStockProducts) {
+    await prisma.reorderProposal.create({
+      data: {
+        productId: prod.id,
+        suggestedQuantity: Math.max(20, prod.maxStockLevel - prod.currentStock),
+        reason: `AI Forecast: Tồn kho hiện tại (${prod.currentStock}) đã thủng ngưỡng an toàn (${prod.minStockLevel}). Đề xuất nhập bổ sung ngay.`,
+        confidenceScore: 0.94,
+        status: 'DRAFT',
+      },
+    });
+  }
+  console.log(`✅ Reorder Proposals (AI) seeded (${lowStockProducts.length} drafts)`);
 
-  const supplier2 = await prisma.supplier.create({
-    data: {
-      name: 'Nhà Phân Phối Dụng Cụ Thú Y VetCare',
-      contactPerson: 'Vũ Thị Hồng',
-      phone: '02837778899',
-      email: 'sales@vetcare.com',
-      address: 'Quận 7, TP.HCM',
-    },
-  });
-
-  // 6. Products
-  const prod1 = await prisma.product.create({
-    data: {
-      name: 'Hạt Royal Canin Mini Adult (2kg)',
-      category: 'Thức ăn',
-      sku: 'RC-MINI-2KG',
-      unitPrice: 320000,
-      costPrice: 240000,
-      currentStock: 8,
-      minStockLevel: 15,
-      maxStockLevel: 80,
-      supplierId: supplier1.id,
-    },
-  });
-
-  const prod2 = await prisma.product.create({
-    data: {
-      name: 'Cát Vệ Sinh Mèo Đậu Nành Tofu 6L',
-      category: 'Phụ kiện',
-      sku: 'CAT-TOFU-6L',
-      unitPrice: 110000,
-      costPrice: 75000,
-      currentStock: 45,
-      minStockLevel: 20,
-      maxStockLevel: 120,
-      supplierId: supplier1.id,
-    },
-  });
-
-  const prod3 = await prisma.product.create({
-    data: {
-      name: 'Sữa Tắm Dưỡng Lông SOS Cho Chó Mèo 530ml',
-      category: 'Mỹ phẩm Spa',
-      sku: 'SOS-SHAMPOO-530',
-      unitPrice: 150000,
-      costPrice: 95000,
-      currentStock: 5,
-      minStockLevel: 12,
-      maxStockLevel: 50,
-      supplierId: supplier2.id,
-    },
-  });
-
-  // 12 Sản phẩm đồng bộ từ VPet's (https://vpets.vn/san-pham/)
-  const vpetsProducts = [
-    { name: 'Thức ăn cho chó trưởng thành Mini Adult | Royal Canin (2kg) + TẶNG 1 Pate', category: 'Thức ăn', sku: 'VP-RC-MINI-2KG', unitPrice: 322000, costPrice: 245000, currentStock: 32, minStockLevel: 12, maxStockLevel: 80, supplierId: supplier1.id },
-    { name: 'Thức ăn cho mèo con Kitten | Royal Canin (2kg) + TẶNG 2 Pate', category: 'Thức ăn', sku: 'VP-RC-KITTEN-2KG', unitPrice: 408000, costPrice: 315000, currentStock: 26, minStockLevel: 10, maxStockLevel: 70, supplierId: supplier1.id },
-    { name: 'Thức ăn cho mèo trưởng thành 6 Free Natural (2kg) + TẶNG 1 Pate', category: 'Thức ăn', sku: 'VP-6FREE-CAT-2KG', unitPrice: 540000, costPrice: 410000, currentStock: 18, minStockLevel: 10, maxStockLevel: 50, supplierId: supplier1.id },
-    { name: 'Sữa bột cho chó Predogen (lon 400g) + TẶNG 1 Xúc xích', category: 'Dinh dưỡng', sku: 'VP-PREDOGEN-400G', unitPrice: 195000, costPrice: 140000, currentStock: 28, minStockLevel: 10, maxStockLevel: 60, supplierId: supplier2.id },
-    { name: 'Sữa bột cho mèo Precaten (lon 400g) + TẶNG 1 Pate mèo con', category: 'Dinh dưỡng', sku: 'VP-PRECATEN-400G', unitPrice: 195000, costPrice: 140000, currentStock: 24, minStockLevel: 10, maxStockLevel: 60, supplierId: supplier2.id },
-    { name: 'Giường ngủ cho thú cưng | Touchdog', category: 'Phụ kiện', sku: 'VP-TOUCHDOG-BED', unitPrice: 661000, costPrice: 480000, currentStock: 12, minStockLevel: 6, maxStockLevel: 35, supplierId: supplier2.id },
-    { name: 'Lồng vận chuyển hàng không cho chó mèo A1103 Pian Pian (Size L)', category: 'Phụ kiện', sku: 'VP-PIANPIAN-A1103-L', unitPrice: 411000, costPrice: 295000, currentStock: 15, minStockLevel: 8, maxStockLevel: 40, supplierId: supplier2.id },
-    { name: 'Lược chải lông cho thú cưng có nút bấm', category: 'Mỹ phẩm Spa', sku: 'VP-BRUSH-BTN', unitPrice: 380000, costPrice: 265000, currentStock: 20, minStockLevel: 10, maxStockLevel: 50, supplierId: supplier2.id },
-    { name: 'Dây dắt tự động dây tròn XS New Comfort', category: 'Phụ kiện', sku: 'VP-FLEXI-XS-COMFORT', unitPrice: 380000, costPrice: 270000, currentStock: 22, minStockLevel: 10, maxStockLevel: 50, supplierId: supplier2.id },
-    { name: 'Yếm ren đeo cổ cao cấp cho thú cưng (Màu hồng)', category: 'Phụ kiện', sku: 'VP-LACE-COLLAR-PINK', unitPrice: 90000, costPrice: 55000, currentStock: 35, minStockLevel: 12, maxStockLevel: 80, supplierId: supplier2.id },
-    { name: 'Đồ chơi chuột chút chít cho thú cưng', category: 'Phụ kiện', sku: 'VP-SQUEAKY-MOUSE', unitPrice: 25000, costPrice: 12000, currentStock: 80, minStockLevel: 25, maxStockLevel: 200, supplierId: supplier2.id },
-    { name: 'Dung dịch hướng dẫn đi vệ sinh Good Puppy Forcan (80ml)', category: 'Mỹ phẩm Spa', sku: 'VP-FORCAN-PUPPY-80ML', unitPrice: 143000, costPrice: 95000, currentStock: 29, minStockLevel: 12, maxStockLevel: 70, supplierId: supplier2.id },
-  ];
-  await prisma.product.createMany({ data: vpetsProducts });
-
-  console.log('✅ Products & Suppliers seeded');
-
-  // 7. Appointments
-  await prisma.appointment.create({
-    data: {
-      petId: pet1.id,
-      customerId: customer1.id,
-      staffId: careStaff.id,
-      serviceId: service1.id,
-      appointmentDate: new Date(),
-      timeSlot: '09:00 - 10:00',
-      status: 'IN_PROGRESS',
-      notes: 'Bé hơi nhát, nhờ cắt ngắn bớt lông quanh mắt',
-    },
-  });
-
-  // 8. Reorder Proposals (AI Generated Mock)
-  await prisma.reorderProposal.create({
-    data: {
-      productId: prod1.id,
-      suggestedQuantity: 35,
-      reason: 'AI Forecast: Nhu cầu tiêu thụ dự kiến tăng 30% trong 2 tuần tới. Tồn kho hiện tại (8) đã thủng ngưỡng an toàn (15).',
-      confidenceScore: 0.94,
-      status: 'DRAFT',
-    },
-  });
-
-  await prisma.reorderProposal.create({
-    data: {
-      productId: prod3.id,
-      suggestedQuantity: 25,
-      reason: 'AI Forecast: Tồn kho nguy cấp (5/12). Lịch hẹn Spa cuối tuần tăng cao dẫn tới nguy cơ hết hàng trong 3 ngày.',
-      confidenceScore: 0.96,
-      status: 'DRAFT',
-    },
-  });
-
-  console.log('✅ Reorder Proposals (AI) seeded');
+  // 5. Reviews (12 đánh giá khách hàng)
+  const revRes = await ensureDefaultReviews(prisma);
+  console.log(`✅ Reviews seeded (+${revRes.seededCount} reviews)`);
   console.log('🎉 Seeding complete!');
 }
 

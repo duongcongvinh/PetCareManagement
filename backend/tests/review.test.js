@@ -28,9 +28,9 @@ test('computeReviewStats tính đúng điểm trung bình và phân bố số sa
   assert.equal(empty.totalCount, 0);
 
   const stats = computeReviewStats(DEFAULT_REVIEWS);
-  assert.equal(stats.totalCount, 5);
+  assert.equal(stats.totalCount, 12);
   assert.equal(stats.averageRating, 4.8);
-  assert.equal(stats.distribution[5], 4);
-  assert.equal(stats.distribution[4], 1);
+  assert.equal(stats.distribution[5], 10);
+  assert.equal(stats.distribution[4], 2);
   assert.equal(stats.distribution[1], 0);
 });

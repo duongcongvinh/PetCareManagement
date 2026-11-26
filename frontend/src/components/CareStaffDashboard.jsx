@@ -2,10 +2,11 @@ import React, { useState } from 'react';
 import {
   Calendar, CheckCircle2, Clock, PlayCircle, FileText,
   PawPrint, Search, Tag, Sparkles, TrendingUp, ShieldAlert,
-  Plus, Edit3, Trash2, X, Check, Package, ShoppingBag, DollarSign, AlertTriangle, Send, Star, MessageSquare
+  Plus, Edit3, Trash2, X, Check, Package, ShoppingBag, DollarSign, AlertTriangle, Send, Star, MessageSquare, Truck, CreditCard, MapPin
 } from 'lucide-react';
 import { getPetAvatar, getServiceImage, getProductImage, FALLBACK_IMAGES } from '../mediaAssets';
 import { toast, confirmModal } from './ToastNotification';
+import ServiceOrderHistoryPanel from './ServiceOrderHistoryPanel';
 
 export default function CareStaffDashboard({
   appointments = [],
@@ -82,12 +83,15 @@ export default function CareStaffDashboard({
     medicalHistory: ''
   });
 
-  // 6. Warehouse view state
+  // 6. Warehouse view & Orders management state
   const [warehouseSearch, setWarehouseSearch] = useState('');
   const [warehouseFilter, setWarehouseFilter] = useState('ALL');
   const [replyDrafts, setReplyDrafts] = useState({});
+  const [orderSearch, setOrderSearch] = useState('');
+  const [orderStatusFilter, setOrderStatusFilter] = useState('ALL');
+  const [orderPaymentFilter, setOrderPaymentFilter] = useState('ALL');
 
-  const validTabs = ['queue', 'services', 'promotions', 'pets-logs', 'reports'];
+  const validTabs = ['queue', 'orders-mgmt', 'history-logs', 'services', 'promotions', 'pets-logs', 'reports'];
   const currentTab = validTabs.includes(activeTab) ? activeTab : 'queue';
 
   // Filtered appointments
@@ -133,8 +137,42 @@ export default function CareStaffDashboard({
 
   // Report KPIs
   const serviceRevenue = appointments.filter(a => a.status !== 'CANCELLED').reduce((sum, a) => sum + (Number(a.price) || 0), 0);
-  const orderRevenue = orders.reduce((sum, o) => sum + (Number(o.total) || 0), 0);
+  const orderRevenue = orders.filter(o => o.status !== 'CANCELLED').reduce((sum, o) => sum + (Number(o.total) || 0), 0);
   const totalRevenue = serviceRevenue + orderRevenue;
+
+  // Filtered Orders for Quản Lý Đơn Đặt Hàng tab
+  const pendingOrdersList = orders.filter(o => o.status === 'PENDING');
+  const readyToShipOrdersList = orders.filter(o => o.status === 'CONFIRMED' || o.status === 'PAID');
+  const deliveredOrdersList = orders.filter(o => o.status === 'DELIVERED' || o.status === 'COMPLETED');
+  const cancelledOrdersList = orders.filter(o => o.status === 'CANCELLED');
+
+  const filteredManagedOrders = [...orders]
+    .filter(o => {
+      const matchStatus = orderStatusFilter === 'ALL' ? true : o.status === orderStatusFilter;
+      const pm = (o.paymentMethod || '').toLowerCase();
+      const matchPay =
+        orderPaymentFilter === 'ALL'
+          ? true
+          : orderPaymentFilter === 'ONLINE'
+            ? pm.includes('online') || pm.includes('payos') || pm.includes('vietqr') || pm.includes('chuyển khoản')
+            : pm.includes('cod') || pm.includes('tiền mặt');
+      const q = orderSearch.trim().toLowerCase();
+      const matchQ =
+        !q ||
+        (o.id || '').toLowerCase().includes(q) ||
+        (o.customerName || '').toLowerCase().includes(q) ||
+        (o.phone || '').toLowerCase().includes(q) ||
+        (o.address || '').toLowerCase().includes(q) ||
+        (o.items || '').toLowerCase().includes(q);
+      return matchStatus && matchPay && matchQ;
+    })
+    .sort((a, b) => {
+      const rank = { PENDING: 0, PAID: 1, CONFIRMED: 2, DELIVERED: 3, COMPLETED: 3, CANCELLED: 4 };
+      const ra = rank[a.status] ?? 5;
+      const rb = rank[b.status] ?? 5;
+      if (ra !== rb) return ra - rb;
+      return String(b.date || '').localeCompare(String(a.date || ''));
+    });
 
   // Handlers
   const handleCompleteAppointment = (id) => {
@@ -360,6 +398,247 @@ export default function CareStaffDashboard({
 
   return (
     <div className="animate-fade-in" style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
+
+      {/* ==================== 1A. QUẢN LÝ ĐƠN ĐẶT HÀNG ==================== */}
+      {currentTab === 'orders-mgmt' && (
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '1.35rem' }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '1rem' }}>
+            <div>
+              <h2 style={{ fontSize: '1.45rem', fontWeight: 800, color: '#0f172a', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                <ShoppingBag size={22} color="#ea580c" /> Quản Lý Đơn Đặt Hàng
+              </h2>
+              <p style={{ fontSize: '0.85rem', color: 'var(--text-muted)' }}>
+                Tiếp nhận, xác nhận đơn mua sản phẩm Pet Shop, bàn giao vận chuyển và cập nhật hoàn tất giao hàng
+              </p>
+            </div>
+            <div style={{ display: 'flex', alignItems: 'center', background: '#ffffff', borderRadius: '12px', padding: '0.5rem 0.9rem', border: '1px solid #cbd5e1', minWidth: 280 }}>
+              <Search size={16} color="#64748b" style={{ marginRight: '8px' }} />
+              <input
+                type="text"
+                value={orderSearch}
+                onChange={e => setOrderSearch(e.target.value)}
+                placeholder="Tìm mã đơn, khách hàng, SĐT, sản phẩm..."
+                style={{ background: 'transparent', border: 'none', color: '#0f172a', fontSize: '0.85rem', outline: 'none', width: '100%' }}
+              />
+            </div>
+          </div>
+
+          {/* 4 KPI CARDS */}
+          <div className="grid-4">
+            <div className="glass-panel" onClick={() => setOrderStatusFilter('PENDING')} style={{ padding: '1.15rem', borderLeft: '4px solid #f59e0b', cursor: 'pointer' }}>
+              <div style={{ fontSize: '0.78rem', color: '#64748b', fontWeight: 700 }}>Chờ Xác Nhận</div>
+              <div style={{ fontSize: '1.7rem', fontWeight: 900, color: '#d97706', marginTop: '4px' }}>{pendingOrdersList.length}</div>
+              <div style={{ fontSize: '0.73rem', color: '#92400e', marginTop: '2px' }}>Cần nhân viên xử lý ngay</div>
+            </div>
+            <div className="glass-panel" onClick={() => setOrderStatusFilter('CONFIRMED')} style={{ padding: '1.15rem', borderLeft: '4px solid #0284c7', cursor: 'pointer' }}>
+              <div style={{ fontSize: '0.78rem', color: '#64748b', fontWeight: 700 }}>Đã Xác Nhận / Thanh Toán</div>
+              <div style={{ fontSize: '1.7rem', fontWeight: 900, color: '#0284c7', marginTop: '4px' }}>{readyToShipOrdersList.length}</div>
+              <div style={{ fontSize: '0.73rem', color: '#0369a1', marginTop: '2px' }}>Đang đóng gói &amp; giao hàng</div>
+            </div>
+            <div className="glass-panel" onClick={() => setOrderStatusFilter('DELIVERED')} style={{ padding: '1.15rem', borderLeft: '4px solid #059669', cursor: 'pointer' }}>
+              <div style={{ fontSize: '0.78rem', color: '#64748b', fontWeight: 700 }}>Đã Giao Hoàn Tất</div>
+              <div style={{ fontSize: '1.7rem', fontWeight: 900, color: '#059669', marginTop: '4px' }}>{deliveredOrdersList.length}</div>
+              <div style={{ fontSize: '0.73rem', color: '#047857', marginTop: '2px' }}>Giao thành công tới khách</div>
+            </div>
+            <div className="glass-panel" style={{ padding: '1.15rem', borderLeft: '4px solid #7c3aed' }}>
+              <div style={{ fontSize: '0.78rem', color: '#64748b', fontWeight: 700 }}>Doanh Thu Đơn Hợp Lệ</div>
+              <div style={{ fontSize: '1.35rem', fontWeight: 900, color: '#7c3aed', marginTop: '6px' }}>
+                {orderRevenue.toLocaleString('vi-VN')} đ
+              </div>
+              <div style={{ fontSize: '0.73rem', color: '#64748b', marginTop: '2px' }}>
+                {orders.length} đơn ({cancelledOrdersList.length} đơn hủy)
+              </div>
+            </div>
+          </div>
+
+          {/* FILTER BAR + ORDERS TABLE */}
+          <div className="glass-panel" style={{ padding: '1.35rem' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '0.75rem', marginBottom: '1rem' }}>
+              <div style={{ display: 'flex', gap: '0.45rem', flexWrap: 'wrap' }}>
+                {[
+                  { id: 'ALL', label: `Tất cả (${orders.length})` },
+                  { id: 'PENDING', label: `Chờ xác nhận (${pendingOrdersList.length})` },
+                  { id: 'PAID', label: `Đã thanh toán (${orders.filter(o => o.status === 'PAID').length})` },
+                  { id: 'CONFIRMED', label: `Đã xác nhận (${orders.filter(o => o.status === 'CONFIRMED').length})` },
+                  { id: 'DELIVERED', label: `Đã giao hàng (${deliveredOrdersList.length})` },
+                  { id: 'CANCELLED', label: `Đã hủy (${cancelledOrdersList.length})` },
+                ].map(f => (
+                  <button
+                    key={f.id}
+                    type="button"
+                    onClick={() => setOrderStatusFilter(f.id)}
+                    style={{
+                      padding: '0.4rem 0.9rem',
+                      borderRadius: '18px',
+                      fontSize: '0.78rem',
+                      fontWeight: 700,
+                      border: orderStatusFilter === f.id ? '1.5px solid #0284c7' : '1px solid #cbd5e1',
+                      background: orderStatusFilter === f.id ? '#e0f2fe' : '#ffffff',
+                      color: orderStatusFilter === f.id ? '#0369a1' : '#475569',
+                      cursor: 'pointer'
+                    }}
+                  >
+                    {f.label}
+                  </button>
+                ))}
+              </div>
+
+              <select
+                className="form-control"
+                style={{ width: 'auto', padding: '0.42rem 0.8rem', fontSize: '0.82rem' }}
+                value={orderPaymentFilter}
+                onChange={e => setOrderPaymentFilter(e.target.value)}
+              >
+                <option value="ALL">Mọi hình thức thanh toán</option>
+                <option value="ONLINE">Online (payOS / VietQR)</option>
+                <option value="COD">Tiền Mặt COD</option>
+              </select>
+            </div>
+
+            <div className="table-container" style={{ maxHeight: '620px', overflowY: 'auto' }}>
+              <table>
+                <thead>
+                  <tr>
+                    <th>Mã Đơn &amp; Ngày Đặt</th>
+                    <th>Khách Hàng &amp; Địa Chỉ</th>
+                    <th>Chi Tiết Sản Phẩm</th>
+                    <th>Thanh Toán &amp; Giao Hàng</th>
+                    <th>Tổng Tiền</th>
+                    <th>Trạng Thái</th>
+                    <th>Thao Tác</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {filteredManagedOrders.length === 0 ? (
+                    <tr>
+                      <td colSpan={7} style={{ textAlign: 'center', color: 'var(--text-muted)', padding: '2rem' }}>
+                        Không có đơn đặt hàng nào phù hợp bộ lọc.
+                      </td>
+                    </tr>
+                  ) : (
+                    filteredManagedOrders.map(order => (
+                      <tr key={order.id} style={{ background: order.status === 'PENDING' ? '#fffbeb' : 'transparent' }}>
+                        <td style={{ whiteSpace: 'nowrap' }}>
+                          <strong style={{ color: '#0f172a' }}>{order.id}</strong>
+                          <div style={{ fontSize: '0.75rem', color: '#64748b', marginTop: '2px' }}>{order.date}</div>
+                        </td>
+                        <td style={{ maxWidth: 220 }}>
+                          <strong style={{ color: '#0f172a', fontSize: '0.85rem' }}>{order.customerName}</strong>
+                          {order.phone && <div style={{ fontSize: '0.75rem', color: '#475569' }}>{order.phone}</div>}
+                          {order.address && (
+                            <div style={{ fontSize: '0.73rem', color: '#64748b', display: 'flex', alignItems: 'flex-start', gap: '3px', marginTop: '2px' }}>
+                              <MapPin size={11} style={{ flexShrink: 0, marginTop: '2px' }} />
+                              <span>{order.address}</span>
+                            </div>
+                          )}
+                        </td>
+                        <td style={{ maxWidth: 280, fontSize: '0.83rem', color: '#1e293b', lineHeight: 1.45 }}>{order.items}</td>
+                        <td style={{ whiteSpace: 'nowrap' }}>
+                          <div style={{ fontSize: '0.76rem', fontWeight: 700, color: '#0369a1', display: 'flex', alignItems: 'center', gap: '4px' }}>
+                            <CreditCard size={12} /> {order.paymentMethod || 'Tiền Mặt COD'}
+                          </div>
+                          <div style={{ fontSize: '0.73rem', color: '#64748b', display: 'flex', alignItems: 'center', gap: '4px', marginTop: '2px' }}>
+                            <Truck size={12} /> {order.shippingMethod || 'Tiêu Chuẩn'}
+                          </div>
+                        </td>
+                        <td style={{ whiteSpace: 'nowrap' }}>
+                          <strong style={{ color: order.status === 'CANCELLED' ? '#94a3b8' : '#059669', textDecoration: order.status === 'CANCELLED' ? 'line-through' : 'none' }}>
+                            {Number(order.total || 0).toLocaleString('vi-VN')} đ
+                          </strong>
+                        </td>
+                        <td style={{ whiteSpace: 'nowrap' }}>
+                          <span className={`badge ${
+                            order.status === 'PENDING'
+                              ? 'badge-pending'
+                              : order.status === 'CONFIRMED'
+                                ? 'badge-info'
+                                : order.status === 'CANCELLED'
+                                  ? 'badge-danger'
+                                  : 'badge-success'
+                          }`}>
+                            {order.status === 'PENDING'
+                              ? 'Chờ xác nhận'
+                              : order.status === 'CONFIRMED'
+                                ? 'Đã xác nhận'
+                                : order.status === 'PAID'
+                                  ? 'Đã thanh toán'
+                                  : order.status === 'CANCELLED'
+                                    ? 'Đã hủy'
+                                    : 'Đã giao hàng'}
+                          </span>
+                        </td>
+                        <td style={{ whiteSpace: 'nowrap' }}>
+                          {order.status === 'PENDING' && onUpdateOrderStatus ? (
+                            <div style={{ display: 'flex', gap: '0.35rem' }}>
+                              <button
+                                type="button"
+                                className="btn btn-emerald"
+                                style={{ padding: '0.36rem 0.7rem', fontSize: '0.76rem' }}
+                                onClick={() => {
+                                  onUpdateOrderStatus(order.id, 'CONFIRMED');
+                                  toast.success(`Đã xác nhận đơn hàng ${order.id}!`, 'Quản Lý Đơn Đặt Hàng');
+                                }}
+                              >
+                                <Check size={13} /> Xác Nhận
+                              </button>
+                              <button
+                                type="button"
+                                className="btn btn-danger"
+                                style={{ padding: '0.36rem 0.58rem', fontSize: '0.75rem' }}
+                                onClick={async () => {
+                                  const ok = await confirmModal(
+                                    `Xác nhận hủy đơn hàng ${order.id} của khách "${order.customerName}"?`,
+                                    'Xác Nhận Hủy Đơn Hàng',
+                                    { type: 'danger', confirmText: 'Hủy Đơn', cancelText: 'Giữ Lại' }
+                                  );
+                                  if (ok) {
+                                    onUpdateOrderStatus(order.id, 'CANCELLED');
+                                    toast.info(`Đã hủy đơn hàng ${order.id}.`, 'Quản Lý Đơn Đặt Hàng');
+                                  }
+                                }}
+                                title="Hủy đơn hàng"
+                              >
+                                <X size={13} /> Hủy
+                              </button>
+                            </div>
+                          ) : (order.status === 'CONFIRMED' || order.status === 'PAID') && onUpdateOrderStatus ? (
+                            <button
+                              type="button"
+                              className="btn btn-primary"
+                              style={{ padding: '0.36rem 0.72rem', fontSize: '0.76rem' }}
+                              onClick={() => {
+                                onUpdateOrderStatus(order.id, 'DELIVERED');
+                                toast.success(`Đã cập nhật đơn ${order.id} sang Đã giao hàng!`, 'Quản Lý Đơn Đặt Hàng');
+                              }}
+                            >
+                              <Truck size={13} /> Đã Giao Hàng
+                            </button>
+                          ) : order.status === 'CANCELLED' ? (
+                            <span style={{ fontSize: '0.76rem', color: '#dc2626', fontWeight: 600 }}>Đã hủy</span>
+                          ) : (
+                            <span style={{ fontSize: '0.76rem', color: '#059669', fontWeight: 700 }}>✓ Hoàn tất</span>
+                          )}
+                        </td>
+                      </tr>
+                    ))
+                  )}
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ==================== 1B. LỊCH SỬ DỊCH VỤ ĐÃ LÀM & SẢN PHẨM ĐÃ MUA ==================== */}
+      {currentTab === 'history-logs' && (
+        <ServiceOrderHistoryPanel
+          appointments={appointments}
+          orders={orders}
+          services={services}
+          onUpdateOrderStatus={onUpdateOrderStatus}
+          accentColor="#0284c7"
+        />
+      )}
 
       {/* ==================== 1. QUẢN LÝ LỊCH HẸN ==================== */}
       {currentTab === 'queue' && (
@@ -966,65 +1245,6 @@ export default function CareStaffDashboard({
                   <span style={{ fontSize: '0.75rem', color: '#475569', fontWeight: 700, marginTop: '8px' }}>{bar.month}</span>
                 </div>
               ))}
-            </div>
-          </div>
-
-          {/* ORDERS MANAGEMENT TABLE */}
-          <div className="glass-panel" style={{ padding: '1.5rem' }}>
-            <h3 style={{ fontSize: '1.15rem', fontWeight: 800, color: '#0f172a', marginBottom: '0.35rem', display: 'flex', alignItems: 'center', gap: '8px' }}>
-              <ShoppingBag size={19} color="#ea580c" /> Thống Kê & Xử Lý Đơn Hàng Khách Đặt
-            </h3>
-            <p style={{ fontSize: '0.82rem', color: 'var(--text-muted)', marginBottom: '1rem' }}>
-              Theo dõi và xác nhận đơn đặt hàng sản phẩm từ khách hàng
-            </p>
-            <div className="table-container">
-              <table>
-                <thead>
-                  <tr>
-                    <th>Mã Đơn</th>
-                    <th>Khách Hàng</th>
-                    <th>Chi Tiết Sản Phẩm</th>
-                    <th>Tổng Tiền</th>
-                    <th>Ngày Đặt</th>
-                    <th>Trạng Thái</th>
-                    <th>Thao Tác</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {orders.map(order => (
-                    <tr key={order.id}>
-                      <td><strong>{order.id}</strong></td>
-                      <td>
-                        <strong>{order.customerName}</strong>
-                        <div style={{ fontSize: '0.75rem', color: '#64748b' }}>{order.phone}</div>
-                      </td>
-                      <td style={{ maxWidth: 240, fontSize: '0.84rem' }}>{order.items}</td>
-                      <td><strong style={{ color: '#059669' }}>{Number(order.total).toLocaleString('vi-VN')} đ</strong></td>
-                      <td style={{ fontSize: '0.82rem', color: '#64748b' }}>{order.date}</td>
-                      <td>
-                        <span className={`badge ${order.status === 'PENDING' ? 'badge-pending' : 'badge-success'}`}>
-                          {order.status === 'PENDING' ? 'Chờ xác nhận' : 'Đã xác nhận'}
-                        </span>
-                      </td>
-                      <td>
-                        {order.status === 'PENDING' && onUpdateOrderStatus && (
-                          <button
-                            type="button"
-                            className="btn btn-emerald"
-                            style={{ padding: '0.38rem 0.75rem', fontSize: '0.78rem' }}
-                            onClick={() => {
-                              onUpdateOrderStatus(order.id, 'CONFIRMED');
-                              toast.success(`Đã xác nhận đơn hàng ${order.id}!`, 'Đơn Hàng');
-                            }}
-                          >
-                            <Check size={14} /> Xác Nhận
-                          </button>
-                        )}
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
             </div>
           </div>
 

@@ -1,8 +1,8 @@
-// Danh mục 18 dịch vụ chuẩn Petzera (3 chuyên mục: Spa & Grooming, Y Tế & Tiêm Phòng, Khám Bệnh & Trị Liệu [đã gộp Khoa Sinh Sản])
+// Danh mục 24 dịch vụ chuẩn Petzera (3 chuyên mục: Spa & Grooming [8], Y Tế & Tiêm Phòng [6], Khám Bệnh & Trị Liệu [10 - gồm Khoa Sinh Sản])
 // Dùng chung cho seed.js & auto-sync startup (cả local và production)
 
 const DEFAULT_SERVICES = [
-  // 1. SPA & GROOMING (6 gói)
+  // 1. SPA & GROOMING (8 gói)
   {
     name: 'Spa Grooming Trọn Gói (Cắt tỉa & Tắm mượt 7 bước)',
     legacyNames: ['Spa Grooming Trọn Gói (Cắt tỉa & Tắm mượt)'],
@@ -46,14 +46,35 @@ const DEFAULT_SERVICES = [
     price: 100000,
     category: 'Spa & Grooming',
   },
+  {
+    name: 'Tắm Sục Ozone Nano Kháng Khuẩn & Thư Giãn Cơ Bắp',
+    description: 'Ngâm bồn sục khí Ozone siêu mịn giúp diệt khuẩn tận gốc chân lông, cải thiện tuần hoàn máu, giảm stress và phục hồi da nhạy cảm.',
+    durationMinutes: 55,
+    price: 290000,
+    category: 'Spa & Grooming',
+  },
+  {
+    name: 'Gỡ Rối Lông Chuyên Sâu & Ủ Collagen Phục Hồi Lông Xơ Rối',
+    description: 'Giải quyết tình trạng lông vón cục cho Poodle, Bichon, Mèo Ba Tư kết hợp ủ dưỡng Collagen & tinh dầu Argan giúp lông tơi mượt tức thì.',
+    durationMinutes: 60,
+    price: 260000,
+    category: 'Spa & Grooming',
+  },
 
-  // 2. Y TẾ & TIÊM PHÒNG (3 gói)
+  // 2. Y TẾ & TIÊM PHÒNG (6 gói)
   {
     name: 'Tiêm Vắc Xin 5 Trong 1 Cho Chó (Vanguard Plus 5/CV-L)',
     legacyNames: ['Tiêm Vắc Xin 5 Trong 1'],
     description: 'Vắc xin nhập khẩu chính hãng Vanguard Plus, bảo vệ chó cưng khỏi 5 bệnh truyền nhiễm nguy hiểm nhất kèm cấp sổ tiêm chủng.',
     durationMinutes: 30,
     price: 180000,
+    category: 'Y Tế & Tiêm Phòng',
+  },
+  {
+    name: 'Tiêm Vắc Xin 7 Bệnh Toàn Diện Cho Chó (Recombitek C6/CV)',
+    description: 'Phòng ngừa toàn diện 7 bệnh nguy hiểm gồm Care, Parvo, Viêm gan, Phó cúm, Ho cũi chó và 2 chủng Leptospira với bảo hộ miễn dịch cao.',
+    durationMinutes: 30,
+    price: 240000,
     category: 'Y Tế & Tiêm Phòng',
   },
   {
@@ -64,20 +85,41 @@ const DEFAULT_SERVICES = [
     category: 'Y Tế & Tiêm Phòng',
   },
   {
+    name: 'Tiêm Vắc Xin Phòng Giảm Bạch Cầu & Viêm Phúc Mạc Cho Mèo',
+    description: 'Phác đồ tiêm tăng cường miễn dịch chuyên sâu cho mèo sống theo đàn hoặc chuẩn bị đi giao lưu, kèm khám sàng lọc trước tiêm miễn phí.',
+    durationMinutes: 30,
+    price: 290000,
+    category: 'Y Tế & Tiêm Phòng',
+  },
+  {
     name: 'Tiêm Phòng Bệnh Dại Định Kỳ & Cấp Sổ Chứng Nhận Quốc Tế',
     description: 'Vắc xin phòng dại Rabisin đạt chuẩn WHO, cấp chứng nhận tiêm phòng hợp chuẩn lưu hành và xuất cảnh thú cưng.',
     durationMinutes: 20,
     price: 120000,
     category: 'Y Tế & Tiêm Phòng',
   },
+  {
+    name: 'Gắn Microchip Định Danh Quốc Tế ISO & Cấp Hộ Chiếu Thú Cưng',
+    description: 'Cấy chip định danh sinh học chuẩn ISO 11784/11785 không đau, hỗ trợ tìm lại bé khi thất lạc và đủ điều kiện bay nội địa / xuất cảnh.',
+    durationMinutes: 20,
+    price: 350000,
+    category: 'Y Tế & Tiêm Phòng',
+  },
 
-  // 3. KHÁM BỆNH & TRỊ LIỆU (9 gói = 3 gói Khám/Trị liệu + 6 gói Khoa Sinh Sản gộp chung)
+  // 3. KHÁM BỆNH & TRỊ LIỆU (10 gói = 4 gói Khám/Trị liệu + 6 gói Khoa Sinh Sản gộp chung)
   {
     name: 'Khám Sức Khỏe Tổng Quát & Siêu Âm Ổ Bụng Chẩn Đoán',
     legacyNames: ['Khám Sức Khỏe Tổng Quát'],
     description: 'Đo điện tim, siêu âm kiểm tra gan thận ruột, soi tai mũi họng, xét nghiệm tầm soát ký sinh trùng máu và tư vấn chế độ ăn.',
     durationMinutes: 45,
     price: 300000,
+    category: 'Khám Bệnh & Trị Liệu',
+  },
+  {
+    name: 'Xét Nghiệm Máu Sinh Hóa 14 Chỉ Số & Tầm Soát Ký Sinh Trùng Máu',
+    description: 'Phân tích công thức máu CBC, men gan thận, đường huyết và test nhanh ký sinh trùng máu giúp phát hiện sớm bệnh lý tiềm ẩn.',
+    durationMinutes: 40,
+    price: 380000,
     category: 'Khám Bệnh & Trị Liệu',
   },
   {
@@ -161,9 +203,9 @@ const isRemovedHotelService = (svc) => {
 };
 
 /**
- * Đồng bộ an toàn (idempotent) 18 gói dịch vụ chuẩn thuộc 3 chuyên mục vào MongoDB:
+ * Đồng bộ an toàn (idempotent) 24 gói dịch vụ chuẩn thuộc 3 chuyên mục vào MongoDB:
  * 1. Gộp danh mục cũ 'Khám Bệnh' và 'Khoa Sinh Sản' vào 'Khám Bệnh & Trị Liệu'.
- * 2. Dọn bỏ các gói 'Khách Sạn & Lưu Trú' không còn sử dụng (chỉ xóa khi không có lịch hẹn tham chiếu để tránh vỡ dữ liệu).
+ * 2. Dọn bỏ các gói 'Khách Sạn & Lưu Trú' không còn sử dụng (chỉ xóa khi không có lịch hẹn tham chiếu).
  * 3. Tạo bổ sung / cập nhật các dịch vụ chuẩn còn thiếu mà không làm hỏng ObjectId lịch hẹn hiện hữu.
  */
 async function ensureDefaultServices(prisma) {
@@ -175,7 +217,6 @@ async function ensureDefaultServices(prisma) {
   const existing = await prisma.serviceCatalog.findMany();
   let removedCount = 0;
 
-  // Dọn các dịch vụ Khách Sạn & Lưu Trú đã gỡ bỏ (an toàn khi có lịch hẹn cũ tham chiếu)
   for (const svc of existing) {
     if (!isRemovedHotelService(svc)) continue;
     const refCount = await prisma.appointment.count({ where: { serviceId: svc.id } });

@@ -22,7 +22,9 @@ import {
   INITIAL_REORDER_PROPOSALS,
   INITIAL_USERS,
   INITIAL_SUPPLIERS,
-  INITIAL_REVIEWS
+  INITIAL_REVIEWS,
+  INITIAL_ORDERS,
+  INITIAL_AUDIT_LOGS
 } from './mockData';
 
 const STAFF_ROLES = ['CARE_STAFF', 'WAREHOUSE_STAFF', 'ADMIN'];
@@ -145,7 +147,7 @@ export default function App() {
 
   const ROLE_VALID_TABS = {
     ADMIN: ['overview', 'accounts-admin', 'roles-admin', 'approve-proposals', 'suppliers-admin', 'system-settings'],
-    CARE_STAFF: ['queue', 'services', 'promotions', 'pets-logs', 'reports'],
+    CARE_STAFF: ['queue', 'orders-mgmt', 'history-logs', 'services', 'promotions', 'pets-logs', 'reports'],
     WAREHOUSE_STAFF: ['inventory', 'products-mgmt', 'demand-forecast', 'reorder-proposals'],
     CUSTOMER: ['home', 'about', 'booking', 'service-detail', 'shop', 'product-detail', 'cart', 'checkout', 'pets', 'history', 'profile', 'reproduction'],
   };
@@ -376,10 +378,35 @@ export default function App() {
   const [reorderProposals, setReorderProposals] = useState(() => getInitialState('petcare_reorderProposals', INITIAL_REORDER_PROPOSALS));
   const [suppliers, setSuppliers] = useState(() => getInitialState('petcare_suppliers', INITIAL_SUPPLIERS));
   const [reviews, setReviews] = useState(() => getInitialState('petcare_reviews', INITIAL_REVIEWS));
-  const [orders, setOrders] = useState(() => getInitialState('petcare_orders', [
-    { id: 'ORD-001', customerName: 'Phạm Minh Anh', phone: '0934567890', items: 'Hạt Royal Canin (2kg) x 2, Pate Cung Đình x 5', total: 600000, status: 'PENDING', date: '2026-08-25 10:30' },
-    { id: 'ORD-002', customerName: 'Nguyễn Văn Nam', phone: '0912345678', items: 'Cát Đậu Nành Tofu x 3', total: 270000, status: 'CONFIRMED', date: '2026-08-25 09:15' }
-  ]));
+  const [orders, setOrders] = useState(() => getInitialState('petcare_orders', INITIAL_ORDERS));
+
+  // Tự động gộp các bản ghi mặc định mới ngay cả khi đang mở sẵn tab (HMR hoặc tab cũ)
+  useEffect(() => {
+    setAppointments((prev) => {
+      const merged = mergeWithDefaults(prev, INITIAL_APPOINTMENTS);
+      if (merged.length !== prev.length) {
+        try { localStorage.setItem('petcare_appointments', JSON.stringify(merged)); } catch (e) {}
+        return merged;
+      }
+      return prev;
+    });
+    setOrders((prev) => {
+      const merged = mergeWithDefaults(prev, INITIAL_ORDERS);
+      if (merged.length !== prev.length) {
+        try { localStorage.setItem('petcare_orders', JSON.stringify(merged)); } catch (e) {}
+        return merged;
+      }
+      return prev;
+    });
+    setProducts((prev) => {
+      const merged = mergeWithDefaults(prev, INITIAL_PRODUCTS, getDeletedProductIds());
+      if (merged.length !== prev.length) {
+        try { localStorage.setItem('petcare_products', JSON.stringify(merged)); } catch (e) {}
+        return merged;
+      }
+      return prev;
+    });
+  }, [INITIAL_APPOINTMENTS.length, INITIAL_ORDERS.length, INITIAL_PRODUCTS.length]);
 
   // Dynamic On-Page SEO: title, meta description, canonical, robots & JSON-LD Schema
   useEffect(() => {
@@ -387,11 +414,7 @@ export default function App() {
     const selectedService = selectedServiceId ? services.find(s => s.id === selectedServiceId) : null;
     applyPageSEO({ portalMode, activeRole, activeTab, selectedProduct, selectedService, services, products });
   }, [portalMode, activeRole, activeTab, selectedProductId, selectedServiceId, services, products]);
-  const [auditLogs, setAuditLogs] = useState(() => getInitialState('petcare_audit_logs', [
-    { id: 'log-1', time: '09:00 - Hôm nay', category: 'SYSTEM', actor: 'Nguyễn Văn Admin', action: 'Khởi động cấu hình AI Dự báo', detail: 'Thiết lập mức tin cậy 95% (Z = 1.65) và Lead-time mặc định 4 ngày.' },
-    { id: 'log-2', time: '09:45 - Hôm nay', category: 'SECURITY', actor: 'Nguyễn Văn Admin', action: 'Cập nhật ma trận RBAC', detail: 'Xác thực phân quyền 4 vai trò: Khách hàng, Nhân viên, Quản lý kho, Admin.' },
-    { id: 'log-3', time: '10:20 - Hôm nay', category: 'INVENTORY', actor: 'Lê Văn Kho', action: 'Gửi đề xuất nhập hàng AI', detail: 'Lập 2 phiếu đề xuất nhập hàng chờ Admin phê duyệt (Royal Canin, Sữa tắm SOS).' }
-  ]));
+  const [auditLogs, setAuditLogs] = useState(() => getInitialState('petcare_audit_logs', INITIAL_AUDIT_LOGS));
 
   const handleAddAuditLog = (category, action, detail) => {
     const entry = {
@@ -423,11 +446,11 @@ export default function App() {
       channel.onmessage = (event) => {
         const { type, payload } = event.data || {};
         if (type === 'SYNC_USERS') setUsers(payload);
-        if (type === 'SYNC_APPOINTMENTS') setAppointments(payload);
-        if (type === 'SYNC_ORDERS') setOrders(payload);
-        if (type === 'SYNC_PETS') setPets(payload);
+        if (type === 'SYNC_APPOINTMENTS') setAppointments(mergeWithDefaults(payload, INITIAL_APPOINTMENTS));
+        if (type === 'SYNC_ORDERS') setOrders(mergeWithDefaults(payload, INITIAL_ORDERS));
+        if (type === 'SYNC_PETS') setPets(mergeWithDefaults(payload, INITIAL_PETS));
         if (type === 'SYNC_PRODUCTS') setProducts(mergeWithDefaults(payload, INITIAL_PRODUCTS, getDeletedProductIds()));
-        if (type === 'SYNC_PROMOTIONS') setPromotions(payload);
+        if (type === 'SYNC_PROMOTIONS') setPromotions(mergeWithDefaults(payload, INITIAL_PROMOTIONS));
         if (type === 'SYNC_SUPPLIERS') setSuppliers(mergeWithDefaults(payload, INITIAL_SUPPLIERS));
         if (type === 'SYNC_REVIEWS') setReviews(payload);
       };
@@ -436,11 +459,11 @@ export default function App() {
     const handleStorageChange = (e) => {
       try {
         if (e.key === 'petcare_users' && e.newValue) setUsers(JSON.parse(e.newValue));
-        if (e.key === 'petcare_appointments' && e.newValue) setAppointments(JSON.parse(e.newValue));
-        if (e.key === 'petcare_orders' && e.newValue) setOrders(JSON.parse(e.newValue));
-        if (e.key === 'petcare_pets' && e.newValue) setPets(JSON.parse(e.newValue));
+        if (e.key === 'petcare_appointments' && e.newValue) setAppointments(mergeWithDefaults(JSON.parse(e.newValue), INITIAL_APPOINTMENTS));
+        if (e.key === 'petcare_orders' && e.newValue) setOrders(mergeWithDefaults(JSON.parse(e.newValue), INITIAL_ORDERS));
+        if (e.key === 'petcare_pets' && e.newValue) setPets(mergeWithDefaults(JSON.parse(e.newValue), INITIAL_PETS));
         if (e.key === 'petcare_products' && e.newValue) setProducts(mergeWithDefaults(JSON.parse(e.newValue), INITIAL_PRODUCTS, getDeletedProductIds()));
-        if (e.key === 'petcare_promotions' && e.newValue) setPromotions(JSON.parse(e.newValue));
+        if (e.key === 'petcare_promotions' && e.newValue) setPromotions(mergeWithDefaults(JSON.parse(e.newValue), INITIAL_PROMOTIONS));
         if (e.key === 'petcare_suppliers' && e.newValue) setSuppliers(mergeWithDefaults(JSON.parse(e.newValue), INITIAL_SUPPLIERS));
         if (e.key === 'petcare_reviews' && e.newValue) setReviews(JSON.parse(e.newValue));
       } catch (err) {}
@@ -468,13 +491,22 @@ export default function App() {
         const res = await apiService.getLiveSyncState();
         if (res && res.data && res.data.lastUpdated && res.data.lastUpdated > lastSyncTimestamp) {
           lastSyncTimestamp = res.data.lastUpdated;
+          const patchBack = {};
           if (res.data.appointments) {
-            setAppointments(res.data.appointments);
-            localStorage.setItem('petcare_appointments', JSON.stringify(res.data.appointments));
+            const mergedApps = mergeWithDefaults(res.data.appointments, INITIAL_APPOINTMENTS);
+            setAppointments(mergedApps);
+            localStorage.setItem('petcare_appointments', JSON.stringify(mergedApps));
+            if (mergedApps.length !== res.data.appointments.length) {
+              patchBack.appointments = mergedApps;
+            }
           }
           if (res.data.orders) {
-            setOrders(res.data.orders);
-            localStorage.setItem('petcare_orders', JSON.stringify(res.data.orders));
+            const mergedOrders = mergeWithDefaults(res.data.orders, INITIAL_ORDERS);
+            setOrders(mergedOrders);
+            localStorage.setItem('petcare_orders', JSON.stringify(mergedOrders));
+            if (mergedOrders.length !== res.data.orders.length) {
+              patchBack.orders = mergedOrders;
+            }
           }
           if (Array.isArray(res.data.deletedProductIds)) {
             const combinedDeleted = Array.from(new Set([...getDeletedProductIds(), ...res.data.deletedProductIds]));
@@ -486,16 +518,28 @@ export default function App() {
             setProducts(mergedProducts);
             localStorage.setItem('petcare_products', JSON.stringify(mergedProducts));
             if (JSON.stringify(mergedProducts) !== JSON.stringify(res.data.products)) {
-              apiService.postLiveSyncState({ products: mergedProducts, deletedProductIds: deletedIds });
+              patchBack.products = mergedProducts;
+              patchBack.deletedProductIds = deletedIds;
             }
           }
           if (Array.isArray(res.data.promotions)) {
-            setPromotions(res.data.promotions);
-            localStorage.setItem('petcare_promotions', JSON.stringify(res.data.promotions));
+            const mergedPromos = mergeWithDefaults(res.data.promotions, INITIAL_PROMOTIONS);
+            setPromotions(mergedPromos);
+            localStorage.setItem('petcare_promotions', JSON.stringify(mergedPromos));
+            if (mergedPromos.length !== res.data.promotions.length) {
+              patchBack.promotions = mergedPromos;
+            }
           }
           if (res.data.pets) {
-            setPets(res.data.pets);
-            localStorage.setItem('petcare_pets', JSON.stringify(res.data.pets));
+            const mergedPets = mergeWithDefaults(res.data.pets, INITIAL_PETS);
+            setPets(mergedPets);
+            localStorage.setItem('petcare_pets', JSON.stringify(mergedPets));
+            if (mergedPets.length !== res.data.pets.length) {
+              patchBack.pets = mergedPets;
+            }
+          }
+          if (Object.keys(patchBack).length > 0) {
+            apiService.postLiveSyncState(patchBack);
           }
           if (Array.isArray(res.data.reviews)) {
             setReviews(res.data.reviews);
@@ -1562,6 +1606,7 @@ export default function App() {
               activeTab={activeTab}
               onTabChange={setActiveTab}
               pendingProposalsCount={reorderProposals.filter(p => p.status === 'DRAFT').length}
+              pendingOrdersCount={orders.filter(o => o.status === 'PENDING').length}
             />
 
             <main className="staff-main-content">

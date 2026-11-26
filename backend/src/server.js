@@ -7,6 +7,7 @@ dotenv.config();
 const apiRoutes = require('./routes/api');
 const prisma = require('./config/prisma');
 const { ensureDefaultServices } = require('./config/defaultServices');
+const { ensureDefaultOperationalData } = require('./config/defaultOperationalData');
 const { ensureDefaultReviews } = require('./services/reviewService');
 
 const app = express();
@@ -45,9 +46,13 @@ app.listen(PORT, async () => {
     console.log(
       `✅ Service catalog synced (${syncRes.createdCount} added, ${syncRes.updatedCount} updated, ${syncRes.removedCount || 0} removed, ${syncRes.totalExpected} standard services)`
     );
+    const opRes = await ensureDefaultOperationalData(prisma);
+    console.log(
+      `✅ Operational data synced (${opRes.usersTotal} users, ${opRes.suppliersTotal} suppliers, +${opRes.productsAdded} new products)`
+    );
     const revRes = await ensureDefaultReviews(prisma);
     if (revRes.seededCount > 0) {
-      console.log(`✅ Initial customer reviews seeded (${revRes.seededCount} reviews)`);
+      console.log(`✅ Customer reviews synced (+${revRes.seededCount} reviews)`);
     }
   } catch (err) {
     console.warn('⚠️ Startup service catalog sync skipped:', err.message);
