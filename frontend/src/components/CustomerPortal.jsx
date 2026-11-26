@@ -87,7 +87,9 @@ const getCategoryVisual = (category) => {
 };
 
 const getProductBrand = (p) => {
-  if (!p || !p.name) return 'Petzera Mall';
+  if (!p) return 'Petzera Mall';
+  if (p.brand && String(p.brand).trim()) return String(p.brand).trim();
+  if (!p.name) return 'Petzera Mall';
   const n = p.name;
   if (n.includes('Royal Canin')) return 'Royal Canin';
   if (n.includes('6 Free')) return 'ANF 6 Free';
@@ -165,15 +167,17 @@ const getProductRichDetails = (p) => {
   const cat = p.category || '';
 
   const targetPet =
-    n.includes('chó') && n.includes('mèo') ? 'Chó & Mèo mọi lứa tuổi'
+    (p.targetPet && String(p.targetPet).trim()) ||
+    (n.includes('chó') && n.includes('mèo') ? 'Chó & Mèo mọi lứa tuổi'
     : n.includes('mèo con') || n.includes('kitten') ? 'Mèo con từ 2 – 12 tháng tuổi'
     : n.includes('mèo') || cat === 'Cát vệ sinh' ? 'Mèo mọi giống loài'
     : n.includes('chó con') || n.includes('puppy') ? 'Chó con & cún đang phát triển'
     : n.includes('chó') || n.includes('cún') ? 'Chó trưởng thành / giống nhỏ'
-    : 'Chó & Mèo thú cưng';
+    : 'Chó & Mèo thú cưng');
 
   const origin =
-    n.includes('royal canin') ? 'Pháp / Hàn Quốc (Royal Canin chính hãng)'
+    (p.origin && String(p.origin).trim()) ||
+    (n.includes('royal canin') ? 'Pháp / Hàn Quốc (Royal Canin chính hãng)'
     : n.includes('6 free') || n.includes('forcan') ? 'Hàn Quốc (Nhập khẩu chính ngạch)'
     : n.includes('predogen') || n.includes('precaten') ? 'Việt Nam — Công thức dinh dưỡng Dr. Kyan'
     : n.includes('orijen') ? 'Canada (Champion Petfoods)'
@@ -182,10 +186,16 @@ const getProductRichDetails = (p) => {
     : n.includes('frontline') ? 'Pháp (Boehringer Ingelheim)'
     : n.includes('drontal') ? 'Đức (Elanco Animal Health)'
     : n.includes('ciao') ? 'Nhật Bản (Inaba Foods)'
-    : 'Phân phối chính hãng bởi Petzera';
+    : 'Phân phối chính hãng bởi Petzera');
+
+  const applyCustom = (base) => ({
+    ...base,
+    summary: (p.description && String(p.description).trim()) || base.summary,
+    usage: (p.usageGuide && String(p.usageGuide).trim()) || base.usage,
+  });
 
   if (cat === 'Thức ăn') {
-    return {
+    return applyCustom({
       summary: `${p.name} cung cấp nguồn đạm chất lượng cao, vitamin và khoáng chất cân bằng giúp thú cưng tiêu hóa tốt, hạn chế mùi phân, nuôi dưỡng da khỏe và bộ lông bóng mượt mỗi ngày.`,
       highlights: [
         'Hàm lượng protein & chất béo cân bằng theo khuyến nghị bác sĩ thú y.',
@@ -196,10 +206,10 @@ const getProductRichDetails = (p) => {
       usage: 'Cho ăn trực tiếp theo khẩu phần khuyến nghị theo cân nặng trên bao bì, luôn chuẩn bị sẵn nước sạch bên cạnh. Đóng kín miệng túi sau khi mở và bảo quản nơi khô ráo thoáng mát.',
       origin,
       targetPet
-    };
+    });
   }
   if (cat === 'Dinh dưỡng') {
-    return {
+    return applyCustom({
       summary: `${p.name} là giải pháp bổ sung vi chất, canxi, đạm dễ hấp thu hoặc lợi khuẩn đường ruột thiết yếu giúp thú cưng phục hồi thể lực nhanh, tăng đề kháng và phát triển khung xương vững chắc.`,
       highlights: [
         'Công thức dễ hấp thu, thân thiện với hệ tiêu hóa nhạy cảm của chó mèo nhỏ.',
@@ -212,10 +222,10 @@ const getProductRichDetails = (p) => {
         : 'Cho ăn trực tiếp hoặc trộn đều vào thức ăn hằng ngày theo liều lượng tương ứng cân nặng trên bao bì sản phẩm.',
       origin,
       targetPet
-    };
+    });
   }
   if (cat === 'Bánh thưởng') {
-    return {
+    return applyCustom({
       summary: `${p.name} là món snack thưởng thơm ngon làm từ nguyên liệu chọn lọc, lý tưởng dùng khi huấn luyện, gắn kết tình cảm và hỗ trợ vệ sinh răng miệng hằng ngày.`,
       highlights: [
         'Nguyên liệu tự nhiên giàu đạm, không chất bảo quản độc hại hay phẩm màu tổng hợp.',
@@ -226,10 +236,10 @@ const getProductRichDetails = (p) => {
       usage: 'Dùng làm phần thưởng giữa các bữa ăn chính (không thay thế hoàn toàn bữa chính). Bảo quản nơi khô ráo, tránh ánh nắng trực tiếp.',
       origin,
       targetPet
-    };
+    });
   }
   if (cat === 'Cát vệ sinh') {
-    return {
+    return applyCustom({
       summary: `${p.name} có khả năng thấm hút vượt trội, vón cục nhanh trong vài giây và khóa chặt mùi hôi khó chịu, giữ không gian sống của gia đình luôn sạch sẽ và không bụi mịn.`,
       highlights: [
         'Thấm hút tức thì, vón cục chắc tay không vỡ vụn khi xúc dọn.',
@@ -240,10 +250,10 @@ const getProductRichDetails = (p) => {
       usage: 'Đổ lớp cát dày khoảng 5–7cm vào khay vệ sinh. Dọn bỏ phần cát vón mỗi ngày và bổ sung thêm cát mới định kỳ.',
       origin,
       targetPet
-    };
+    });
   }
   if (cat === 'Mỹ phẩm Spa') {
-    return {
+    return applyCustom({
       summary: `${p.name} là dòng sản phẩm chăm sóc lông da & vệ sinh chuyên dụng được nhiều phòng khám thú y và Spa Grooming tin dùng nhờ độ an toàn cao, dịu nhẹ và hiệu quả rõ rệt.`,
       highlights: [
         'Công thức pH cân bằng riêng cho làn da nhạy cảm của chó mèo, không gây kích ứng.',
@@ -258,10 +268,10 @@ const getProductRichDetails = (p) => {
           : 'Làm ướt toàn bộ lông bằng nước ấm, thoa đều sữa tắm và massage nhẹ 3–5 phút rồi xả sạch, sấy khô hoàn toàn.',
       origin,
       targetPet
-    };
+    });
   }
   if (cat === 'Y tế') {
-    return {
+    return applyCustom({
       summary: `${p.name} là sản phẩm thú y chính hãng giúp phòng ngừa và điều trị hiệu quả ký sinh trùng (ve rận, bọ chét, giun sán), bảo vệ sức khỏe toàn diện cho thú cưng và cả gia đình.`,
       highlights: [
         'Hiệu quả nhanh, phổ tác động rộng giúp bảo vệ bé suốt nhiều tuần liền.',
@@ -272,9 +282,9 @@ const getProductRichDetails = (p) => {
       usage: 'Sử dụng đúng liều lượng theo cân nặng của chó/mèo và lặp lại định kỳ theo hướng dẫn bác sĩ thú y. Không dùng cho thú cưng dưới độ tuổi khuyến nghị trên hộp.',
       origin,
       targetPet
-    };
+    });
   }
-  return {
+  return applyCustom({
     summary: `${p.name} được thiết kế chắc chắn, thẩm mỹ cao và an toàn tuyệt đối cho thú cưng, mang lại trải nghiệm thoải mái khi nghỉ ngơi, vui chơi hay di chuyển cùng chủ nuôi.`,
     highlights: [
       'Chất liệu cao cấp, bền bỉ, không góc cạnh sắc nhọn và thân thiện với thú cưng.',
@@ -285,7 +295,7 @@ const getProductRichDetails = (p) => {
     usage: 'Kiểm tra kích thước phù hợp với cân nặng của bé trước khi dùng. Vệ sinh định kỳ bằng khăn ẩm hoặc dung dịch vệ sinh thú cưng dịu nhẹ.',
     origin,
     targetPet
-  };
+  });
 };
 
 const isReproductiveService = (s) => {
@@ -313,8 +323,31 @@ const getServiceRichDetails = (s) => {
   const cat = (s.category || '').toLowerCase();
   const n = (s.name || '').toLowerCase();
 
+  const parseCustomSteps = (raw) => {
+    if (!raw || !String(raw).trim()) return null;
+    const lines = String(raw)
+      .split(/\r?\n/)
+      .map((line) => line.replace(/^\s*(?:bước\s*\d+\s*[:.-]?|\d+\s*[.)-]|\-|\•)\s*/i, '').trim())
+      .filter(Boolean);
+    if (lines.length === 0) return null;
+    return lines.map((line, idx) => {
+      const sepIdx = line.indexOf(':');
+      if (sepIdx > 0 && sepIdx < 60) {
+        return { title: line.slice(0, sepIdx).trim(), desc: line.slice(sepIdx + 1).trim() };
+      }
+      return { title: `Bước ${idx + 1}`, desc: line };
+    });
+  };
+
+  const applyCustomService = (base) => ({
+    targetPet: (s.targetPet && String(s.targetPet).trim()) || base.targetPet,
+    standard: (s.standard && String(s.standard).trim()) || base.standard,
+    steps: parseCustomSteps(s.processSteps) || base.steps,
+    prepNote: (s.prepNote && String(s.prepNote).trim()) || base.prepNote,
+  });
+
   if (isReproductiveService(s)) {
-    return {
+    return applyCustomService({
       targetPet: n.includes('đực') ? 'Chó đực / Mèo đực từ 6 tháng tuổi trở lên' : 'Chó cái / Mèo cái cần khám thai, hộ sinh hoặc triệt sản',
       standard: 'Phòng phẫu thuật vô trùng áp lực dương • Gây mê bay hơi Isoflurane',
       steps: [
@@ -326,10 +359,10 @@ const getServiceRichDetails = (s) => {
       prepNote: n.includes('phẫu thuật') || n.includes('triệt sản') || n.includes('thiến') || n.includes('mổ đẻ')
         ? 'Nên cho bé nhịn ăn 6–8 tiếng trước giờ phẫu thuật (vẫn có thể uống ít nước). Đưa bé trong lồng vận chuyển kín gió và báo bác sĩ nếu bé có tiền sử dị ứng thuốc.'
         : 'Đem theo sổ tiêm phòng / ngày phối giống gần nhất để bác sĩ chẩn đoán và dự sinh chuẩn xác nhất.'
-    };
+    });
   }
   if (cat.includes('tiêm') || cat.includes('y tế') || cat.includes('khám')) {
-    return {
+    return applyCustomService({
       targetPet: 'Chó & Mèo ở mọi giai đoạn phát triển',
       standard: 'Vắc xin nhập khẩu bảo quản dây chuyền lạnh 2–8°C • Sổ theo dõi thú y',
       steps: [
@@ -339,9 +372,9 @@ const getServiceRichDetails = (s) => {
         { title: 'Theo dõi sau tiêm & hẹn lịch nhắc mũi', desc: 'Theo dõi phản ứng sau tiêm 15–20 phút, dán tem vào sổ tiêm chủng và lưu lịch nhắc tái khám trên hệ thống.' }
       ],
       prepNote: 'Không nên tắm cho bé trong vòng 5–7 ngày sau khi tiêm vắc xin. Chỉ tiêm khi bé hoàn toàn khỏe mạnh, ăn uống bình thường và đã tẩy giun trước đó.'
-    };
+    });
   }
-  return {
+  return applyCustomService({
     targetPet: 'Chó & Mèo mọi giống loài (Poodle, Corgi, Phốc Sóc, Mèo Anh...)',
     standard: 'Mỹ phẩm Spa hữu cơ dịu nhẹ • Dụng cụ khử khuẩn UV sau mỗi lượt khách',
     steps: [
@@ -351,7 +384,7 @@ const getServiceRichDetails = (s) => {
       { title: 'Cắt tỉa tạo kiểu & bàn giao Nhật ký Spa', desc: 'Groomer cắt tỉa chuẩn form, xịt dưỡng thơm lâu và lưu Nhật ký chăm sóc (Care Summary) gửi chủ nuôi.' }
     ],
     prepNote: 'Nên đưa bé đến trước giờ hẹn 5–10 phút và cho bé đi vệ sinh nhẹ trước khi vào Spa để bé thoải mái nhất trong suốt liệu trình.'
-  };
+  });
 };
 
 export default function CustomerPortal({ 
@@ -1276,10 +1309,14 @@ export default function CustomerPortal({
     finalizeOrderSuccess(receiptSummary, { paidViaPayOS: false });
   };
 
-  // Filter & Sort Products
-  const filteredProducts = products.filter(p => {
+  // Filter & Sort Products (hide INACTIVE products on public shop)
+  const visibleProducts = products.filter(p => p.status !== 'INACTIVE');
+  const filteredProducts = visibleProducts.filter(p => {
     const matchCat = selectedCategory === 'ALL' || p.category === selectedCategory;
-    const matchQuery = p.name.toLowerCase().includes(searchQuery.toLowerCase()) || p.sku.toLowerCase().includes(searchQuery.toLowerCase());
+    const matchQuery =
+      (p.name || '').toLowerCase().includes(searchQuery.toLowerCase()) ||
+      (p.sku || '').toLowerCase().includes(searchQuery.toLowerCase()) ||
+      (p.brand || '').toLowerCase().includes(searchQuery.toLowerCase());
     return matchCat && matchQuery;
   }).sort((a, b) => {
     if (sortBy === 'PRICE_LOW') return a.unitPrice - b.unitPrice;
@@ -1287,8 +1324,9 @@ export default function CustomerPortal({
     return 0;
   });
 
-  // Filter Services by Category & Search Keyword
+  // Filter Services by Category & Search Keyword (hide INACTIVE services on public booking)
   const filteredServices = services.filter(s => {
+    if (s.status === 'INACTIVE') return false;
     const matchCat = selectedServiceCategory === 'ALL' || s.category === selectedServiceCategory;
     const q = serviceSearchQuery.trim().toLowerCase();
     const matchQ =
@@ -2143,7 +2181,7 @@ export default function CustomerPortal({
                 { id: 'Y tế', label: '🏥 Y Tế' }
               ].map(cat => {
                 const isActive = selectedCategory === cat.id;
-                const count = cat.id === 'ALL' ? products.length : products.filter(p => p.category === cat.id).length;
+                const count = cat.id === 'ALL' ? visibleProducts.length : visibleProducts.filter(p => p.category === cat.id).length;
                 return (
                   <button
                     key={cat.id}
@@ -2583,6 +2621,12 @@ export default function CustomerPortal({
                       <span style={{ color: '#64748b' }}>Thương hiệu:</span>
                       <strong style={{ color: '#0f172a', textAlign: 'right' }}>{dBrand}</strong>
                     </div>
+                    {dp.unit && (
+                      <div style={{ display: 'flex', justifyContent: 'space-between', gap: '1rem' }}>
+                        <span style={{ color: '#64748b' }}>Quy cách / ĐVT:</span>
+                        <strong style={{ color: '#0f172a', textAlign: 'right' }}>{dp.unit}</strong>
+                      </div>
+                    )}
                     <div style={{ display: 'flex', justifyContent: 'space-between', gap: '1rem' }}>
                       <span style={{ color: '#64748b' }}>Phù hợp cho:</span>
                       <strong style={{ color: '#0f172a', textAlign: 'right' }}>{dInfo.targetPet}</strong>
@@ -2591,6 +2635,12 @@ export default function CustomerPortal({
                       <span style={{ color: '#64748b' }}>Xuất xứ:</span>
                       <strong style={{ color: '#0f172a', textAlign: 'right' }}>{dInfo.origin}</strong>
                     </div>
+                    {dp.expiryDate && (
+                      <div style={{ display: 'flex', justifyContent: 'space-between', gap: '1rem' }}>
+                        <span style={{ color: '#64748b' }}>Hạn sử dụng:</span>
+                        <strong style={{ color: '#059669', textAlign: 'right' }}>{dp.expiryDate}</strong>
+                      </div>
+                    )}
                     <div style={{ display: 'flex', justifyContent: 'space-between', gap: '1rem' }}>
                       <span style={{ color: '#64748b' }}>Nhà phân phối:</span>
                       <strong style={{ color: '#0284c7', textAlign: 'right' }}>{dp.supplierName || 'Petzera Official'}</strong>

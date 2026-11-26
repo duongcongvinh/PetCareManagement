@@ -70,7 +70,7 @@ export default function App() {
             ...def,
             ...item,
             category: def.category || item.category,
-            image: def.image || item.image,
+            image: item.customImage && item.image ? item.image : (def.image || item.image),
           };
         }
         return item;
@@ -380,7 +380,7 @@ export default function App() {
   const [reviews, setReviews] = useState(() => getInitialState('petcare_reviews', INITIAL_REVIEWS));
   const [orders, setOrders] = useState(() => getInitialState('petcare_orders', INITIAL_ORDERS));
 
-  // Tự động gộp các bản ghi mặc định mới ngay cả khi đang mở sẵn tab (HMR hoặc tab cũ)
+  // Tự động gộp các bản ghi mặc định mới & đồng bộ ảnh cập nhật ngay cả khi đang mở sẵn tab (HMR hoặc tab cũ)
   useEffect(() => {
     setAppointments((prev) => {
       const merged = mergeWithDefaults(prev, INITIAL_APPOINTMENTS);
@@ -398,15 +398,27 @@ export default function App() {
       }
       return prev;
     });
+    setServices((prev) => {
+      const merged = mergeWithDefaults(prev, INITIAL_SERVICES)
+        .filter((s) => s.category !== 'Khách Sạn & Lưu Trú')
+        .map((s) => (s.category === 'Khoa Sinh Sản' || s.category === 'Khám Bệnh' ? { ...s, category: 'Khám Bệnh & Trị Liệu' } : s));
+      const changed = merged.length !== prev.length || merged.some((item, idx) => item.image !== prev[idx]?.image);
+      if (changed) {
+        try { localStorage.setItem('petcare_services', JSON.stringify(merged)); } catch (e) {}
+        return merged;
+      }
+      return prev;
+    });
     setProducts((prev) => {
       const merged = mergeWithDefaults(prev, INITIAL_PRODUCTS, getDeletedProductIds());
-      if (merged.length !== prev.length) {
+      const changed = merged.length !== prev.length || merged.some((item, idx) => item.image !== prev[idx]?.image);
+      if (changed) {
         try { localStorage.setItem('petcare_products', JSON.stringify(merged)); } catch (e) {}
         return merged;
       }
       return prev;
     });
-  }, [INITIAL_APPOINTMENTS.length, INITIAL_ORDERS.length, INITIAL_PRODUCTS.length]);
+  }, [INITIAL_APPOINTMENTS.length, INITIAL_ORDERS.length, INITIAL_SERVICES.length, INITIAL_PRODUCTS.length]);
 
   // Dynamic On-Page SEO: title, meta description, canonical, robots & JSON-LD Schema
   useEffect(() => {
@@ -1232,15 +1244,30 @@ export default function App() {
 
   // Services, Promotions & Pet Medical Handlers (Care Staff)
   const handleAddService = async (svcData) => {
+    const cleanPayload = {
+      name: (svcData.name || '').trim(),
+      category: svcData.category || 'Spa & Grooming',
+      durationMinutes: Number(svcData.durationMinutes) || 45,
+      price: Number(svcData.price) || 0,
+      description: (svcData.description || '').trim(),
+      image: svcData.image ? String(svcData.image).trim() : '',
+      customImage: Boolean(svcData.image && String(svcData.image).trim()),
+      targetPet: (svcData.targetPet || '').trim(),
+      standard: (svcData.standard || '').trim(),
+      processSteps: (svcData.processSteps || '').trim(),
+      prepNote: (svcData.prepNote || '').trim(),
+      status: svcData.status === 'INACTIVE' ? 'INACTIVE' : 'ACTIVE',
+    };
+
     let created = null;
     try {
-      const res = await apiService.createService(svcData, authToken);
-      if (res && res.service && res.service.id) created = res.service;
-      else if (res && res.id) created = res;
+      const res = await apiService.createService(cleanPayload, authToken);
+      if (res && res.service && res.service.id) created = { ...cleanPayload, ...res.service };
+      else if (res && res.id) created = { ...cleanPayload, ...res };
     } catch (e) {}
 
     if (!created) {
-      created = { ...svcData, id: 's-' + Date.now(), status: 'ACTIVE' };
+      created = { ...cleanPayload, id: 's-' + Date.now() };
     }
     const updated = [created, ...services];
     setServices(updated);
@@ -1248,10 +1275,24 @@ export default function App() {
   };
 
   const handleUpdateService = async (serviceId, updates) => {
+    const cleanUpdates = {
+      ...updates,
+      name: updates.name !== undefined ? String(updates.name).trim() : undefined,
+      durationMinutes: updates.durationMinutes !== undefined ? (Number(updates.durationMinutes) || 45) : undefined,
+      price: updates.price !== undefined ? (Number(updates.price) || 0) : undefined,
+      description: updates.description !== undefined ? String(updates.description).trim() : undefined,
+      image: updates.image !== undefined ? String(updates.image || '').trim() : undefined,
+      customImage: updates.image !== undefined ? Boolean(String(updates.image || '').trim()) : undefined,
+      targetPet: updates.targetPet !== undefined ? String(updates.targetPet || '').trim() : undefined,
+      standard: updates.standard !== undefined ? String(updates.standard || '').trim() : undefined,
+      processSteps: updates.processSteps !== undefined ? String(updates.processSteps || '').trim() : undefined,
+      prepNote: updates.prepNote !== undefined ? String(updates.prepNote || '').trim() : undefined,
+      status: updates.status !== undefined ? (updates.status === 'INACTIVE' ? 'INACTIVE' : 'ACTIVE') : undefined,
+    };
     try {
-      await apiService.updateService(serviceId, updates, authToken);
+      await apiService.updateService(serviceId, cleanUpdates, authToken);
     } catch (e) {}
-    const updated = services.map(s => s.id === serviceId ? { ...s, ...updates } : s);
+    const updated = services.map(s => s.id === serviceId ? { ...s, ...cleanUpdates } : s);
     setServices(updated);
     try { localStorage.setItem('petcare_services', JSON.stringify(updated)); } catch (e) {}
   };
@@ -1375,6 +1416,7 @@ export default function App() {
 
   // Add & Update Product Actions
   const handleAddProduct = async (newProdData) => {
+    const trimmedImage = newProdData.image ? String(newProdData.image).trim() : '';
     const payload = {
       name: newProdData.name.trim(),
       sku: (newProdData.sku || ('SKU-' + Math.floor(1000 + Math.random() * 9000))).trim().toUpperCase(),
@@ -1384,7 +1426,17 @@ export default function App() {
       currentStock: Math.max(0, parseInt(newProdData.currentStock, 10) || 0),
       minStockLevel: Math.max(0, parseInt(newProdData.minStockLevel, 10) || 10),
       maxStockLevel: Math.max(1, parseInt(newProdData.maxStockLevel, 10) || 100),
-      supplierName: newProdData.supplierName || 'Royal Canin Việt Nam'
+      supplierName: newProdData.supplierName || 'Royal Canin Việt Nam',
+      image: trimmedImage,
+      customImage: Boolean(trimmedImage),
+      brand: (newProdData.brand || '').trim(),
+      unit: (newProdData.unit || '').trim(),
+      targetPet: (newProdData.targetPet || '').trim(),
+      origin: (newProdData.origin || '').trim(),
+      expiryDate: (newProdData.expiryDate || '').trim(),
+      description: (newProdData.description || '').trim(),
+      usageGuide: (newProdData.usageGuide || '').trim(),
+      status: newProdData.status === 'INACTIVE' ? 'INACTIVE' : 'ACTIVE',
     };
 
     let created = null;
@@ -1406,6 +1458,8 @@ export default function App() {
   };
 
   const handleUpdateProduct = async (productId, updates) => {
+    const hasImageField = updates.image !== undefined;
+    const trimmedImage = hasImageField ? String(updates.image || '').trim() : undefined;
     const payload = {
       ...updates,
       name: updates.name ? updates.name.trim() : undefined,
@@ -1415,6 +1469,16 @@ export default function App() {
       currentStock: updates.currentStock !== undefined ? Math.max(0, parseInt(updates.currentStock, 10) || 0) : undefined,
       minStockLevel: updates.minStockLevel !== undefined ? Math.max(0, parseInt(updates.minStockLevel, 10) || 0) : undefined,
       maxStockLevel: updates.maxStockLevel !== undefined ? Math.max(1, parseInt(updates.maxStockLevel, 10) || 100) : undefined,
+      image: trimmedImage,
+      customImage: hasImageField ? Boolean(trimmedImage) : undefined,
+      brand: updates.brand !== undefined ? String(updates.brand || '').trim() : undefined,
+      unit: updates.unit !== undefined ? String(updates.unit || '').trim() : undefined,
+      targetPet: updates.targetPet !== undefined ? String(updates.targetPet || '').trim() : undefined,
+      origin: updates.origin !== undefined ? String(updates.origin || '').trim() : undefined,
+      expiryDate: updates.expiryDate !== undefined ? String(updates.expiryDate || '').trim() : undefined,
+      description: updates.description !== undefined ? String(updates.description || '').trim() : undefined,
+      usageGuide: updates.usageGuide !== undefined ? String(updates.usageGuide || '').trim() : undefined,
+      status: updates.status !== undefined ? (updates.status === 'INACTIVE' ? 'INACTIVE' : 'ACTIVE') : undefined,
     };
 
     try {

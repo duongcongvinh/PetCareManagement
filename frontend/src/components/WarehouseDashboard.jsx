@@ -6,6 +6,7 @@ import {
 import { INITIAL_SUPPLIERS } from '../mockData';
 import { getProductImage, FALLBACK_IMAGES } from '../mediaAssets';
 import DemandForecastPanel from './DemandForecastPanel';
+import ImagePickerField from './ImagePickerField';
 import { toast, confirmModal } from './ToastNotification';
 
 export default function WarehouseDashboard({
@@ -91,19 +92,30 @@ export default function WarehouseDashboard({
   };
 
   // Add / Edit Product modal
-  const [showAddProductModal, setShowAddProductModal] = useState(false);
-  const [editingProduct, setEditingProduct] = useState(null);
-  const [newProductForm, setNewProductForm] = useState({
+  const getEmptyProductForm = () => ({
     name: '',
     sku: '',
     category: 'Thức ăn',
+    brand: '',
+    unit: '',
+    targetPet: 'Chó & Mèo mọi lứa tuổi',
+    origin: '',
+    expiryDate: '',
     unitPrice: 150000,
     costPrice: 100000,
     currentStock: 20,
     minStockLevel: 10,
     maxStockLevel: 100,
-    supplierName: suppliers[0]?.name || 'Royal Canin Việt Nam'
+    supplierName: suppliers[0]?.name || 'Royal Canin Việt Nam',
+    image: '',
+    description: '',
+    usageGuide: '',
+    status: 'ACTIVE',
   });
+
+  const [showAddProductModal, setShowAddProductModal] = useState(false);
+  const [editingProduct, setEditingProduct] = useState(null);
+  const [newProductForm, setNewProductForm] = useState(getEmptyProductForm);
 
   // Dedicated Products Tab filters
   const [prodSearchQuery, setProdSearchQuery] = useState('');
@@ -111,17 +123,7 @@ export default function WarehouseDashboard({
 
   const openCreateProduct = () => {
     setEditingProduct(null);
-    setNewProductForm({
-      name: '',
-      sku: '',
-      category: 'Thức ăn',
-      unitPrice: 150000,
-      costPrice: 100000,
-      currentStock: 20,
-      minStockLevel: 10,
-      maxStockLevel: 100,
-      supplierName: suppliers[0]?.name || 'Royal Canin Việt Nam'
-    });
+    setNewProductForm(getEmptyProductForm());
     setShowAddProductModal(true);
   };
 
@@ -131,12 +133,21 @@ export default function WarehouseDashboard({
       name: prod.name || '',
       sku: prod.sku || '',
       category: prod.category || 'Thức ăn',
+      brand: prod.brand || '',
+      unit: prod.unit || '',
+      targetPet: prod.targetPet || 'Chó & Mèo mọi lứa tuổi',
+      origin: prod.origin || '',
+      expiryDate: prod.expiryDate || '',
       unitPrice: prod.unitPrice ?? 150000,
       costPrice: prod.costPrice ?? Math.round((Number(prod.unitPrice) || 150000) * 0.65),
       currentStock: prod.currentStock ?? 0,
       minStockLevel: prod.minStockLevel ?? 10,
       maxStockLevel: prod.maxStockLevel ?? 100,
-      supplierName: prod.supplierName || suppliers[0]?.name || 'Royal Canin Việt Nam'
+      supplierName: prod.supplierName || suppliers[0]?.name || 'Royal Canin Việt Nam',
+      image: prod.image || '',
+      description: prod.description || '',
+      usageGuide: prod.usageGuide || '',
+      status: prod.status === 'INACTIVE' ? 'INACTIVE' : 'ACTIVE',
     });
     setShowAddProductModal(true);
   };
@@ -247,6 +258,17 @@ export default function WarehouseDashboard({
       toast.warning('Vui lòng nhập tên sản phẩm!', 'Thiếu Thông Tin');
       return;
     }
+    const unitPriceNum = Number(newProductForm.unitPrice) || 0;
+    const minNum = Number(newProductForm.minStockLevel) || 0;
+    const maxNum = Number(newProductForm.maxStockLevel) || 1;
+    if (unitPriceNum <= 0) {
+      toast.warning('Đơn giá bán phải lớn hơn 0 đ!', 'Giá Không Hợp Lệ');
+      return;
+    }
+    if (maxNum < minNum) {
+      toast.warning('Ngưỡng tối đa (Max) phải lớn hơn hoặc bằng ngưỡng cảnh báo (Min)!', 'Ngưỡng Tồn Kho');
+      return;
+    }
     if (editingProduct) {
       if (onUpdateProduct) onUpdateProduct(editingProduct.id, newProductForm);
     } else {
@@ -254,17 +276,7 @@ export default function WarehouseDashboard({
     }
     setShowAddProductModal(false);
     setEditingProduct(null);
-    setNewProductForm({
-      name: '',
-      sku: '',
-      category: 'Thức ăn',
-      unitPrice: 150000,
-      costPrice: 100000,
-      currentStock: 20,
-      minStockLevel: 10,
-      maxStockLevel: 100,
-      supplierName: suppliers[0]?.name || 'Royal Canin Việt Nam'
-    });
+    setNewProductForm(getEmptyProductForm());
   };
 
   const handleCreateSupplierSubmit = (e) => {
@@ -1214,78 +1226,262 @@ export default function WarehouseDashboard({
       )}
 
       {/* ==================== MODAL: THÊM / SỬA SẢN PHẨM ==================== */}
-      {showAddProductModal && (
-        <div className="modal-overlay" onClick={(e) => { if (e.target === e.currentTarget) { setShowAddProductModal(false); setEditingProduct(null); } }}>
-          <div className="modal-content animate-fade-in" style={{ maxWidth: 560 }}>
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.15rem' }}>
-              <h3 style={{ fontSize: '1.25rem', fontWeight: 800, color: '#0f172a' }}>
-                {editingProduct ? 'Chỉnh Sửa Thông Tin Sản Phẩm' : 'Thêm Sản Phẩm Mới Vào Kho'}
-              </h3>
-              <button type="button" onClick={() => { setShowAddProductModal(false); setEditingProduct(null); }} style={{ background: '#f1f5f9', border: 'none', borderRadius: '50%', width: 32, height: 32, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                <X size={16} />
-              </button>
+      {showAddProductModal && (() => {
+        const sellNum = Number(newProductForm.unitPrice) || 0;
+        const costNum = Number(newProductForm.costPrice) || 0;
+        const profit = sellNum - costNum;
+        const marginPct = sellNum > 0 ? ((profit / sellNum) * 100).toFixed(1) : '0.0';
+        const fallbackPreview = editingProduct ? getProductImage(editingProduct) : '';
+
+        const generateSku = () => {
+          const prefixMap = {
+            'Thức ăn': 'FOOD',
+            'Bánh thưởng': 'SNACK',
+            'Cát vệ sinh': 'LITTER',
+            'Phụ kiện': 'ACC',
+            'Mỹ phẩm Spa': 'SPA',
+            'Dinh dưỡng': 'NUTRI',
+            'Y tế': 'VET',
+          };
+          const prefix = prefixMap[newProductForm.category] || 'SKU';
+          const code = `${prefix}-${Math.floor(1000 + Math.random() * 9000)}`;
+          setNewProductForm(prev => ({ ...prev, sku: code }));
+        };
+
+        return (
+          <div className="modal-overlay" onClick={(e) => { if (e.target === e.currentTarget) { setShowAddProductModal(false); setEditingProduct(null); } }}>
+            <div
+              className="modal-content animate-fade-in"
+              style={{ maxWidth: 740, maxHeight: '90vh', overflowY: 'auto', padding: '1.5rem 1.75rem' }}
+            >
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem', paddingBottom: '0.75rem', borderBottom: '1px solid #e2e8f0' }}>
+                <div>
+                  <h3 style={{ fontSize: '1.25rem', fontWeight: 800, color: '#0f172a', margin: 0 }}>
+                    {editingProduct ? 'Chỉnh Sửa Thông Tin Sản Phẩm' : 'Thêm Sản Phẩm Mới Vào Kho'}
+                  </h3>
+                  <p style={{ fontSize: '0.8rem', color: '#64748b', margin: '2px 0 0' }}>
+                    Điền đầy đủ hình ảnh, thông số, định giá & mô tả để đồng bộ trực tiếp lên Pet Shop
+                  </p>
+                </div>
+                <button type="button" onClick={() => { setShowAddProductModal(false); setEditingProduct(null); }} style={{ background: '#f1f5f9', border: 'none', borderRadius: '50%', width: 34, height: 34, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                  <X size={16} />
+                </button>
+              </div>
+
+              <form onSubmit={handleCreateProductSubmit}>
+                {/* 1. Hình ảnh sản phẩm */}
+                <ImagePickerField
+                  label="Hình Ảnh Sản Phẩm (Tải từ máy hoặc dán URL)"
+                  value={newProductForm.image}
+                  fallbackPreview={fallbackPreview}
+                  onChange={(img) => setNewProductForm(prev => ({ ...prev, image: img }))}
+                  aspect="product"
+                  helperText="Khuyên dùng ảnh nền sáng, rõ bao bì sản phẩm (JPG/PNG/WEBP). Ảnh tải từ máy được tự động tối ưu dung lượng."
+                />
+
+                {/* 2. Thông tin cơ bản */}
+                <div style={{ fontSize: '0.78rem', fontWeight: 800, color: '#ea580c', textTransform: 'uppercase', letterSpacing: '0.04em', marginBottom: '0.6rem' }}>
+                  1. Thông Tin Cơ Bản & Phân Loại
+                </div>
+
+                <div className="form-group">
+                  <label>Tên Sản Phẩm *</label>
+                  <input
+                    className="form-control"
+                    value={newProductForm.name}
+                    onChange={e => setNewProductForm({ ...newProductForm, name: e.target.value })}
+                    placeholder="VD: Hạt Royal Canin Mini Adult Cho Chó Nhỏ (2kg)"
+                    required
+                  />
+                </div>
+
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, minmax(0, 1fr))', gap: '0.85rem' }}>
+                  <div className="form-group">
+                    <label style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                      <span>Mã SKU</span>
+                      <button
+                        type="button"
+                        onClick={generateSku}
+                        style={{ background: 'none', border: 'none', color: '#ea580c', fontSize: '0.72rem', fontWeight: 700, cursor: 'pointer', padding: 0 }}
+                      >
+                        + Tạo mã
+                      </button>
+                    </label>
+                    <input
+                      className="form-control"
+                      value={newProductForm.sku}
+                      onChange={e => setNewProductForm({ ...newProductForm, sku: e.target.value.toUpperCase() })}
+                      placeholder="VD: RC-MINI-2KG"
+                    />
+                  </div>
+                  <div className="form-group">
+                    <label>Danh Mục *</label>
+                    <select className="form-control" value={newProductForm.category} onChange={e => setNewProductForm({ ...newProductForm, category: e.target.value })}>
+                      <option value="Thức ăn">Thức ăn</option>
+                      <option value="Bánh thưởng">Bánh thưởng</option>
+                      <option value="Cát vệ sinh">Cát vệ sinh</option>
+                      <option value="Phụ kiện">Phụ kiện</option>
+                      <option value="Mỹ phẩm Spa">Mỹ phẩm Spa</option>
+                      <option value="Dinh dưỡng">Dinh dưỡng</option>
+                      <option value="Y tế">Y tế</option>
+                    </select>
+                  </div>
+                  <div className="form-group">
+                    <label>Thương Hiệu</label>
+                    <input
+                      className="form-control"
+                      value={newProductForm.brand}
+                      onChange={e => setNewProductForm({ ...newProductForm, brand: e.target.value })}
+                      placeholder="VD: Royal Canin..."
+                    />
+                  </div>
+                </div>
+
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, minmax(0, 1fr))', gap: '0.85rem' }}>
+                  <div className="form-group">
+                    <label>Quy Cách / ĐVT</label>
+                    <input
+                      className="form-control"
+                      value={newProductForm.unit}
+                      onChange={e => setNewProductForm({ ...newProductForm, unit: e.target.value })}
+                      placeholder="VD: Túi 2kg, 500ml"
+                    />
+                  </div>
+                  <div className="form-group">
+                    <label>Đối Tượng Thú Cưng</label>
+                    <select className="form-control" value={newProductForm.targetPet} onChange={e => setNewProductForm({ ...newProductForm, targetPet: e.target.value })}>
+                      <option value="Chó & Mèo mọi lứa tuổi">Chó & Mèo mọi lứa tuổi</option>
+                      <option value="Chó con & cún đang phát triển">Chó con (Puppy)</option>
+                      <option value="Chó trưởng thành">Chó trưởng thành (Adult)</option>
+                      <option value="Mèo con từ 2 – 12 tháng tuổi">Mèo con (Kitten)</option>
+                      <option value="Mèo trưởng thành">Mèo trưởng thành</option>
+                      <option value="Mèo mọi giống loài">Mèo mọi giống loài</option>
+                    </select>
+                  </div>
+                  <div className="form-group">
+                    <label>Xuất Xứ</label>
+                    <input
+                      className="form-control"
+                      value={newProductForm.origin}
+                      onChange={e => setNewProductForm({ ...newProductForm, origin: e.target.value })}
+                      placeholder="VD: Pháp, Hàn Quốc..."
+                    />
+                  </div>
+                </div>
+
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, minmax(0, 1fr))', gap: '0.85rem' }}>
+                  <div className="form-group">
+                    <label>Nhà Cung Cấp</label>
+                    <select className="form-control" value={newProductForm.supplierName} onChange={e => setNewProductForm({ ...newProductForm, supplierName: e.target.value })}>
+                      {suppliers.map(s => <option key={s.id} value={s.name}>{s.name}</option>)}
+                    </select>
+                  </div>
+                  <div className="form-group">
+                    <label>Trạng Thái Hiển Thị Shop</label>
+                    <select className="form-control" value={newProductForm.status} onChange={e => setNewProductForm({ ...newProductForm, status: e.target.value })}>
+                      <option value="ACTIVE">✓ Đang mở bán trên Pet Shop</option>
+                      <option value="INACTIVE">⏸ Tạm ẩn khỏi cửa hàng</option>
+                    </select>
+                  </div>
+                </div>
+
+                {/* 3. Định giá & tồn kho */}
+                <div style={{ fontSize: '0.78rem', fontWeight: 800, color: '#ea580c', textTransform: 'uppercase', letterSpacing: '0.04em', margin: '0.85rem 0 0.6rem', paddingTop: '0.75rem', borderTop: '1px solid #f1f5f9' }}>
+                  2. Định Giá, Lợi Nhuận & Tồn Kho
+                </div>
+
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, minmax(0, 1fr))', gap: '0.85rem' }}>
+                  <div className="form-group">
+                    <label>Đơn Giá Bán (đ) *</label>
+                    <input type="number" min="0" step="1000" className="form-control" value={newProductForm.unitPrice} onChange={e => setNewProductForm({ ...newProductForm, unitPrice: e.target.value })} required />
+                  </div>
+                  <div className="form-group">
+                    <label>Giá Vốn Nhập (đ)</label>
+                    <input type="number" min="0" step="1000" className="form-control" value={newProductForm.costPrice} onChange={e => setNewProductForm({ ...newProductForm, costPrice: e.target.value })} />
+                  </div>
+                  <div className="form-group">
+                    <label>Hạn Sử Dụng (nếu có)</label>
+                    <input
+                      type="date"
+                      className="form-control"
+                      value={newProductForm.expiryDate}
+                      onChange={e => setNewProductForm({ ...newProductForm, expiryDate: e.target.value })}
+                    />
+                  </div>
+                </div>
+
+                {/* Realtime Profit Margin Strip */}
+                <div
+                  style={{
+                    background: profit >= 0 ? '#f0fdf4' : '#fef2f2',
+                    border: `1px solid ${profit >= 0 ? '#bbf7d0' : '#fecaca'}`,
+                    borderRadius: '10px',
+                    padding: '0.5rem 0.85rem',
+                    marginBottom: '0.85rem',
+                    display: 'flex',
+                    justifyContent: 'space-between',
+                    alignItems: 'center',
+                    flexWrap: 'wrap',
+                    gap: '0.5rem',
+                    fontSize: '0.8rem',
+                  }}
+                >
+                  <span style={{ color: '#475569', fontWeight: 600 }}>Lợi nhuận dự kiến / sản phẩm:</span>
+                  <strong style={{ color: profit >= 0 ? '#15803d' : '#dc2626' }}>
+                    {profit >= 0 ? '+' : ''}{profit.toLocaleString('vi-VN')} đ ({marginPct}% biên lợi nhuận)
+                  </strong>
+                </div>
+
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, minmax(0, 1fr))', gap: '0.85rem' }}>
+                  <div className="form-group">
+                    <label>{editingProduct ? 'Tồn Kho Hiện Tại *' : 'Tồn Ban Đầu *'}</label>
+                    <input type="number" min="0" className="form-control" value={newProductForm.currentStock} onChange={e => setNewProductForm({ ...newProductForm, currentStock: e.target.value })} required />
+                  </div>
+                  <div className="form-group">
+                    <label>Ngưỡng Cảnh Báo Min</label>
+                    <input type="number" min="0" className="form-control" value={newProductForm.minStockLevel} onChange={e => setNewProductForm({ ...newProductForm, minStockLevel: e.target.value })} />
+                  </div>
+                  <div className="form-group">
+                    <label>Ngưỡng Tối Đa Max</label>
+                    <input type="number" min="1" className="form-control" value={newProductForm.maxStockLevel} onChange={e => setNewProductForm({ ...newProductForm, maxStockLevel: e.target.value })} />
+                  </div>
+                </div>
+
+                {/* 4. Mô tả & hướng dẫn */}
+                <div style={{ fontSize: '0.78rem', fontWeight: 800, color: '#ea580c', textTransform: 'uppercase', letterSpacing: '0.04em', margin: '0.85rem 0 0.6rem', paddingTop: '0.75rem', borderTop: '1px solid #f1f5f9' }}>
+                  3. Mô Tả Chi Tiết & Hướng Dẫn Sử Dụng
+                </div>
+
+                <div className="form-group">
+                  <label>Mô Tả Sản Phẩm & Công Dụng</label>
+                  <textarea
+                    className="form-control"
+                    rows={3}
+                    value={newProductForm.description}
+                    onChange={e => setNewProductForm({ ...newProductForm, description: e.target.value })}
+                    placeholder="Thành phần chính, công dụng nổi bật, đặc điểm sản phẩm..."
+                  />
+                </div>
+                <div className="form-group">
+                  <label>Hướng Dẫn Sử Dụng & Bảo Quản</label>
+                  <textarea
+                    className="form-control"
+                    rows={2}
+                    value={newProductForm.usageGuide}
+                    onChange={e => setNewProductForm({ ...newProductForm, usageGuide: e.target.value })}
+                    placeholder="Liều lượng khuyến nghị, cách dùng và điều kiện bảo quản..."
+                  />
+                </div>
+
+                <div style={{ display: 'flex', gap: '0.75rem', justifyContent: 'flex-end', marginTop: '1.15rem', paddingTop: '0.85rem', borderTop: '1px solid #e2e8f0' }}>
+                  <button type="button" className="btn btn-secondary" onClick={() => { setShowAddProductModal(false); setEditingProduct(null); }}>Hủy</button>
+                  <button type="submit" className="btn btn-coral">{editingProduct ? 'Lưu Thay Đổi' : 'Lưu Sản Phẩm'}</button>
+                </div>
+              </form>
             </div>
-            <form onSubmit={handleCreateProductSubmit}>
-              <div className="form-group">
-                <label>Tên Sản Phẩm *</label>
-                <input className="form-control" value={newProductForm.name} onChange={e => setNewProductForm({ ...newProductForm, name: e.target.value })} placeholder="Nhập tên sản phẩm" required />
-              </div>
-              <div className="grid-2">
-                <div className="form-group">
-                  <label>Mã SKU</label>
-                  <input className="form-control" value={newProductForm.sku} onChange={e => setNewProductForm({ ...newProductForm, sku: e.target.value.toUpperCase() })} placeholder="Nhập mã SKU" />
-                </div>
-                <div className="form-group">
-                  <label>Danh Mục</label>
-                  <select className="form-control" value={newProductForm.category} onChange={e => setNewProductForm({ ...newProductForm, category: e.target.value })}>
-                    <option value="Thức ăn">Thức ăn</option>
-                    <option value="Bánh thưởng">Bánh thưởng</option>
-                    <option value="Cát vệ sinh">Cát vệ sinh</option>
-                    <option value="Phụ kiện">Phụ kiện</option>
-                    <option value="Mỹ phẩm Spa">Mỹ phẩm Spa</option>
-                    <option value="Dinh dưỡng">Dinh dưỡng</option>
-                    <option value="Y tế">Y tế</option>
-                  </select>
-                </div>
-              </div>
-              <div className="grid-2">
-                <div className="form-group">
-                  <label>Đơn Giá Bán (đ) *</label>
-                  <input type="number" min="0" className="form-control" value={newProductForm.unitPrice} onChange={e => setNewProductForm({ ...newProductForm, unitPrice: e.target.value })} required />
-                </div>
-                <div className="form-group">
-                  <label>Giá Vốn Nhập (đ)</label>
-                  <input type="number" min="0" className="form-control" value={newProductForm.costPrice} onChange={e => setNewProductForm({ ...newProductForm, costPrice: e.target.value })} />
-                </div>
-              </div>
-              <div className="grid-3">
-                <div className="form-group">
-                  <label>{editingProduct ? 'Tồn Kho Hiện Tại' : 'Tồn Ban Đầu *'}</label>
-                  <input type="number" min="0" className="form-control" value={newProductForm.currentStock} onChange={e => setNewProductForm({ ...newProductForm, currentStock: e.target.value })} required />
-                </div>
-                <div className="form-group">
-                  <label>Ngưỡng Min</label>
-                  <input type="number" min="0" className="form-control" value={newProductForm.minStockLevel} onChange={e => setNewProductForm({ ...newProductForm, minStockLevel: e.target.value })} />
-                </div>
-                <div className="form-group">
-                  <label>Ngưỡng Max</label>
-                  <input type="number" min="1" className="form-control" value={newProductForm.maxStockLevel} onChange={e => setNewProductForm({ ...newProductForm, maxStockLevel: e.target.value })} />
-                </div>
-              </div>
-              <div className="form-group">
-                <label>Nhà Cung Cấp</label>
-                <select className="form-control" value={newProductForm.supplierName} onChange={e => setNewProductForm({ ...newProductForm, supplierName: e.target.value })}>
-                  {suppliers.map(s => <option key={s.id} value={s.name}>{s.name}</option>)}
-                </select>
-              </div>
-              <div style={{ display: 'flex', gap: '0.75rem', justifyContent: 'flex-end', marginTop: '1rem' }}>
-                <button type="button" className="btn btn-secondary" onClick={() => { setShowAddProductModal(false); setEditingProduct(null); }}>Hủy</button>
-                <button type="submit" className="btn btn-coral">{editingProduct ? 'Lưu Thay Đổi' : 'Lưu Sản Phẩm'}</button>
-              </div>
-            </form>
           </div>
-        </div>
-      )}
+        );
+      })()}
 
       {/* ==================== MODAL: THÊM NHÀ CUNG CẤP ==================== */}
       {showAddSupplierModal && (

@@ -164,7 +164,19 @@ const getAllServices = async () => {
   });
 };
 
-const createNewService = async ({ name, description, durationMinutes, price, category }) => {
+const createNewService = async ({
+  name,
+  description,
+  durationMinutes,
+  price,
+  category,
+  image,
+  targetPet,
+  standard,
+  processSteps,
+  prepNote,
+  status,
+}) => {
   return await prisma.serviceCatalog.create({
     data: {
       name,
@@ -172,17 +184,32 @@ const createNewService = async ({ name, description, durationMinutes, price, cat
       durationMinutes: parseInt(durationMinutes || 45, 10),
       price: parseFloat(price),
       category: category || 'Spa & Grooming',
+      image: image ? String(image).trim() : null,
+      targetPet: targetPet ? String(targetPet).trim() : null,
+      standard: standard ? String(standard).trim() : null,
+      processSteps: processSteps ? String(processSteps).trim() : null,
+      prepNote: prepNote ? String(prepNote).trim() : null,
+      status: status === 'INACTIVE' ? 'INACTIVE' : 'ACTIVE',
     },
   });
 };
 
-const updateService = async (id, { name, description, durationMinutes, price, category }) => {
+const updateService = async (
+  id,
+  { name, description, durationMinutes, price, category, image, targetPet, standard, processSteps, prepNote, status }
+) => {
   const data = {};
   if (name !== undefined) data.name = name;
   if (description !== undefined) data.description = description;
   if (durationMinutes !== undefined) data.durationMinutes = parseInt(durationMinutes, 10);
   if (price !== undefined) data.price = parseFloat(price);
   if (category !== undefined) data.category = category;
+  if (image !== undefined) data.image = image ? String(image).trim() : null;
+  if (targetPet !== undefined) data.targetPet = targetPet ? String(targetPet).trim() : null;
+  if (standard !== undefined) data.standard = standard ? String(standard).trim() : null;
+  if (processSteps !== undefined) data.processSteps = processSteps ? String(processSteps).trim() : null;
+  if (prepNote !== undefined) data.prepNote = prepNote ? String(prepNote).trim() : null;
+  if (status !== undefined) data.status = status === 'INACTIVE' ? 'INACTIVE' : 'ACTIVE';
 
   return await prisma.serviceCatalog.update({
     where: { id },

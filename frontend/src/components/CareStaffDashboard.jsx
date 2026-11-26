@@ -7,6 +7,7 @@ import {
 import { getPetAvatar, getServiceImage, getProductImage, FALLBACK_IMAGES } from '../mediaAssets';
 import { toast, confirmModal } from './ToastNotification';
 import ServiceOrderHistoryPanel from './ServiceOrderHistoryPanel';
+import ImagePickerField from './ImagePickerField';
 
 export default function CareStaffDashboard({
   appointments = [],
@@ -42,17 +43,25 @@ export default function CareStaffDashboard({
   const [showCancelledApps, setShowCancelledApps] = useState(false);
 
   // 2. Services state
-  const [serviceSearch, setServiceSearch] = useState('');
-  const [serviceCatFilter, setServiceCatFilter] = useState('ALL');
-  const [showServiceModal, setShowServiceModal] = useState(false);
-  const [editingService, setEditingService] = useState(null);
-  const [serviceForm, setServiceForm] = useState({
+  const getEmptyServiceForm = () => ({
     name: '',
     category: 'Spa & Grooming',
     durationMinutes: 45,
     price: 200000,
-    description: ''
+    image: '',
+    targetPet: 'Chó & Mèo mọi lứa tuổi',
+    standard: '',
+    description: '',
+    processSteps: '',
+    prepNote: '',
+    status: 'ACTIVE',
   });
+
+  const [serviceSearch, setServiceSearch] = useState('');
+  const [serviceCatFilter, setServiceCatFilter] = useState('ALL');
+  const [showServiceModal, setShowServiceModal] = useState(false);
+  const [editingService, setEditingService] = useState(null);
+  const [serviceForm, setServiceForm] = useState(getEmptyServiceForm);
 
   // 3. Promotions state
   const [showPromoModal, setShowPromoModal] = useState(false);
@@ -184,7 +193,7 @@ export default function CareStaffDashboard({
 
   const openCreateService = () => {
     setEditingService(null);
-    setServiceForm({ name: '', category: 'Spa & Grooming', durationMinutes: 45, price: 200000, description: '' });
+    setServiceForm(getEmptyServiceForm());
     setShowServiceModal(true);
   };
 
@@ -195,7 +204,13 @@ export default function CareStaffDashboard({
       category: svc.category || 'Spa & Grooming',
       durationMinutes: svc.durationMinutes || 45,
       price: svc.price || 200000,
-      description: svc.description || ''
+      image: svc.image || '',
+      targetPet: svc.targetPet || 'Chó & Mèo mọi lứa tuổi',
+      standard: svc.standard || '',
+      description: svc.description || '',
+      processSteps: svc.processSteps || '',
+      prepNote: svc.prepNote || '',
+      status: svc.status === 'INACTIVE' ? 'INACTIVE' : 'ACTIVE',
     });
     setShowServiceModal(true);
   };
@@ -206,11 +221,22 @@ export default function CareStaffDashboard({
       toast.warning('Vui lòng nhập tên dịch vụ!', 'Thiếu Thông Tin');
       return;
     }
+    if ((Number(serviceForm.price) || 0) <= 0) {
+      toast.warning('Đơn giá dịch vụ phải lớn hơn 0 đ!', 'Giá Không Hợp Lệ');
+      return;
+    }
     const payload = {
       ...serviceForm,
       name: serviceForm.name.trim(),
-      durationMinutes: Number(serviceForm.durationMinutes) || 45,
+      durationMinutes: Math.max(10, Number(serviceForm.durationMinutes) || 45),
       price: Number(serviceForm.price) || 0,
+      image: (serviceForm.image || '').trim(),
+      targetPet: (serviceForm.targetPet || '').trim(),
+      standard: (serviceForm.standard || '').trim(),
+      description: (serviceForm.description || '').trim(),
+      processSteps: (serviceForm.processSteps || '').trim(),
+      prepNote: (serviceForm.prepNote || '').trim(),
+      status: serviceForm.status === 'INACTIVE' ? 'INACTIVE' : 'ACTIVE',
     };
     if (editingService) {
       if (onUpdateService) onUpdateService(editingService.id, payload);
@@ -934,7 +960,12 @@ export default function CareStaffDashboard({
                           style={{ width: 48, height: 48, borderRadius: '10px', objectFit: 'cover', border: '1px solid #e2e8f0', flexShrink: 0 }}
                         />
                         <div>
-                          <strong style={{ color: '#0f172a', fontSize: '0.9rem' }}>{s.name}</strong>
+                          <div style={{ display: 'flex', alignItems: 'center', gap: '6px', flexWrap: 'wrap' }}>
+                            <strong style={{ color: '#0f172a', fontSize: '0.9rem' }}>{s.name}</strong>
+                            {s.status === 'INACTIVE' && (
+                              <span className="badge badge-danger" style={{ fontSize: '0.68rem', padding: '1px 7px' }}>Tạm ngưng</span>
+                            )}
+                          </div>
                           <div style={{ fontSize: '0.76rem', color: '#64748b', maxWidth: 380, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
                             {s.description}
                           </div>
@@ -1468,24 +1499,54 @@ export default function CareStaffDashboard({
       {/* ==================== MODAL: THÊM / SỬA DỊCH VỤ ==================== */}
       {showServiceModal && (
         <div className="modal-overlay" onClick={(e) => { if (e.target === e.currentTarget) setShowServiceModal(false); }}>
-          <div className="modal-content animate-fade-in" style={{ maxWidth: 520 }}>
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.15rem' }}>
-              <h3 style={{ fontSize: '1.25rem', fontWeight: 800, color: '#0f172a' }}>
-                {editingService ? 'Chỉnh Sửa Dịch Vụ' : 'Thêm Dịch Vụ Mới'}
-              </h3>
-              <button type="button" onClick={() => setShowServiceModal(false)} style={{ background: '#f1f5f9', border: 'none', borderRadius: '50%', width: 32, height: 32, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+          <div
+            className="modal-content animate-fade-in"
+            style={{ maxWidth: 700, maxHeight: '90vh', overflowY: 'auto', padding: '1.5rem 1.75rem' }}
+          >
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem', paddingBottom: '0.75rem', borderBottom: '1px solid #e2e8f0' }}>
+              <div>
+                <h3 style={{ fontSize: '1.25rem', fontWeight: 800, color: '#0f172a', margin: 0 }}>
+                  {editingService ? 'Chỉnh Sửa Dịch Vụ' : 'Thêm Dịch Vụ Mới'}
+                </h3>
+                <p style={{ fontSize: '0.8rem', color: '#64748b', margin: '2px 0 0' }}>
+                  Cập nhật hình ảnh, giá niêm yết, đối tượng áp dụng & quy trình thực hiện chuẩn Petzera
+                </p>
+              </div>
+              <button type="button" onClick={() => setShowServiceModal(false)} style={{ background: '#f1f5f9', border: 'none', borderRadius: '50%', width: 34, height: 34, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
                 <X size={16} />
               </button>
             </div>
 
             <form onSubmit={handleSaveService}>
+              {/* 1. Hình ảnh dịch vụ */}
+              <ImagePickerField
+                label="Hình Ảnh Minh Họa Dịch Vụ (Tải từ máy hoặc dán URL)"
+                value={serviceForm.image}
+                fallbackPreview={editingService ? getServiceImage(editingService) : ''}
+                onChange={(img) => setServiceForm(prev => ({ ...prev, image: img }))}
+                aspect="service"
+                helperText="Khuyên dùng ảnh ngang (tỷ lệ 16:10 / 3:2) rõ nét về dịch vụ Spa, Tiêm phòng hoặc Khám thú y."
+              />
+
+              {/* 2. Thông tin cơ bản */}
+              <div style={{ fontSize: '0.78rem', fontWeight: 800, color: '#0284c7', textTransform: 'uppercase', letterSpacing: '0.04em', marginBottom: '0.6rem' }}>
+                1. Thông Tin Dịch Vụ & Định Giá
+              </div>
+
               <div className="form-group">
                 <label>Tên Dịch Vụ *</label>
-                <input className="form-control" value={serviceForm.name} onChange={e => setServiceForm({ ...serviceForm, name: e.target.value })} placeholder="Nhập tên dịch vụ" required />
+                <input
+                  className="form-control"
+                  value={serviceForm.name}
+                  onChange={e => setServiceForm({ ...serviceForm, name: e.target.value })}
+                  placeholder="VD: Spa Grooming Trọn Gói Cắt Tỉa & Tắm Thảo Dược 7 Bước"
+                  required
+                />
               </div>
-              <div className="grid-2">
+
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, minmax(0, 1fr))', gap: '0.85rem' }}>
                 <div className="form-group">
-                  <label>Danh Mục</label>
+                  <label>Danh Mục *</label>
                   <select className="form-control" value={serviceForm.category} onChange={e => setServiceForm({ ...serviceForm, category: e.target.value })}>
                     <option value="Spa & Grooming">Spa & Grooming</option>
                     <option value="Y Tế & Tiêm Phòng">Y Tế & Tiêm Phòng</option>
@@ -1493,19 +1554,99 @@ export default function CareStaffDashboard({
                   </select>
                 </div>
                 <div className="form-group">
-                  <label>Đơn Giá (VNĐ) *</label>
-                  <input type="number" min="0" className="form-control" value={serviceForm.price} onChange={e => setServiceForm({ ...serviceForm, price: e.target.value })} required />
+                  <label>Đơn Giá Niêm Yết (VNĐ) *</label>
+                  <input
+                    type="number"
+                    min="0"
+                    step="10000"
+                    className="form-control"
+                    value={serviceForm.price}
+                    onChange={e => setServiceForm({ ...serviceForm, price: e.target.value })}
+                    required
+                  />
+                </div>
+                <div className="form-group">
+                  <label>Thời Lượng (phút) *</label>
+                  <input
+                    type="number"
+                    min="10"
+                    step="5"
+                    className="form-control"
+                    value={serviceForm.durationMinutes}
+                    onChange={e => setServiceForm({ ...serviceForm, durationMinutes: e.target.value })}
+                    required
+                  />
                 </div>
               </div>
-              <div className="form-group">
-                <label>Thời Lượng Thực Hiện (phút)</label>
-                <input type="number" min="10" className="form-control" value={serviceForm.durationMinutes} onChange={e => setServiceForm({ ...serviceForm, durationMinutes: e.target.value })} />
+
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, minmax(0, 1fr))', gap: '0.85rem' }}>
+                <div className="form-group">
+                  <label>Đối Tượng Thú Cưng</label>
+                  <select className="form-control" value={serviceForm.targetPet} onChange={e => setServiceForm({ ...serviceForm, targetPet: e.target.value })}>
+                    <option value="Chó & Mèo mọi lứa tuổi">Chó & Mèo mọi lứa tuổi</option>
+                    <option value="Chỉ dành cho Chó (mọi giống & cân nặng)">Chỉ dành cho Chó</option>
+                    <option value="Chỉ dành cho Mèo (mọi giống & độ tuổi)">Chỉ dành cho Mèo</option>
+                    <option value="Chó / Mèo con từ 2 – 12 tháng tuổi">Chó / Mèo con (2–12 tháng)</option>
+                    <option value="Chó / Mèo sinh sản & hậu phẫu">Chó / Mèo sinh sản</option>
+                  </select>
+                </div>
+                <div className="form-group">
+                  <label>Tiêu Chuẩn / Phụ Trách</label>
+                  <input
+                    className="form-control"
+                    value={serviceForm.standard}
+                    onChange={e => setServiceForm({ ...serviceForm, standard: e.target.value })}
+                    placeholder="VD: Master Groomer • Vô trùng 100%"
+                  />
+                </div>
+                <div className="form-group">
+                  <label>Trạng Thái Tiếp Nhận</label>
+                  <select className="form-control" value={serviceForm.status} onChange={e => setServiceForm({ ...serviceForm, status: e.target.value })}>
+                    <option value="ACTIVE">✓ Đang tiếp nhận đặt lịch</option>
+                    <option value="INACTIVE">⏸ Tạm ngưng dịch vụ</option>
+                  </select>
+                </div>
               </div>
-              <div className="form-group">
-                <label>Mô Tả Chi Tiết</label>
-                <textarea className="form-control" rows={3} value={serviceForm.description} onChange={e => setServiceForm({ ...serviceForm, description: e.target.value })} placeholder="Mô tả quy trình, quyền lợi dịch vụ..." />
+
+              {/* 3. Mô tả, quy trình & lưu ý */}
+              <div style={{ fontSize: '0.78rem', fontWeight: 800, color: '#0284c7', textTransform: 'uppercase', letterSpacing: '0.04em', margin: '0.85rem 0 0.6rem', paddingTop: '0.75rem', borderTop: '1px solid #f1f5f9' }}>
+                2. Mô Tả, Quy Trình & Lưu Ý Cho Khách Hàng
               </div>
-              <div style={{ display: 'flex', gap: '0.75rem', justifyContent: 'flex-end', marginTop: '1.25rem' }}>
+
+              <div className="form-group">
+                <label>Mô Tả Chi Tiết Dịch Vụ</label>
+                <textarea
+                  className="form-control"
+                  rows={3}
+                  value={serviceForm.description}
+                  onChange={e => setServiceForm({ ...serviceForm, description: e.target.value })}
+                  placeholder="Mô tả lợi ích nổi bật, thuốc/mỹ phẩm sử dụng và quyền lợi khách hàng nhận được..."
+                />
+              </div>
+
+              <div className="form-group">
+                <label>Quy Trình Thực Hiện (mỗi bước 1 dòng — hiển thị thành từng bước trên trang dịch vụ)</label>
+                <textarea
+                  className="form-control"
+                  rows={3}
+                  value={serviceForm.processSteps}
+                  onChange={e => setServiceForm({ ...serviceForm, processSteps: e.target.value })}
+                  placeholder={'Kiểm tra da lông, tai móng và tư vấn kiểu dáng phù hợp\nTắm thảo dược khử mùi và massage thư giãn\nSấy chải phồng lông, cắt tỉa tạo kiểu chuẩn form\nXịt dưỡng mượt lông và bàn giao kèm sổ theo dõi'}
+                />
+              </div>
+
+              <div className="form-group">
+                <label>Lưu Ý Chuẩn Bị Cho Chủ Nuôi</label>
+                <textarea
+                  className="form-control"
+                  rows={2}
+                  value={serviceForm.prepNote}
+                  onChange={e => setServiceForm({ ...serviceForm, prepNote: e.target.value })}
+                  placeholder="VD: Không cho bé ăn quá no trước giờ tắm 1 tiếng; mang theo sổ tiêm phòng nếu có..."
+                />
+              </div>
+
+              <div style={{ display: 'flex', gap: '0.75rem', justifyContent: 'flex-end', marginTop: '1.15rem', paddingTop: '0.85rem', borderTop: '1px solid #e2e8f0' }}>
                 <button type="button" className="btn btn-secondary" onClick={() => setShowServiceModal(false)}>Hủy</button>
                 <button type="submit" className="btn btn-coral">{editingService ? 'Lưu Thay Đổi' : 'Thêm Dịch Vụ'}</button>
               </div>
