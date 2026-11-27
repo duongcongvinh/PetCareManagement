@@ -41,18 +41,21 @@ router.put('/appointments/:id/status', authenticateToken, authorizeRoles('CARE_S
 router.put('/appointments/:id/cancel', authenticateToken, appointmentController.cancelAppointment);
 
 // --- 4. Inventory & Supplier Routes ---
-router.get('/products', authenticateToken, inventoryController.getProducts);
+router.get('/products', inventoryController.getProducts);
 router.post('/products', authenticateToken, authorizeRoles('WAREHOUSE_STAFF', 'ADMIN'), inventoryController.createProduct);
 router.put('/products/:id', authenticateToken, authorizeRoles('WAREHOUSE_STAFF', 'ADMIN'), inventoryController.updateProduct);
 router.put('/products/:id/stock', authenticateToken, authorizeRoles('WAREHOUSE_STAFF', 'ADMIN'), inventoryController.updateStock);
 router.delete('/products/:id', authenticateToken, authorizeRoles('WAREHOUSE_STAFF', 'ADMIN'), inventoryController.deleteProduct);
 router.get('/products/low-stock', authenticateToken, authorizeRoles('WAREHOUSE_STAFF', 'ADMIN'), inventoryController.getLowStockAlerts);
-router.get('/suppliers', authenticateToken, authorizeRoles('WAREHOUSE_STAFF', 'ADMIN'), inventoryController.getSuppliers);
+router.get('/suppliers', inventoryController.getSuppliers);
 router.post('/suppliers', authenticateToken, authorizeRoles('WAREHOUSE_STAFF', 'ADMIN'), inventoryController.createSupplier);
+router.put('/suppliers/:id', authenticateToken, authorizeRoles('WAREHOUSE_STAFF', 'ADMIN'), inventoryController.updateSupplier);
+router.delete('/suppliers/:id', authenticateToken, authorizeRoles('WAREHOUSE_STAFF', 'ADMIN'), inventoryController.deleteSupplier);
 
 // --- 5. E-Commerce Order & payOS Payment Routes ---
 router.post('/orders', authenticateToken, orderController.createOrder);
 router.get('/orders', authenticateToken, orderController.getOrders);
+router.put('/orders/:id/status', authenticateToken, authorizeRoles('CARE_STAFF', 'WAREHOUSE_STAFF', 'ADMIN'), orderController.updateOrderStatus);
 router.post('/payment/payos/create', paymentController.createPayOSPayment);
 router.get('/payment/payos/status/:orderCode', paymentController.getPayOSPaymentStatus);
 router.post('/payment/payos/cancel/:orderCode', paymentController.cancelPayOSPayment);
@@ -60,6 +63,8 @@ router.post('/payment/payos-webhook', paymentController.handlePayOSWebhook);
 
 // --- 6. AI Smart Forecasting & Reorder Proposal Routes ---
 router.get('/forecasting/proposals', authenticateToken, authorizeRoles('WAREHOUSE_STAFF', 'ADMIN'), forecastingController.getProposals);
+router.post('/forecasting/proposals', authenticateToken, authorizeRoles('WAREHOUSE_STAFF', 'ADMIN'), forecastingController.createProposal);
+router.delete('/forecasting/proposals/:id', authenticateToken, authorizeRoles('WAREHOUSE_STAFF', 'ADMIN'), forecastingController.deleteProposal);
 router.post('/forecasting/trigger', authenticateToken, authorizeRoles('WAREHOUSE_STAFF', 'ADMIN'), forecastingController.triggerAIForecast);
 router.post('/forecasting/seasonal', authenticateToken, authorizeRoles('WAREHOUSE_STAFF', 'ADMIN'), forecastingController.seasonalForecast);
 router.post('/forecasting/order-history', authenticateToken, authorizeRoles('WAREHOUSE_STAFF', 'ADMIN'), forecastingController.orderHistoryForecast);
@@ -84,7 +89,19 @@ router.get('/sync/live-state', (req, res) => {
 });
 
 router.post('/sync/live-state', (req, res) => {
-  const { appointments, orders, products, deletedProductIds, pets, services, promotions, users, reviews } = req.body;
+  const {
+    appointments,
+    orders,
+    products,
+    deletedProductIds,
+    pets,
+    services,
+    promotions,
+    users,
+    reviews,
+    auditLogs,
+    supplierCategoryOverrides,
+  } = req.body;
   if (!liveSyncStore) liveSyncStore = {};
   if (appointments !== undefined) liveSyncStore.appointments = appointments;
   if (orders !== undefined) liveSyncStore.orders = orders;
@@ -95,6 +112,8 @@ router.post('/sync/live-state', (req, res) => {
   if (promotions !== undefined) liveSyncStore.promotions = promotions;
   if (users !== undefined) liveSyncStore.users = users;
   if (reviews !== undefined) liveSyncStore.reviews = reviews;
+  if (auditLogs !== undefined) liveSyncStore.auditLogs = auditLogs;
+  if (supplierCategoryOverrides !== undefined) liveSyncStore.supplierCategoryOverrides = supplierCategoryOverrides;
   liveSyncStore.lastUpdated = Date.now();
   res.json({ status: 'ok', data: liveSyncStore });
 });

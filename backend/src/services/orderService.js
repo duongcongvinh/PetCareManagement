@@ -77,7 +77,22 @@ const getOrdersByUser = async (user) => {
   });
 };
 
+const updateOrderStatus = async (id, status) => {
+  if (!/^[0-9a-fA-F]{24}$/.test(String(id || ''))) {
+    throw new Error('Mã đơn hàng không hợp lệ.');
+  }
+  return await prisma.order.update({
+    where: { id },
+    data: { status },
+    include: {
+      customer: { select: { fullName: true, phone: true, email: true } },
+      items: { include: { product: true } },
+    },
+  });
+};
+
 module.exports = {
   createNewOrder,
   getOrdersByUser,
+  updateOrderStatus,
 };

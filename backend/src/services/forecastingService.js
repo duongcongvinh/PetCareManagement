@@ -179,6 +179,33 @@ const updateProposal = async (id, status) => {
   return { updated, proposal };
 };
 
+const createManualProposal = async ({ productId, suggestedQuantity, reason, confidenceScore }) => {
+  if (!productId || !/^[0-9a-fA-F]{24}$/.test(String(productId))) {
+    throw new Error('Mã sản phẩm không hợp lệ.');
+  }
+  return await prisma.reorderProposal.create({
+    data: {
+      productId,
+      suggestedQuantity: Math.max(1, parseInt(suggestedQuantity, 10) || 15),
+      reason: reason || 'Đề xuất nhập kho bổ sung.',
+      confidenceScore: parseFloat(confidenceScore) || 0.95,
+      status: 'DRAFT',
+    },
+    include: {
+      product: {
+        include: { supplier: true },
+      },
+    },
+  });
+};
+
+const deleteProposal = async (id) => {
+  if (!/^[0-9a-fA-F]{24}$/.test(String(id || ''))) {
+    throw new Error('Mã phiếu đề xuất không hợp lệ.');
+  }
+  return await prisma.reorderProposal.delete({ where: { id } });
+};
+
 module.exports = {
   getAllProposals,
   triggerForecastEngine,
@@ -186,4 +213,6 @@ module.exports = {
   runOrderHistoryForecast,
   runInventoryRiskForecast,
   updateProposal,
+  createManualProposal,
+  deleteProposal,
 };

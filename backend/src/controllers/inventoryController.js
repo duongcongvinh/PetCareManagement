@@ -93,6 +93,27 @@ const createSupplier = async (req, res) => {
   }
 };
 
+const updateSupplier = async (req, res) => {
+  try {
+    const supplier = await inventoryService.updateSupplierById(req.params.id, req.body);
+    return res.json({
+      message: 'Cập nhật nhà cung cấp thành công!',
+      supplier,
+    });
+  } catch (error) {
+    return res.status(400).json({ message: error.message || 'Lỗi khi cập nhật nhà cung cấp.' });
+  }
+};
+
+const deleteSupplier = async (req, res) => {
+  try {
+    await inventoryService.deleteSupplierById(req.params.id);
+    return res.json({ message: 'Đã xóa nhà cung cấp thành công!' });
+  } catch (error) {
+    return res.status(400).json({ message: error.message || 'Lỗi khi xóa nhà cung cấp.' });
+  }
+};
+
 module.exports = {
   getProducts,
   createProduct,
@@ -102,4 +123,6 @@ module.exports = {
   getLowStockAlerts,
   getSuppliers,
   createSupplier,
+  updateSupplier,
+  deleteSupplier,
 };

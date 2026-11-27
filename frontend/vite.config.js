@@ -18,7 +18,7 @@ function customUrlLoggerPlugin() {
 export default defineConfig({
   plugins: [react(), customUrlLoggerPlugin()],
   server: {
-    host: '0.0.0.0',
+    host: '::',
     port: 3000,
     watch: {
       usePolling: true,
@@ -26,7 +26,7 @@ export default defineConfig({
     },
     proxy: {
       '/api': {
-        target: process.env.BACKEND_PROXY_URL || 'http://localhost:5000',
+        target: process.env.BACKEND_PROXY_URL || 'http://127.0.0.1:5000',
         changeOrigin: true,
       },
     },

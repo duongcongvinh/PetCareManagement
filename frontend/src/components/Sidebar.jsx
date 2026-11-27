@@ -1,9 +1,18 @@
 import React from 'react';
 import {
-  LayoutDashboard, Calendar, PawPrint, Package, Brain, ShoppingBag, Users, Tag, Shield, FileText, CheckSquare, Activity, TrendingUp, Building2, Settings, History
+  LayoutDashboard, BarChart3, Calendar, PawPrint, Package, Brain, ShoppingBag, Users, Tag, Shield, FileText, CheckSquare, Activity, TrendingUp, Building2, Settings, History, Sparkles, ChevronLeft
 } from 'lucide-react';
 
-export default function Sidebar({ activeRole, activeTab, onTabChange, pendingProposalsCount = 0, pendingOrdersCount = 0 }) {
+export default function Sidebar({
+  activeRole,
+  activeTab,
+  onTabChange,
+  pendingProposalsCount = 0,
+  pendingOrdersCount = 0,
+  currentUser,
+  isCollapsed = false,
+  onToggleCollapse
+}) {
   const getRoleTheme = (role) => {
     switch (role) {
       case 'CARE_STAFF':
@@ -36,6 +45,154 @@ export default function Sidebar({ activeRole, activeTab, onTabChange, pendingPro
         };
     }
   };
+
+  // Dedicated Executive Midnight-Slate Sidebar for ADMIN actor (8 standardized modules)
+  if (activeRole === 'ADMIN') {
+    const adminGroups = [
+      {
+        label: 'Điều hành',
+        items: [
+          { id: 'overview', label: 'Tổng Quan Hệ Thống', icon: LayoutDashboard },
+          { id: 'reports-admin', label: 'Thống Kê & Báo Cáo', icon: BarChart3 },
+        ],
+      },
+      {
+        label: 'Kho hàng & Dịch vụ',
+        items: [
+          { id: 'catalog-admin', label: 'Quản Lý Kho & Dịch Vụ', icon: Package },
+          { id: 'approve-proposals', label: 'Phê Duyệt Nhập Hàng', icon: CheckSquare, badgeCount: pendingProposalsCount },
+          { id: 'suppliers-admin', label: 'Quản Lý Nhà Cung Cấp', icon: Building2 },
+        ],
+      },
+      {
+        label: 'Nhân sự & Bảo mật',
+        items: [
+          { id: 'accounts-admin', label: 'Quản Lý Tài Khoản', icon: Users },
+          { id: 'roles-admin', label: 'Phân Quyền Người Dùng', icon: Shield },
+        ],
+      },
+      {
+        label: 'Hệ thống',
+        items: [
+          { id: 'system-settings', label: 'Cấu Hình & Nhật Ký', icon: Settings },
+        ],
+      },
+    ];
+
+    const allAdminIds = adminGroups.flatMap((g) => g.items.map((i) => i.id));
+    const effectiveTab = allAdminIds.includes(activeTab) ? activeTab : 'overview';
+
+    return (
+      <aside
+        className={`staff-sidebar admin-sidebar${isCollapsed ? ' is-collapsed' : ''}`}
+        aria-label="Menu quản trị Admin"
+      >
+        {onToggleCollapse && (
+          <button
+            type="button"
+            onClick={onToggleCollapse}
+            className="admin-sidebar-edge-toggle"
+            title={isCollapsed ? 'Mở rộng thanh menu' : 'Thu gọn thanh menu'}
+            aria-label={isCollapsed ? 'Mở rộng thanh menu' : 'Thu gọn thanh menu'}
+            aria-expanded={!isCollapsed}
+          >
+            <ChevronLeft size={15} className="admin-sidebar-edge-icon" />
+          </button>
+        )}
+
+        {isCollapsed ? (
+          <div
+            className="admin-sidebar-compact-emblem staff-sidebar-header"
+            title={`Administrator — ${currentUser?.email || 'Petzera Admin'}`}
+          >
+            <Shield size={19} color="#c4b5fd" />
+          </div>
+        ) : (
+          <div className="admin-sidebar-brand-card staff-sidebar-header">
+            <div className="admin-sidebar-role-tag">
+              <Shield size={12} />
+              <span>ADMINISTRATOR</span>
+            </div>
+            <div className="admin-sidebar-role-title">Trung Tâm Điều Hành</div>
+            <div className="admin-sidebar-role-sub">
+              {currentUser?.email || 'Quản trị toàn hệ thống Petzera'}
+            </div>
+          </div>
+        )}
+
+        <nav className="admin-sidebar-nav">
+          {adminGroups.map((group, groupIdx) => (
+            <div key={group.label} className="admin-sidebar-group">
+              {isCollapsed ? (
+                groupIdx > 0 && <div className="admin-sidebar-compact-divider staff-sidebar-header" />
+              ) : (
+                <div className="admin-sidebar-group-label staff-sidebar-header">
+                  {group.label}
+                </div>
+              )}
+              <div className="admin-sidebar-group-items">
+                {group.items.map((item) => {
+                  const Icon = item.icon;
+                  const isActive = effectiveTab === item.id;
+                  return (
+                    <button
+                      key={item.id}
+                      type="button"
+                      onClick={() => onTabChange(item.id)}
+                      className={`admin-nav-item${isActive ? ' is-active' : ''}`}
+                      aria-current={isActive ? 'page' : undefined}
+                      title={isCollapsed ? `${item.label}${item.badgeCount > 0 ? ` (${item.badgeCount})` : ''}` : undefined}
+                    >
+                      <span className="admin-nav-item-main">
+                        <span className="admin-nav-icon">
+                          <Icon size={18} />
+                        </span>
+                        {!isCollapsed && <span className="admin-nav-label">{item.label}</span>}
+                      </span>
+                      {item.badgeCount > 0 && (
+                        <span
+                          className={`admin-nav-badge${isCollapsed ? ' is-compact' : ''}`}
+                          title={`${item.badgeCount} phiếu đang chờ phê duyệt`}
+                        >
+                          {item.badgeCount}
+                        </span>
+                      )}
+                      {isCollapsed && (
+                        <span className="admin-nav-tooltip" role="tooltip">
+                          {item.label}
+                          {item.badgeCount > 0 ? ` (${item.badgeCount})` : ''}
+                        </span>
+                      )}
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+          ))}
+        </nav>
+
+        {isCollapsed ? (
+          <div
+            className="admin-sidebar-footer-compact staff-sidebar-header"
+            title="RBAC & AI Forecasting v2 đang hoạt động"
+          >
+            <span className="admin-sidebar-status-dot" />
+          </div>
+        ) : (
+          <div className="admin-sidebar-footer staff-sidebar-header">
+            <div className="admin-sidebar-status-row">
+              <span className="admin-sidebar-status-dot" />
+              <span>RBAC &amp; AI Forecasting v2</span>
+            </div>
+            <div className="admin-sidebar-status-meta">
+              <Sparkles size={12} />
+              <span>8 phân hệ quản trị chuẩn hóa</span>
+            </div>
+          </div>
+        )}
+      </aside>
+    );
+  }
 
   // Menu phân chia 1-1 theo sơ đồ Use Case tổng quát của hệ thống
   const getNavItems = () => {
@@ -103,7 +260,7 @@ export default function Sidebar({ activeRole, activeTab, onTabChange, pendingPro
         <div style={{ fontSize: '0.68rem', fontWeight: 700, opacity: 0.85, letterSpacing: '0.6px' }}>
           VAI TRÒ HỆ THỐNG
         </div>
-        <div style={{ fontSize: '0.98rem', fontWeight: 900, marginTop: '2px' }}>
+        <div style={{ fontSize: '0.98rem', fontWeight: 800, marginTop: '2px' }}>
           {theme.title}
         </div>
         <div style={{ fontSize: '0.75rem', opacity: 0.9, marginTop: '2px' }}>

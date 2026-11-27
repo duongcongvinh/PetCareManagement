@@ -7,6 +7,18 @@ const getHeaders = (token) => ({
   ...(token ? { 'Authorization': `Bearer ${token}` } : {})
 });
 
+// Parse JSON while preserving arrays and annotating objects with HTTP status metadata
+const parseResponse = async (res) => {
+  let data = null;
+  try {
+    data = await res.json();
+  } catch (e) {
+    data = {};
+  }
+  if (Array.isArray(data)) return data;
+  return { ...(data || {}), _ok: res.ok, _httpStatus: res.status };
+};
+
 export const apiService = {
   // Auth APIs (hỗ trợ cả Email và Số điện thoại, tách biệt cổng CUSTOMER / STAFF)
   login: async (identifier, password, portal) => {
@@ -98,8 +110,8 @@ export const apiService = {
 
   // Pet APIs
   getPets: async (token) => {
-    const res = await fetch(`${API_BASE_URL}/pets`, { headers: getHeaders(token) });
-    return res.json();
+    const res = await fetch(`${API_BASE_URL}/pets`, { headers: getHeaders(token), cache: 'no-store' });
+    return parseResponse(res);
   },
 
   createPet: async (petData, token) => {
@@ -108,7 +120,7 @@ export const apiService = {
       headers: getHeaders(token),
       body: JSON.stringify(petData)
     });
-    return res.json();
+    return parseResponse(res);
   },
 
   updatePet: async (id, petData, token) => {
@@ -130,7 +142,7 @@ export const apiService = {
 
   // Service & Appointment APIs
   getServices: async () => {
-    const res = await fetch(`${API_BASE_URL}/services`);
+    const res = await fetch(`${API_BASE_URL}/services`, { cache: 'no-store' });
     return res.json();
   },
 
@@ -161,8 +173,8 @@ export const apiService = {
   },
 
   getAppointments: async (token) => {
-    const res = await fetch(`${API_BASE_URL}/appointments`, { headers: getHeaders(token) });
-    return res.json();
+    const res = await fetch(`${API_BASE_URL}/appointments`, { headers: getHeaders(token), cache: 'no-store' });
+    return parseResponse(res);
   },
 
   createAppointment: async (appointmentData, token) => {
@@ -202,8 +214,8 @@ export const apiService = {
 
   // Product & Inventory APIs
   getProducts: async (token) => {
-    const res = await fetch(`${API_BASE_URL}/products`, { headers: getHeaders(token) });
-    return res.json();
+    const res = await fetch(`${API_BASE_URL}/products`, { headers: getHeaders(token), cache: 'no-store' });
+    return parseResponse(res);
   },
 
   createProduct: async (productData, token) => {
@@ -212,7 +224,7 @@ export const apiService = {
       headers: getHeaders(token),
       body: JSON.stringify(productData)
     });
-    return res.json();
+    return parseResponse(res);
   },
 
   updateProduct: async (id, productData, token) => {
@@ -221,7 +233,7 @@ export const apiService = {
       headers: getHeaders(token),
       body: JSON.stringify(productData)
     });
-    return res.json();
+    return parseResponse(res);
   },
 
   updateStock: async (id, type, quantity, note, token, thresholds = {}) => {
@@ -230,7 +242,7 @@ export const apiService = {
       headers: getHeaders(token),
       body: JSON.stringify({ type, quantity, note, ...thresholds })
     });
-    return res.json();
+    return parseResponse(res);
   },
 
   deleteProduct: async (id, token) => {
@@ -238,12 +250,12 @@ export const apiService = {
       method: 'DELETE',
       headers: getHeaders(token)
     });
-    return res.json();
+    return parseResponse(res);
   },
 
   getSuppliers: async (token) => {
-    const res = await fetch(`${API_BASE_URL}/suppliers`, { headers: getHeaders(token) });
-    return res.json();
+    const res = await fetch(`${API_BASE_URL}/suppliers`, { headers: getHeaders(token), cache: 'no-store' });
+    return parseResponse(res);
   },
 
   createSupplier: async (supplierData, token) => {
@@ -252,17 +264,51 @@ export const apiService = {
       headers: getHeaders(token),
       body: JSON.stringify(supplierData)
     });
-    return res.json();
+    return parseResponse(res);
   },
 
-  // Order APIs (Auto PostgreSQL Stock Deduction)
+  updateSupplier: async (id, supplierData, token) => {
+    const res = await fetch(`${API_BASE_URL}/suppliers/${id}`, {
+      method: 'PUT',
+      headers: getHeaders(token),
+      body: JSON.stringify(supplierData)
+    });
+    return parseResponse(res);
+  },
+
+  deleteSupplier: async (id, token) => {
+    const res = await fetch(`${API_BASE_URL}/suppliers/${id}`, {
+      method: 'DELETE',
+      headers: getHeaders(token)
+    });
+    return parseResponse(res);
+  },
+
+  // Order APIs (Auto MongoDB Stock Deduction)
+  getOrders: async (token) => {
+    const res = await fetch(`${API_BASE_URL}/orders`, {
+      headers: getHeaders(token),
+      cache: 'no-store'
+    });
+    return parseResponse(res);
+  },
+
   createOrder: async (items, token) => {
     const res = await fetch(`${API_BASE_URL}/orders`, {
       method: 'POST',
       headers: getHeaders(token),
       body: JSON.stringify({ items })
     });
-    return res.json();
+    return parseResponse(res);
+  },
+
+  updateOrderStatus: async (id, status, token) => {
+    const res = await fetch(`${API_BASE_URL}/orders/${id}/status`, {
+      method: 'PUT',
+      headers: getHeaders(token),
+      body: JSON.stringify({ status })
+    });
+    return parseResponse(res);
   },
 
   // payOS Real-time VietQR Payment Gateway APIs
@@ -295,8 +341,25 @@ export const apiService = {
 
   // AI Forecasting & Reorder Proposal APIs
   getProposals: async (token) => {
-    const res = await fetch(`${API_BASE_URL}/forecasting/proposals`, { headers: getHeaders(token) });
-    return res.json();
+    const res = await fetch(`${API_BASE_URL}/forecasting/proposals`, { headers: getHeaders(token), cache: 'no-store' });
+    return parseResponse(res);
+  },
+
+  createProposal: async (proposalData, token) => {
+    const res = await fetch(`${API_BASE_URL}/forecasting/proposals`, {
+      method: 'POST',
+      headers: getHeaders(token),
+      body: JSON.stringify(proposalData)
+    });
+    return parseResponse(res);
+  },
+
+  deleteProposal: async (id, token) => {
+    const res = await fetch(`${API_BASE_URL}/forecasting/proposals/${id}`, {
+      method: 'DELETE',
+      headers: getHeaders(token)
+    });
+    return parseResponse(res);
   },
 
   triggerAIForecast: async (token) => {
@@ -304,7 +367,7 @@ export const apiService = {
       method: 'POST',
       headers: getHeaders(token)
     });
-    return res.json();
+    return parseResponse(res);
   },
 
   updateProposalStatus: async (id, status, token) => {
@@ -313,7 +376,7 @@ export const apiService = {
       headers: getHeaders(token),
       body: JSON.stringify({ status })
     });
-    return res.json();
+    return parseResponse(res);
   },
 
   triggerSeasonalForecast: async (historicalMonths, options = {}, token = null) => {

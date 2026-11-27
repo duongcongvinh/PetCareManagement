@@ -7,6 +7,19 @@ const getAllProducts = async () => {
   });
 };
 
+const resolveSupplierId = async (supplierId, supplierName) => {
+  if (supplierId && /^[0-9a-fA-F]{24}$/.test(String(supplierId))) {
+    return supplierId;
+  }
+  if (supplierName && String(supplierName).trim()) {
+    const found = await prisma.supplier.findFirst({
+      where: { name: { contains: String(supplierName).trim(), mode: 'insensitive' } },
+    });
+    if (found) return found.id;
+  }
+  return null;
+};
+
 const createNewProduct = async ({
   name,
   category,
@@ -17,6 +30,7 @@ const createNewProduct = async ({
   minStockLevel,
   maxStockLevel,
   supplierId,
+  supplierName,
   image,
   brand,
   unit,
@@ -27,9 +41,7 @@ const createNewProduct = async ({
   usageGuide,
   status,
 }) => {
-  const validSupplierId =
-    supplierId && /^[0-9a-fA-F]{24}$/.test(String(supplierId)) ? String(supplierId) : null;
-
+  const resolvedSupId = await resolveSupplierId(supplierId, supplierName);
   const product = await prisma.product.create({
     data: {
       name,
@@ -40,7 +52,7 @@ const createNewProduct = async ({
       currentStock: parseInt(currentStock || 0, 10),
       minStockLevel: parseInt(minStockLevel || 10, 10),
       maxStockLevel: parseInt(maxStockLevel || 100, 10),
-      supplierId: validSupplierId,
+      supplierId: resolvedSupId,
       image: image ? String(image).trim() : null,
       brand: brand ? String(brand).trim() : null,
       unit: unit ? String(unit).trim() : null,
@@ -51,6 +63,7 @@ const createNewProduct = async ({
       usageGuide: usageGuide ? String(usageGuide).trim() : null,
       status: status === 'INACTIVE' ? 'INACTIVE' : 'ACTIVE',
     },
+    include: { supplier: true },
   });
 
   if (product.currentStock > 0) {
@@ -136,6 +149,7 @@ const updateProduct = async (
     minStockLevel,
     maxStockLevel,
     supplierId,
+    supplierName,
     image,
     brand,
     unit,
@@ -164,8 +178,9 @@ const updateProduct = async (
   if (currentStock !== undefined && !Number.isNaN(parseInt(currentStock, 10))) data.currentStock = Math.max(0, parseInt(currentStock, 10));
   if (minStockLevel !== undefined && !Number.isNaN(parseInt(minStockLevel, 10))) data.minStockLevel = Math.max(0, parseInt(minStockLevel, 10));
   if (maxStockLevel !== undefined && !Number.isNaN(parseInt(maxStockLevel, 10))) data.maxStockLevel = Math.max(1, parseInt(maxStockLevel, 10));
-  if (supplierId !== undefined) {
-    data.supplierId = supplierId && /^[0-9a-fA-F]{24}$/.test(String(supplierId)) ? String(supplierId) : null;
+  if (supplierId !== undefined || supplierName !== undefined) {
+    const resolved = await resolveSupplierId(supplierId, supplierName);
+    data.supplierId = resolved;
   }
   if (image !== undefined) data.image = image ? String(image).trim() : null;
   if (brand !== undefined) data.brand = brand ? String(brand).trim() : null;
@@ -218,6 +233,33 @@ const createNewSupplier = async ({ name, contactPerson, phone, email, address })
   });
 };
 
+const updateSupplierById = async (id, { name, contactPerson, phone, email, address }) => {
+  if (!/^[0-9a-fA-F]{24}$/.test(String(id || ''))) {
+    throw new Error('Mã nhà cung cấp không hợp lệ.');
+  }
+  const data = {};
+  if (name !== undefined && String(name).trim()) data.name = String(name).trim();
+  if (contactPerson !== undefined) data.contactPerson = contactPerson;
+  if (phone !== undefined) data.phone = phone;
+  if (email !== undefined) data.email = email;
+  if (address !== undefined) data.address = address;
+  return await prisma.supplier.update({
+    where: { id },
+    data,
+  });
+};
+
+const deleteSupplierById = async (id) => {
+  if (!/^[0-9a-fA-F]{24}$/.test(String(id || ''))) {
+    throw new Error('Mã nhà cung cấp không hợp lệ.');
+  }
+  await prisma.product.updateMany({
+    where: { supplierId: id },
+    data: { supplierId: null },
+  });
+  return await prisma.supplier.delete({ where: { id } });
+};
+
 module.exports = {
   getAllProducts,
   createNewProduct,
@@ -227,4 +269,6 @@ module.exports = {
   getLowStockProducts,
   getAllSuppliers,
   createNewSupplier,
+  updateSupplierById,
+  deleteSupplierById,
 };

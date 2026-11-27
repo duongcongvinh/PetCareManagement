@@ -1,7 +1,18 @@
 import React from 'react';
-import { User, LogOut, Shield, ShoppingBag, PhoneCall, Home, Calendar, Heart, Clock, UserCheck, Activity, Info } from 'lucide-react';
+import { User, LogOut, Shield, ShoppingBag, PhoneCall, Home, Calendar, Heart, Clock, UserCheck, Activity, Info, ExternalLink, ChevronRight, PanelLeftClose, PanelLeftOpen } from 'lucide-react';
 import { CONTACT_INFO } from '../contactConfig';
 import BrandLogo from './BrandLogo';
+
+const ADMIN_TAB_TITLES = {
+  'overview': 'Tổng Quan Hệ Thống',
+  'reports-admin': 'Thống Kê & Báo Cáo',
+  'catalog-admin': 'Quản Lý Kho & Dịch Vụ',
+  'accounts-admin': 'Quản Lý Tài Khoản',
+  'roles-admin': 'Phân Quyền Người Dùng (RBAC)',
+  'approve-proposals': 'Phê Duyệt Nhập Hàng',
+  'suppliers-admin': 'Quản Lý Nhà Cung Cấp',
+  'system-settings': 'Cấu Hình & Nhật Ký Hệ Thống',
+};
 
 export default function Navbar({ 
   currentUser, 
@@ -14,13 +25,15 @@ export default function Navbar({
   activeTab,
   onTabChange,
   activeRole,
-  cartCount = 0 
+  cartCount = 0,
+  adminSidebarCollapsed = false,
+  onToggleAdminSidebar
 }) {
   const getRoleDisplayName = (r) => {
     switch (r) {
       case 'CARE_STAFF': return 'Nhân Viên';
       case 'WAREHOUSE_STAFF': return 'Quản Lý Kho';
-      case 'ADMIN': return 'Admin';
+      case 'ADMIN': return 'Quản Trị Viên';
       case 'CUSTOMER':
       default:
         return 'Khách Hàng';
@@ -37,7 +50,93 @@ export default function Navbar({
   };
 
   const isStaffUser = currentUser && ['CARE_STAFF', 'WAREHOUSE_STAFF', 'ADMIN'].includes(currentUser.role);
-  const isCustomer = !currentUser || currentUser.role === 'CUSTOMER';
+  const isAdminWorkspace = portalMode === 'STAFF' && isStaffUser && currentUser.role === 'ADMIN';
+
+  const getInitials = (name) => {
+    const parts = String(name || 'AD').trim().split(/\s+/);
+    if (parts.length === 1) return parts[0].slice(0, 2).toUpperCase();
+    return (parts[0][0] + parts[parts.length - 1][0]).toUpperCase();
+  };
+
+  if (isAdminWorkspace) {
+    const currentSectionLabel = ADMIN_TAB_TITLES[activeTab] || ADMIN_TAB_TITLES.overview;
+    return (
+      <header className="admin-topbar">
+        <div className="admin-topbar-left">
+          {onToggleAdminSidebar && (
+            <button
+              type="button"
+              onClick={onToggleAdminSidebar}
+              className="admin-topbar-toggle"
+              title={adminSidebarCollapsed ? 'Mở rộng thanh menu' : 'Thu gọn thanh menu'}
+              aria-label={adminSidebarCollapsed ? 'Mở rộng thanh menu' : 'Thu gọn thanh menu'}
+              aria-expanded={!adminSidebarCollapsed}
+            >
+              {adminSidebarCollapsed ? <PanelLeftOpen size={18} /> : <PanelLeftClose size={18} />}
+            </button>
+          )}
+
+          <a
+            href="/admin"
+            aria-label="Trang quản trị Petzera"
+            className="petzera-brand-link"
+            style={{ display: 'inline-flex', alignItems: 'center', cursor: 'pointer', flexShrink: 0, textDecoration: 'none' }}
+            onClick={(e) => {
+              e.preventDefault();
+              onTabChange('overview');
+            }}
+          >
+            <BrandLogo size="sm" subtitle="ADMIN CONTROL CENTER" />
+          </a>
+
+          <div className="admin-topbar-divider" />
+
+          <nav className="admin-breadcrumb" aria-label="Vị trí trang quản trị">
+            <span className="admin-breadcrumb-root">Hệ thống</span>
+            <ChevronRight size={14} color="#94a3b8" />
+            <span className="admin-breadcrumb-current">{currentSectionLabel}</span>
+          </nav>
+        </div>
+
+        <div className="admin-topbar-right">
+          <div className="admin-live-pill" title="Cơ sở dữ liệu & AI Engine đang hoạt động">
+            <span className="admin-live-dot" />
+            <span>Hệ thống ổn định</span>
+          </div>
+
+          <a
+            href="/"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="admin-storefront-link"
+            title="Mở trang Khách hàng ở tab mới"
+          >
+            <span>Trang Khách</span>
+            <ExternalLink size={13} />
+          </a>
+
+          <div className="admin-user-chip">
+            <div className="admin-user-avatar">{getInitials(currentUser.fullName)}</div>
+            <div className="admin-user-meta">
+              <div className="admin-user-name">{currentUser.fullName}</div>
+              <div className="admin-user-role">
+                <Shield size={10} /> {getRoleDisplayName(currentUser.role)}
+              </div>
+            </div>
+            <button
+              type="button"
+              onClick={onLogout}
+              className="admin-logout-btn"
+              title="Đăng xuất khỏi phiên quản trị"
+            >
+              <LogOut size={14} />
+              <span>Đăng xuất</span>
+            </button>
+          </div>
+        </div>
+      </header>
+    );
+  }
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column' }}>
@@ -137,7 +236,7 @@ export default function Navbar({
                       background: '#ef4444',
                       color: '#ffffff',
                       fontSize: '0.6rem',
-                      fontWeight: 900,
+                      fontWeight: 800,
                       padding: '1px 5px',
                       borderRadius: '8px',
                       lineHeight: '1'

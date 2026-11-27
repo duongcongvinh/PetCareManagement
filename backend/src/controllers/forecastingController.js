@@ -77,8 +77,31 @@ const updateProposalStatus = async (req, res) => {
   }
 };
 
+const createProposal = async (req, res) => {
+  try {
+    const proposal = await forecastingService.createManualProposal(req.body);
+    return res.status(201).json({
+      message: 'Đã tạo phiếu đề xuất nhập hàng mới!',
+      proposal,
+    });
+  } catch (error) {
+    return res.status(400).json({ message: error.message || 'Không thể tạo phiếu đề xuất.' });
+  }
+};
+
+const deleteProposal = async (req, res) => {
+  try {
+    await forecastingService.deleteProposal(req.params.id);
+    return res.json({ message: 'Đã xóa phiếu đề xuất nhập hàng.' });
+  } catch (error) {
+    return res.status(400).json({ message: error.message || 'Không thể xóa phiếu đề xuất.' });
+  }
+};
+
 module.exports = {
   getProposals,
+  createProposal,
+  deleteProposal,
   triggerAIForecast,
   seasonalForecast,
   orderHistoryForecast,
